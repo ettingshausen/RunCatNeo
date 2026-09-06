@@ -58,6 +58,9 @@ let package = Package(
                 "Model",
                 .product(name: "LicenseList", package: "LicenseList"),
             ],
+            resources: [
+                .process("Resources"),
+            ],
             swiftSettings: swiftSettings
         ),
         .testTarget(
