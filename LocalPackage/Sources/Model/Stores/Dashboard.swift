@@ -39,6 +39,7 @@ public final class Dashboard: Composable {
     public var systemInfoBundle: SystemInfoBundle
     public var cpuRingBuffer: RingBuffer
     public var memoryRingBuffer: RingBuffer
+    public var fanInfo: FanInfo?
     public var customMetricsBundles: [CustomMetricsBundle]
     public var displayedDate: Date
     public var currentRunner: Runner?
@@ -52,6 +53,7 @@ public final class Dashboard: Composable {
         systemInfoBundle: SystemInfoBundle = .cpuZero(),
         cpuRingBuffer: RingBuffer = .init(),
         memoryRingBuffer: RingBuffer = .init(),
+        fanInfo: FanInfo? = nil,
         customMetricsBundles: [CustomMetricsBundle] = [],
         displayedDate: Date? = nil,
         currentRunner: Runner? = nil,
@@ -70,6 +72,7 @@ public final class Dashboard: Composable {
         self.systemInfoBundle = systemInfoBundle
         self.cpuRingBuffer = cpuRingBuffer
         self.memoryRingBuffer = memoryRingBuffer
+        self.fanInfo = fanInfo
         self.customMetricsBundles = customMetricsBundles
         self.displayedDate = displayedDate ?? dateClient.now()
         self.currentRunner = currentRunner
@@ -162,6 +165,7 @@ public final class Dashboard: Composable {
         systemInfoBundle = metrics.systemInfoBundle
         cpuRingBuffer = metrics.cpuRingBuffer
         memoryRingBuffer = metrics.memoryRingBuffer
+        fanInfo = metrics.fanInfo
         customMetricsBundles = metrics.customMetricsBundles
     }
 

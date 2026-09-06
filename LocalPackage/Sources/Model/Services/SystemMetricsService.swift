@@ -23,6 +23,7 @@ import SystemInfoKit
 
 struct SystemMetricsService {
     private let appStateClient: AppStateClient
+    private let smcClient: SMCClient
     private let systemInfoObserverClient: SystemInfoObserverClient
     private let userDefaultsRepository: UserDefaultsRepository
 
@@ -32,6 +33,7 @@ struct SystemMetricsService {
 
     init(_ appDependencies: AppDependencies) {
         self.appStateClient = appDependencies.appStateClient
+        self.smcClient = appDependencies.smcClient
         self.systemInfoObserverClient = appDependencies.systemInfoObserverClient
         self.userDefaultsRepository = .init(appDependencies.userDefaultsClient)
     }
@@ -57,8 +59,10 @@ struct SystemMetricsService {
     }
 
     func updateMetrics(from systemInfoBundle: SystemInfoBundle) {
+        let fanInfo = currentFanInfo()
         appStateClient.send(\.metrics, default: .init()) { metrics in
             metrics.systemInfoBundle = systemInfoBundle
+            metrics.fanInfo = fanInfo
             if let value = systemInfoBundle.cpuInfo?.percentage.value {
                 metrics.cpuRingBuffer.append(value)
             }
@@ -70,5 +74,17 @@ struct SystemMetricsService {
 
     func emitConfigurationChange() {
         appStateClient.send(\.systemMetricsConfigurationChanges, ())
+    }
+
+    private func currentFanInfo() -> FanInfo? {
+        guard let count = smcClient.read("FNum")?.numberValue else {
+            return nil
+        }
+        return FanInfo(fans: (0..<Int(count)).map { index in
+            FanInfo.Fan(
+                rpm: smcClient.read("F\(index)Ac")?.numberValue ?? .zero,
+                maximumRPM: smcClient.read("F\(index)Mx")?.numberValue
+            )
+        })
     }
 }

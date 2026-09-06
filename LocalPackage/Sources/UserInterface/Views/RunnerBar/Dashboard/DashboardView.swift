@@ -38,6 +38,7 @@ struct DashboardView: View {
                 systemInfoBundle: store.systemInfoBundle,
                 cpuRingBuffer: store.cpuRingBuffer,
                 memoryRingBuffer: store.memoryRingBuffer,
+                fanInfo: store.fanInfo,
                 isPreview: store.isPreview
             )
             ForEach(store.customMetricsBundles) { customMetricsBundle in

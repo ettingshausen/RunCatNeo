@@ -27,6 +27,7 @@ struct SystemInfoStackView: View {
     var systemInfoBundle: SystemInfoBundle
     var cpuRingBuffer: RingBuffer
     var memoryRingBuffer: RingBuffer
+    var fanInfo: FanInfo?
     var isPreview: Bool
 
     var body: some View {
@@ -59,6 +60,10 @@ struct SystemInfoStackView: View {
                 SystemInfoView(systemInfo: networkInfo) {
                     EmptyView()
                 }
+            }
+            if let fanInfo = fanInfo?.simulated(isPreview), !fanInfo.fans.isEmpty {
+                Divider()
+                FanSectionView(fanInfo: fanInfo)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)

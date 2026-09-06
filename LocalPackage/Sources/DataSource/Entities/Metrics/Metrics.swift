@@ -24,17 +24,20 @@ public struct Metrics: Sendable {
     public var systemInfoBundle: SystemInfoBundle
     public var cpuRingBuffer: RingBuffer
     public var memoryRingBuffer: RingBuffer
+    public var fanInfo: FanInfo?
     public var customMetricsBundles: [CustomMetricsBundle]
 
     public init(
         systemInfoBundle: SystemInfoBundle = .cpuZero(),
         cpuRingBuffer: RingBuffer = .init(),
         memoryRingBuffer: RingBuffer = .init(),
+        fanInfo: FanInfo? = nil,
         customMetricsBundles: [CustomMetricsBundle] = []
     ) {
         self.systemInfoBundle = systemInfoBundle
         self.cpuRingBuffer = cpuRingBuffer
         self.memoryRingBuffer = memoryRingBuffer
+        self.fanInfo = fanInfo
         self.customMetricsBundles = customMetricsBundles
     }
 }

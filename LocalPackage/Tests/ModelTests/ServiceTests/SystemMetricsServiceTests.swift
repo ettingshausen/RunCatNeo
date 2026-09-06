@@ -120,6 +120,89 @@ struct SystemMetricsServiceTests {
     }
 
     @Test
+    func updateMetrics_stores_fanInfo_from_smc_readings() throws {
+        let readings: [String: SMCClient.Reading] = [
+            "FNum": .init(dataType: "ui8 ", dataBytes: [1]),
+            "F0Ac": .init(dataType: "flt ", dataBytes: withUnsafeBytes(of: Float(1218)) { Array($0) }),
+            "F0Mx": .init(dataType: "flt ", dataBytes: withUnsafeBytes(of: Float(7199)) { Array($0) }),
+        ]
+        let appState = AllocatedUnfairLock<AppState>(initialState: .init())
+        let sut = SystemMetricsService(.testDependencies(
+            appStateClient: .testDependency(appState),
+            smcClient: testDependency(of: SMCClient.self) {
+                $0.read = { readings[$0] }
+            }
+        ))
+        sut.updateMetrics(from: SystemInfoBundle())
+        let fanInfo = try #require(appState.withLock(\.metrics.latestValue)?.fanInfo)
+        #expect(fanInfo == FanInfo(fans: [FanInfo.Fan(rpm: 1218.0, maximumRPM: 7199.0)]))
+    }
+
+    @Test
+    func updateMetrics_stores_multiple_fans_from_smc_readings() throws {
+        let readings: [String: SMCClient.Reading] = [
+            "FNum": .init(dataType: "ui8 ", dataBytes: [2]),
+            "F0Ac": .init(dataType: "flt ", dataBytes: withUnsafeBytes(of: Float(1218)) { Array($0) }),
+            "F0Mx": .init(dataType: "flt ", dataBytes: withUnsafeBytes(of: Float(7199)) { Array($0) }),
+            "F1Ac": .init(dataType: "fpe2", dataBytes: [0x0F, 0x68]),
+        ]
+        let appState = AllocatedUnfairLock<AppState>(initialState: .init())
+        let sut = SystemMetricsService(.testDependencies(
+            appStateClient: .testDependency(appState),
+            smcClient: testDependency(of: SMCClient.self) {
+                $0.read = { readings[$0] }
+            }
+        ))
+        sut.updateMetrics(from: SystemInfoBundle())
+        let fanInfo = try #require(appState.withLock(\.metrics.latestValue)?.fanInfo)
+        #expect(fanInfo == FanInfo(fans: [
+            FanInfo.Fan(rpm: 1218.0, maximumRPM: 7199.0),
+            FanInfo.Fan(rpm: 986.0),
+        ]))
+    }
+
+    @Test
+    func updateMetrics_stores_empty_fanInfo_when_no_fan_exists() {
+        let readings: [String: SMCClient.Reading] = [
+            "FNum": .init(dataType: "ui8 ", dataBytes: [0]),
+        ]
+        let appState = AllocatedUnfairLock<AppState>(initialState: .init())
+        let sut = SystemMetricsService(.testDependencies(
+            appStateClient: .testDependency(appState),
+            smcClient: testDependency(of: SMCClient.self) {
+                $0.read = { readings[$0] }
+            }
+        ))
+        sut.updateMetrics(from: SystemInfoBundle())
+        #expect(appState.withLock(\.metrics.latestValue)?.fanInfo == FanInfo(fans: []))
+    }
+
+    @Test
+    func updateMetrics_stores_zero_rpm_when_actual_speed_is_missing() throws {
+        let readings: [String: SMCClient.Reading] = [
+            "FNum": .init(dataType: "ui8 ", dataBytes: [1]),
+        ]
+        let appState = AllocatedUnfairLock<AppState>(initialState: .init())
+        let sut = SystemMetricsService(.testDependencies(
+            appStateClient: .testDependency(appState),
+            smcClient: testDependency(of: SMCClient.self) {
+                $0.read = { readings[$0] }
+            }
+        ))
+        sut.updateMetrics(from: SystemInfoBundle())
+        let fanInfo = try #require(appState.withLock(\.metrics.latestValue)?.fanInfo)
+        #expect(fanInfo == FanInfo(fans: [FanInfo.Fan(rpm: 0.0)]))
+    }
+
+    @Test
+    func updateMetrics_keeps_fanInfo_nil_when_smc_is_unavailable() {
+        let appState = AllocatedUnfairLock<AppState>(initialState: .init())
+        let sut = SystemMetricsService(.testDependencies(appStateClient: .testDependency(appState)))
+        sut.updateMetrics(from: SystemInfoBundle())
+        #expect(appState.withLock(\.metrics.latestValue)?.fanInfo == nil)
+    }
+
+    @Test
     func updateMetrics_keeps_ring_buffers_when_info_is_missing() {
         let appState = AllocatedUnfairLock<AppState>(initialState: .init())
         let sut = SystemMetricsService(.testDependencies(appStateClient: .testDependency(appState)))
