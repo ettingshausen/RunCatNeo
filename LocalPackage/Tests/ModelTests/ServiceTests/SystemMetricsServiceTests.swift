@@ -203,6 +203,27 @@ struct SystemMetricsServiceTests {
     }
 
     @Test
+    func updateMetrics_drops_fanInfo_when_fan_monitoring_is_disabled() throws {
+        let readings: [String: SMCClient.Reading] = [
+            "FNum": .init(dataType: "ui8 ", dataBytes: [1]),
+            "F0Ac": .init(dataType: "flt ", dataBytes: withUnsafeBytes(of: Float(1218)) { Array($0) }),
+        ]
+        let configurationData = try JSONEncoder().encode(SystemMetricsConfiguration(monitorsFan: false))
+        let appState = AllocatedUnfairLock<AppState>(initialState: .init())
+        let sut = SystemMetricsService(.testDependencies(
+            appStateClient: .testDependency(appState),
+            smcClient: testDependency(of: SMCClient.self) {
+                $0.read = { readings[$0] }
+            },
+            userDefaultsClient: testDependency(of: UserDefaultsClient.self) {
+                $0.data = { _ in configurationData }
+            }
+        ))
+        sut.updateMetrics(from: SystemInfoBundle())
+        #expect(appState.withLock(\.metrics.latestValue)?.fanInfo == nil)
+    }
+
+    @Test
     func updateMetrics_keeps_ring_buffers_when_info_is_missing() {
         let appState = AllocatedUnfairLock<AppState>(initialState: .init())
         let sut = SystemMetricsService(.testDependencies(appStateClient: .testDependency(appState)))

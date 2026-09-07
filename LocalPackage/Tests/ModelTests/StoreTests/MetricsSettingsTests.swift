@@ -165,6 +165,32 @@ struct MetricsSettingsTests {
     }
 
     @MainActor @Test
+    func send_monitorsFanToggleSwitched_persists_configuration_and_notifies() async throws {
+        let appState = AllocatedUnfairLock<AppState>(initialState: .init())
+        let activationRequests = AllocatedUnfairLock<[SystemInfoType: Bool]?>(initialState: nil)
+        let storage = UserDefaultsClient.storage()
+        let sut = MetricsSettings(.testDependencies(
+            appStateClient: .testDependency(appState),
+            systemInfoObserverClient: testDependency(of: SystemInfoObserverClient.self) {
+                $0.toggleActivation = { requests in
+                    activationRequests.withLock { $0 = requests }
+                }
+            },
+            userDefaultsClient: storage.client
+        ))
+        await sut.send(.monitorsFanToggleSwitched(false))
+        #expect(!sut.systemMetricsConfiguration.monitorsFan)
+        let storedConfigurationData = storage.lock.withLock { $0[.systemMetricsConfiguration] }
+        let storedConfiguration = try JSONDecoder().decode(
+            SystemMetricsConfiguration.self,
+            from: try #require(storedConfigurationData)
+        )
+        #expect(!storedConfiguration.monitorsFan)
+        #expect(activationRequests.withLock(\.self) == nil)
+        #expect(appState.withLock(\.systemMetricsConfigurationChanges.latestValue) != nil)
+    }
+
+    @MainActor @Test
     func send_monitorsSystemMetricsToggleSwitched_cpu_is_noop() async {
         let toggleActivationCount = AllocatedUnfairLock<Int>(initialState: 0)
         let sut = MetricsSettings(.testDependencies(

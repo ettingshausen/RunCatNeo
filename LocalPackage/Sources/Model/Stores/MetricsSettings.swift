@@ -128,6 +128,11 @@ public final class MetricsSettings: Composable {
             systemMetricsService.toggleSystemMetricsActivation(type: type, isOn: isOn)
             systemMetricsService.emitConfigurationChange()
 
+        case let .monitorsFanToggleSwitched(isOn):
+            systemMetricsConfiguration.monitorsFan = isOn
+            userDefaultsRepository.systemMetricsConfiguration = systemMetricsConfiguration
+            systemMetricsService.emitConfigurationChange()
+
         case let .customMetricsSettings(.errorOccurred(error)):
             self.error = error
             showingAlert = true
@@ -148,6 +153,7 @@ public final class MetricsSettings: Composable {
         case changedMyMindButtonTapped
         case showButtonTapped
         case monitorsSystemMetricsToggleSwitched(SystemInfoType, Bool)
+        case monitorsFanToggleSwitched(Bool)
         case customMetricsSettings(CustomMetricsSettings.Action)
     }
 }

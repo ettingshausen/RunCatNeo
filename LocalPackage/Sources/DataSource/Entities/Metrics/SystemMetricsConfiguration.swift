@@ -23,6 +23,7 @@ public struct SystemMetricsConfiguration: Codable, Sendable, Equatable {
     public var monitorsStorage: Bool
     public var monitorsBattery: Bool
     public var monitorsNetwork: Bool
+    public var monitorsFan: Bool = true
 
     static let `default` = Self(
         monitorsMemory: true,
@@ -30,4 +31,27 @@ public struct SystemMetricsConfiguration: Codable, Sendable, Equatable {
         monitorsBattery: true,
         monitorsNetwork: true
     )
+
+    public init(
+        monitorsMemory: Bool = true,
+        monitorsStorage: Bool = true,
+        monitorsBattery: Bool = true,
+        monitorsNetwork: Bool = true,
+        monitorsFan: Bool = true
+    ) {
+        self.monitorsMemory = monitorsMemory
+        self.monitorsStorage = monitorsStorage
+        self.monitorsBattery = monitorsBattery
+        self.monitorsNetwork = monitorsNetwork
+        self.monitorsFan = monitorsFan
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        monitorsMemory = try container.decode(Bool.self, forKey: .monitorsMemory)
+        monitorsStorage = try container.decode(Bool.self, forKey: .monitorsStorage)
+        monitorsBattery = try container.decode(Bool.self, forKey: .monitorsBattery)
+        monitorsNetwork = try container.decode(Bool.self, forKey: .monitorsNetwork)
+        monitorsFan = try container.decodeIfPresent(Bool.self, forKey: .monitorsFan) ?? true
+    }
 }

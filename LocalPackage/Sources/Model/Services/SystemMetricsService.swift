@@ -59,7 +59,7 @@ struct SystemMetricsService {
     }
 
     func updateMetrics(from systemInfoBundle: SystemInfoBundle) {
-        let fanInfo = currentFanInfo()
+        let fanInfo = userDefaultsRepository.systemMetricsConfiguration.monitorsFan ? currentFanInfo() : nil
         appStateClient.send(\.metrics, default: .init()) { metrics in
             metrics.systemInfoBundle = systemInfoBundle
             metrics.fanInfo = fanInfo
