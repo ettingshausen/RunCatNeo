@@ -129,6 +129,11 @@ public final class MetricsSettings: Composable {
             systemMetricsService.emitConfigurationChange()
 
         case let .monitorsFanToggleSwitched(isOn):
+            if !isOn {
+                var metricsBarConfiguration = userDefaultsRepository.metricsBarConfiguration
+                metricsBarConfiguration.showsFan = false
+                userDefaultsRepository.metricsBarConfiguration = metricsBarConfiguration
+            }
             systemMetricsConfiguration.monitorsFan = isOn
             userDefaultsRepository.systemMetricsConfiguration = systemMetricsConfiguration
             systemMetricsService.emitConfigurationChange()

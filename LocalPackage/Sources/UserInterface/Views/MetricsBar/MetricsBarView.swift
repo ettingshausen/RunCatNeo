@@ -49,6 +49,10 @@ struct MetricsBarView: View {
         if store.metricsBarConfiguration.showsNetwork, store.systemInfoBundle.networkInfo != nil {
             widthArray.append(iconWidth + IndicatorKind.usageHalfLabel.size.width)
         }
+        if store.metricsBarConfiguration.showsFan,
+           let fanInfo = store.fanInfo?.simulated(store.isPreview), !fanInfo.fans.isEmpty {
+            widthArray.append(iconWidth + IndicatorKind.usageFullLabel.size.width)
+        }
         for bundle in store.customMetricsBundles where store.metricsBarConfiguration.showsCustomMetrics(of: bundle.id) {
             widthArray.append(iconWidth + IndicatorKind.customValueLabelSize(for: bundle.metricsBarLabel).width)
         }
@@ -82,6 +86,10 @@ struct MetricsBarView: View {
                 }
                 if store.metricsBarConfiguration.showsNetwork, let networkInfo = store.systemInfoBundle.networkInfo {
                     drawSystemInfo(context: &context, point: &point, systemInfo: networkInfo)
+                }
+                if store.metricsBarConfiguration.showsFan,
+                   let fanInfo = store.fanInfo?.simulated(store.isPreview), !fanInfo.fans.isEmpty {
+                    drawFan(context: &context, point: &point, fanInfo: fanInfo)
                 }
                 for bundle in store.customMetricsBundles where store.metricsBarConfiguration.showsCustomMetrics(of: bundle.id) {
                     drawCustomMetrics(context: &context, point: &point, bundle: bundle)
@@ -136,6 +144,21 @@ struct MetricsBarView: View {
         default:
             break
         }
+    }
+
+    private func drawFan(
+        context: inout GraphicsContext,
+        point: inout CGPoint,
+        fanInfo: FanInfo
+    ) {
+        let iconSize = IndicatorKind.categoryIcon.size
+        context.drawIcon(systemName: "fanblades", point: point, size: iconSize)
+        point.x += iconSize.width
+        context.drawBlackText(origin: point, size: IndicatorKind.usageFullLabel.size) {
+            Text(verbatim: "\(Int(fanInfo.fans[0].rpm.rounded()))")
+                .monospacedDigit()
+        }
+        point.x += IndicatorKind.usageFullLabel.size.width + IndicatorKind.spacer.size.width
     }
 
     private func drawCustomMetrics(

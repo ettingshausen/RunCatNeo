@@ -58,6 +58,12 @@ struct MetricsBarSettingsView: View {
                 )) {
                     Text("showNetworkConnectivity", bundle: .module)
                 }
+                Toggle(isOn: Binding<Bool>(
+                    get: { store.metricsBarConfiguration.showsFan },
+                    asyncSet: { await store.send(.showsFanToggleSwitched($0)) }
+                )) {
+                    Text("showFanSpeed", bundle: .module)
+                }
             } header: {
                 Text("metricsBarSettings", bundle: .module)
             }

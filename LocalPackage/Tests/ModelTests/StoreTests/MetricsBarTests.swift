@@ -32,6 +32,18 @@ struct MetricsBarTests {
     }
 
     @MainActor @Test
+    func send_viewAppeared_loads_latest_fanInfo_and_observes_stream() async {
+        let appState = AllocatedUnfairLock<AppState>(initialState: .init())
+        appState.withLock { $0.metrics.send(Metrics(fanInfo: FanInfo(fans: [FanInfo.Fan(rpm: 1218)]))) }
+        let sut = MetricsBar(.testDependencies(appStateClient: .testDependency(appState)))
+        await sut.send(.viewAppeared("MetricsBarTests"))
+        #expect(sut.fanInfo == FanInfo(fans: [FanInfo.Fan(rpm: 1218)]))
+        appState.withLock { $0.metrics.send(Metrics(fanInfo: FanInfo(fans: [FanInfo.Fan(rpm: 1199)]))) }
+        await waitUntil { sut.fanInfo == FanInfo(fans: [FanInfo.Fan(rpm: 1199)]) }
+        await sut.send(.viewDisappeared)
+    }
+
+    @MainActor @Test
     func send_viewAppeared_refreshes_configuration_when_change_event_is_emitted() async throws {
         let appState = AllocatedUnfairLock<AppState>(initialState: .init())
         let configurationData = AllocatedUnfairLock<Data?>(initialState: nil)

@@ -103,6 +103,16 @@ public final class MetricsBarSettings: Composable {
                 systemMetricsService.toggleSystemMetricsActivation(type: type, isOn: isOn)
             }
 
+        case let .showsFanToggleSwitched(isOn):
+            var configuration = userDefaultsRepository.systemMetricsConfiguration
+            metricsBarConfiguration.showsFan = isOn
+            if isOn {
+                configuration.monitorsFan = true
+            }
+            userDefaultsRepository.metricsBarConfiguration = metricsBarConfiguration
+            userDefaultsRepository.systemMetricsConfiguration = configuration
+            systemMetricsService.emitConfigurationChange()
+
         case let .showsCustomMetricsToggleSwitched(id, isOn):
             if isOn {
                 metricsBarConfiguration.visibleCustomMetricsSourceIDs.insert(id)
@@ -123,6 +133,7 @@ public final class MetricsBarSettings: Composable {
         case viewAppeared(String)
         case viewDisappeared
         case showsSystemMetricsToggleSwitched(SystemInfoType, Bool)
+        case showsFanToggleSwitched(Bool)
         case showsCustomMetricsToggleSwitched(UUID, Bool)
     }
 }

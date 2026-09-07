@@ -26,10 +26,11 @@ public struct MetricsBarConfiguration: Codable, Sendable, Equatable {
     public var showsStorage: Bool
     public var showsBattery: Bool
     public var showsNetwork: Bool
+    public var showsFan: Bool = false
     public var visibleCustomMetricsSourceIDs: Set<UUID>
 
     public var isEmpty: Bool {
-        !showsCPU && !showsMemory && !showsStorage && !showsBattery && !showsNetwork
+        !showsCPU && !showsMemory && !showsStorage && !showsBattery && !showsNetwork && !showsFan
             && visibleCustomMetricsSourceIDs.isEmpty
     }
 
@@ -45,4 +46,33 @@ public struct MetricsBarConfiguration: Codable, Sendable, Equatable {
         showsNetwork: false,
         visibleCustomMetricsSourceIDs: []
     )
+
+    public init(
+        showsCPU: Bool,
+        showsMemory: Bool,
+        showsStorage: Bool,
+        showsBattery: Bool,
+        showsNetwork: Bool,
+        showsFan: Bool = false,
+        visibleCustomMetricsSourceIDs: Set<UUID>
+    ) {
+        self.showsCPU = showsCPU
+        self.showsMemory = showsMemory
+        self.showsStorage = showsStorage
+        self.showsBattery = showsBattery
+        self.showsNetwork = showsNetwork
+        self.showsFan = showsFan
+        self.visibleCustomMetricsSourceIDs = visibleCustomMetricsSourceIDs
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        showsCPU = try container.decode(Bool.self, forKey: .showsCPU)
+        showsMemory = try container.decode(Bool.self, forKey: .showsMemory)
+        showsStorage = try container.decode(Bool.self, forKey: .showsStorage)
+        showsBattery = try container.decode(Bool.self, forKey: .showsBattery)
+        showsNetwork = try container.decode(Bool.self, forKey: .showsNetwork)
+        showsFan = try container.decodeIfPresent(Bool.self, forKey: .showsFan) ?? false
+        visibleCustomMetricsSourceIDs = try container.decode(Set<UUID>.self, forKey: .visibleCustomMetricsSourceIDs)
+    }
 }

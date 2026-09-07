@@ -33,6 +33,7 @@ public final class MetricsBar: Composable {
 
     public var metricsBarConfiguration: MetricsBarConfiguration
     public var systemInfoBundle: SystemInfoBundle
+    public var fanInfo: FanInfo?
     public var customMetricsBundles: [CustomMetricsBundle]
     public let isPreview: Bool
     public let action: (Action) async -> Void
@@ -94,6 +95,7 @@ public final class MetricsBar: Composable {
 
     private func updateMetrics(from metrics: Metrics) {
         systemInfoBundle = metrics.systemInfoBundle
+        fanInfo = metrics.fanInfo
         customMetricsBundles = metrics.customMetricsBundles
     }
 

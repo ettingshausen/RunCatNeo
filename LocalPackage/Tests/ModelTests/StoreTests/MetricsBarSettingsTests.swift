@@ -96,6 +96,33 @@ struct MetricsBarSettingsTests {
     }
 
     @MainActor @Test
+    func send_showsFanToggleSwitched_persists_configuration_and_enables_monitoring() async throws {
+        let appState = AllocatedUnfairLock<AppState>(initialState: .init())
+        let activationRequests = AllocatedUnfairLock<[SystemInfoType: Bool]?>(initialState: nil)
+        let storage = UserDefaultsClient.storage()
+        let sut = MetricsBarSettings(.testDependencies(
+            appStateClient: .testDependency(appState),
+            systemInfoObserverClient: testDependency(of: SystemInfoObserverClient.self) {
+                $0.toggleActivation = { requests in
+                    activationRequests.withLock { $0 = requests }
+                }
+            },
+            userDefaultsClient: storage.client
+        ))
+        await sut.send(.showsFanToggleSwitched(true))
+        #expect(sut.metricsBarConfiguration.showsFan)
+        let storedBarConfiguration = try #require(storage.currentMetricsBarConfiguration())
+        #expect(storedBarConfiguration.showsFan)
+        let storedConfiguration = try JSONDecoder().decode(
+            SystemMetricsConfiguration.self,
+            from: try #require(storage.lock.withLock { $0[.systemMetricsConfiguration] })
+        )
+        #expect(storedConfiguration.monitorsFan)
+        #expect(activationRequests.withLock(\.self) == nil)
+        #expect(appState.withLock(\.systemMetricsConfigurationChanges.latestValue) != nil)
+    }
+
+    @MainActor @Test
     func send_showsSystemMetricsToggleSwitched_cpu_does_not_toggle_activation() async {
         let activationCount = AllocatedUnfairLock<Int>(initialState: 0)
         let storage = UserDefaultsClient.storage()
