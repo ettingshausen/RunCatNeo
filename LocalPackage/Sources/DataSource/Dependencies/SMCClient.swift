@@ -125,15 +125,16 @@ private final class SMCConnection: @unchecked Sendable {
                   output.keyInfo.dataSize > 0 else {
                 return nil
             }
+            let dataType = output.keyInfo.dataType.fourCharCode
+            let dataSize = min(Int(output.keyInfo.dataSize), 32)
             input.keyInfo.dataSize = output.keyInfo.dataSize
             input.data8 = SMCFunctionCode.readBytes.rawValue
             guard call(&connection, &input, &output) == kIOReturnSuccess else {
                 return nil
             }
-            let byteCount = min(Int(output.keyInfo.dataSize), 32)
-            let bytes = withUnsafeBytes(of: &output.bytes) { Array($0.prefix(byteCount)) }
+            let bytes = withUnsafeBytes(of: &output.bytes) { Array($0.prefix(dataSize)) }
             return SMCClient.Reading(
-                dataType: output.keyInfo.dataType.fourCharCode,
+                dataType: dataType,
                 dataBytes: bytes
             )
         }
