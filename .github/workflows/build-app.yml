@@ -1,0 +1,61 @@
+name: Build App
+
+on:
+  push:
+    branches: [feat/fan-metrics]
+  workflow_dispatch:
+
+concurrency:
+  group: build-app-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: macos-26
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select the newest Xcode
+        run: |
+          sudo xcode-select -s "$(ls -d /Applications/Xcode*.app | sort -V | tail -1)"
+          xcodebuild -version
+
+      - name: Run tests
+        run: |
+          xcodebuild test \
+            -project RunCatNeo.xcodeproj \
+            -scheme RunCatNeo \
+            -testPlan UnitTest \
+            -destination 'platform=macOS,arch=arm64' \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO
+
+      - name: Build the app
+        run: |
+          xcodebuild build \
+            -project RunCatNeo.xcodeproj \
+            -scheme RunCatNeo \
+            -configuration Release \
+            -destination 'platform=macOS,arch=arm64' \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO
+
+      - name: Ad-hoc sign the app
+        run: |
+          app="build/Build/Products/Release/RunCatNeo.app"
+          codesign --force --deep --sign - "$app"
+          codesign --verify --verbose "$app"
+
+      - name: Zip the app
+        run: |
+          app="build/Build/Products/Release/RunCatNeo.app"
+          ditto -c -k --keepParent "$app" "RunCatNeo-${GITHUB_SHA::7}.zip"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: RunCatNeo-${{ github.sha }}
+          path: RunCatNeo-*.zip
+          if-no-files-found: error
