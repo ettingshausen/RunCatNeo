@@ -50,7 +50,8 @@ struct MetricsBarView: View {
             widthArray.append(iconWidth + IndicatorKind.usageHalfLabel.size.width)
         }
         if store.metricsBarConfiguration.showsFan,
-           let fanInfo = store.fanInfo?.simulated(store.isPreview), !fanInfo.fans.isEmpty {
+           let fanInfo = store.fanInfo?.simulated(store.isPreview), !fanInfo.fans.isEmpty,
+           fanInfo.fans[0].rpm > 0 {
             widthArray.append(iconWidth + IndicatorKind.usageFullLabel.size.width)
         }
         if store.metricsBarConfiguration.showsKeyboardBattery,
@@ -92,7 +93,8 @@ struct MetricsBarView: View {
                     drawSystemInfo(context: &context, point: &point, systemInfo: networkInfo)
                 }
                 if store.metricsBarConfiguration.showsFan,
-                   let fanInfo = store.fanInfo?.simulated(store.isPreview), !fanInfo.fans.isEmpty {
+                   let fanInfo = store.fanInfo?.simulated(store.isPreview), !fanInfo.fans.isEmpty,
+                   fanInfo.fans[0].rpm > 0 {
                     drawFan(context: &context, point: &point, fanInfo: fanInfo)
                 }
                 if store.metricsBarConfiguration.showsKeyboardBattery,
