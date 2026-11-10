@@ -71,6 +71,10 @@ nonisolated final class KeyboardBatteryObserver: @unchecked Sendable {
 
     static let shared = KeyboardBatteryObserver()
 
+    /// ID of the synthetic row shown while Input Monitoring is denied, so the
+    /// bar displays "--" instead of silently hiding the enabled feature.
+    static let permissionHintID = "input-monitoring-required"
+
     private let manager: IOHIDManager
     private let lock: AllocatedUnfairLock<State>
     private var pollTask: Task<Void, Never>?
@@ -242,6 +246,16 @@ nonisolated final class KeyboardBatteryObserver: @unchecked Sendable {
                 } else {
                     deduplicated[info.id] = info
                 }
+            }
+            // With Input Monitoring denied, keyboard entries cannot be inspected
+            // at all; surface a hint row so the bar shows "--" instead of
+            // silently hiding the feature the user just enabled.
+            if !isAccessGranted, deduplicated.values.allSatisfy({ $0.status != .ok }) {
+                deduplicated[Self.permissionHintID] = BluetoothKeyboardInfo(
+                    id: Self.permissionHintID,
+                    name: "keyboard",
+                    status: .needsPermission
+                )
             }
             state.infos = deduplicated.values.sorted { $0.name < $1.name }
             emit(&state)
