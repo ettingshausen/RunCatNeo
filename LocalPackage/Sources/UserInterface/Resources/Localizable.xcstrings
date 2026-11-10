@@ -6204,6 +6204,72 @@
           }
         }
       }
+    },
+    "fanZeroSpeedNote" : {
+      "comment" : "A footnote under the fan speed toggle in the metrics bar settings, explaining that a zero reading hides the indicator.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The indicator stays hidden while the fan speed reads zero."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "风扇转速为 0 时不显示该图标。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "風扇轉速為 0 時不顯示該圖示。"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ファン回転速度が 0 の間、この表示は隠れます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "팬 속도가 0이면 이 표시는 숨겨집니다."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "L’indicateur reste masqué tant que la vitesse du ventilateur est à zéro."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Das Symbol bleibt ausgeblendet, solange die Lüfterdrehzahl null beträgt."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "El indicador permanece oculto mientras la velocidad del ventilador sea cero."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Индикатор скрыт, пока скорость вентилятора равна нулю."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Biểu tượng bị ẩn khi tốc độ quạt bằng 0."
+          }
+        }
+      }
     }
   },
   "version" : "1.2"

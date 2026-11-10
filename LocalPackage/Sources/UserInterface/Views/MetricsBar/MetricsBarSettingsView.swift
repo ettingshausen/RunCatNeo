@@ -64,6 +64,11 @@ struct MetricsBarSettingsView: View {
                 )) {
                     Text("showFanSpeed", bundle: .module)
                 }
+                if store.metricsBarConfiguration.showsFan {
+                    Text("fanZeroSpeedNote", bundle: .module)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
                 Toggle(isOn: Binding<Bool>(
                     get: { store.metricsBarConfiguration.showsKeyboardBattery },
                     asyncSet: { await store.send(.showsKeyboardBatteryToggleSwitched($0)) }
