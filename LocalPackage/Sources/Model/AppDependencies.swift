@@ -30,6 +30,7 @@ public struct AppDependencies: Sendable {
     public var loggingSystemClient = LoggingSystemClient.liveValue
     public var nsAppClient = NSAppClient.liveValue
     public var nsWorkspaceClient = NSWorkspaceClient.liveValue
+    public var keyboardBatteryObserverClient = KeyboardBatteryObserverClient.liveValue
     public var smAppServiceClient = SMAppServiceClient.liveValue
     public var smcClient = SMCClient.liveValue
     public var systemInfoObserverClient = SystemInfoObserverClient.liveValue
@@ -54,6 +55,7 @@ extension AppDependencies {
         loggingSystemClient: LoggingSystemClient = .testValue,
         nsAppClient: NSAppClient = .testValue,
         nsWorkspaceClient: NSWorkspaceClient = .testValue,
+        keyboardBatteryObserverClient: KeyboardBatteryObserverClient = .testValue,
         smAppServiceClient: SMAppServiceClient = .testValue,
         smcClient: SMCClient = .testValue,
         systemInfoObserverClient: SystemInfoObserverClient = .testValue,
@@ -70,6 +72,7 @@ extension AppDependencies {
             loggingSystemClient: loggingSystemClient,
             nsAppClient: nsAppClient,
             nsWorkspaceClient: nsWorkspaceClient,
+            keyboardBatteryObserverClient: keyboardBatteryObserverClient,
             smAppServiceClient: smAppServiceClient,
             smcClient: smcClient,
             systemInfoObserverClient: systemInfoObserverClient,

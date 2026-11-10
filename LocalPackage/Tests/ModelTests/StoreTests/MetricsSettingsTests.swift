@@ -165,6 +165,65 @@ struct MetricsSettingsTests {
     }
 
     @MainActor @Test
+    func send_monitorsKeyboardBatteryToggleSwitched_on_starts_monitoring_and_opens_privacy_pane() async throws {
+        let appState = AllocatedUnfairLock<AppState>(initialState: .init())
+        let startMonitoringCount = AllocatedUnfairLock<Int>(initialState: 0)
+        let openCallStack = AllocatedUnfairLock<[URL]>(initialState: [])
+        let storage = UserDefaultsClient.storage()
+        let sut = MetricsSettings(.testDependencies(
+            appStateClient: .testDependency(appState),
+            nsWorkspaceClient: testDependency(of: NSWorkspaceClient.self) {
+                $0.open = { url in
+                    openCallStack.withLock { $0.append(url) }
+                    return true
+                }
+            },
+            keyboardBatteryObserverClient: testDependency(of: KeyboardBatteryObserverClient.self) {
+                $0.startMonitoring = {
+                    startMonitoringCount.withLock { $0 += 1 }
+                }
+            },
+            userDefaultsClient: storage.client
+        ))
+        await sut.send(.monitorsKeyboardBatteryToggleSwitched(true))
+        #expect(sut.keyboardBatteryConfiguration.isEnabled)
+        let storedConfiguration = try JSONDecoder().decode(
+            KeyboardBatteryConfiguration.self,
+            from: try #require(storage.lock.withLock { $0[.keyboardBatteryConfiguration] })
+        )
+        #expect(storedConfiguration.isEnabled)
+        #expect(startMonitoringCount.withLock(\.self) == 1)
+        #expect(openCallStack.withLock(\.self) == [URL.privacyListenEvent])
+    }
+
+    @MainActor @Test
+    func send_monitorsKeyboardBatteryToggleSwitched_off_stops_monitoring_and_clears_values() async throws {
+        let appState = AllocatedUnfairLock<AppState>(initialState: .init())
+        let stopMonitoringCount = AllocatedUnfairLock<Int>(initialState: 0)
+        let storage = UserDefaultsClient.storage()
+        let sut = MetricsSettings(.testDependencies(
+            appStateClient: .testDependency(appState),
+            keyboardBatteryObserverClient: testDependency(of: KeyboardBatteryObserverClient.self) {
+                $0.stopMonitoring = {
+                    stopMonitoringCount.withLock { $0 += 1 }
+                }
+            },
+            userDefaultsClient: storage.client
+        ))
+        appState.withLock {
+            $0.metrics.send(Metrics(keyboardBatteries: [BluetoothKeyboardInfo(id: "k", name: "K6", percent: 36, status: .ok)]))
+            $0.keyboardBatteries.send([BluetoothKeyboardInfo(id: "k", name: "K6", percent: 36, status: .ok)])
+        }
+        await sut.send(.monitorsKeyboardBatteryToggleSwitched(false))
+        #expect(!sut.keyboardBatteryConfiguration.isEnabled)
+        #expect(stopMonitoringCount.withLock(\.self) == 1)
+        await waitUntil {
+            appState.withLock(\.keyboardBatteries.latestValue) == []
+                && appState.withLock(\.metrics.latestValue)?.keyboardBatteries == []
+        }
+    }
+
+    @MainActor @Test
     func send_monitorsFanToggleSwitched_persists_configuration_and_notifies() async throws {
         let appState = AllocatedUnfairLock<AppState>(initialState: .init())
         let activationRequests = AllocatedUnfairLock<[SystemInfoType: Bool]?>(initialState: nil)

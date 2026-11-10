@@ -35,14 +35,23 @@ let package = Package(
     ],
     targets: [
         .target(
+            name: "HIDShim",
+            path: "Sources/HIDShim",
+            publicHeadersPath: "include"
+        ),
+        .target(
             name: "DataSource",
             dependencies: [
+                "HIDShim",
                 .product(name: "AllocatedUnfairLock", package: "AllocatedUnfairLock"),
                 .product(name: "AsyncAlgorithms", package: "swift-async-algorithms"),
                 .product(name: "Logging", package: "swift-log"),
                 .product(name: "SystemInfoKit", package: "SystemInfoKit"),
             ],
-            swiftSettings: swiftSettings
+            swiftSettings: swiftSettings,
+            linkerSettings: [
+                .linkedFramework("IOKit"),
+            ]
         ),
         .target(
             name: "Model",

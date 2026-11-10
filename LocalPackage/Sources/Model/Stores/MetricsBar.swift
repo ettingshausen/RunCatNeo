@@ -34,6 +34,7 @@ public final class MetricsBar: Composable {
     public var metricsBarConfiguration: MetricsBarConfiguration
     public var systemInfoBundle: SystemInfoBundle
     public var fanInfo: FanInfo?
+    public var keyboardBatteries: [BluetoothKeyboardInfo]
     public var customMetricsBundles: [CustomMetricsBundle]
     public let isPreview: Bool
     public let action: (Action) async -> Void
@@ -42,6 +43,7 @@ public final class MetricsBar: Composable {
         _ appDependencies: AppDependencies,
         metricsBarConfiguration: MetricsBarConfiguration? = nil,
         systemInfoBundle: SystemInfoBundle = .init(),
+        keyboardBatteries: [BluetoothKeyboardInfo] = [],
         customMetricsBundles: [CustomMetricsBundle] = [],
         isPreview: Bool? = nil,
         action: @escaping (Action) async -> Void = { _ in }
@@ -51,6 +53,7 @@ public final class MetricsBar: Composable {
         self.logService = .init(appDependencies)
         self.metricsBarConfiguration = metricsBarConfiguration ?? userDefaultsRepository.metricsBarConfiguration
         self.systemInfoBundle = systemInfoBundle
+        self.keyboardBatteries = keyboardBatteries
         self.customMetricsBundles = customMetricsBundles
         self.isPreview = isPreview ?? ProcessInfo.isPreview
         self.action = action
@@ -96,6 +99,7 @@ public final class MetricsBar: Composable {
     private func updateMetrics(from metrics: Metrics) {
         systemInfoBundle = metrics.systemInfoBundle
         fanInfo = metrics.fanInfo
+        keyboardBatteries = metrics.keyboardBatteries
         customMetricsBundles = metrics.customMetricsBundles
     }
 

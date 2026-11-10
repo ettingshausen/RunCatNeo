@@ -19,6 +19,7 @@
  */
 
 import CoreGraphics
+import DataSource
 
 extension Array where Element == CGFloat {
     func joined(separator: CGFloat) -> CGFloat {
@@ -29,5 +30,25 @@ extension Array where Element == CGFloat {
                 $0 + $1
             }
         }
+    }
+}
+
+extension [BluetoothKeyboardInfo] {
+    /// Picks the first keyboard worth showing, simulating a healthy reading in
+    /// previews. A permission-denied row still occupies the bar so the user
+    /// notices something needs attention; rows without any reading stay hidden
+    /// rather than showing a misleading placeholder.
+    func simulated(_ simulated: Bool) -> BluetoothKeyboardInfo? {
+        let candidate = first { $0.status == .ok } ?? first { $0.status == .needsPermission }
+        guard let candidate else { return nil }
+        guard simulated, candidate.status == .ok, candidate.percent == nil else { return candidate }
+        return BluetoothKeyboardInfo(
+            id: candidate.id,
+            name: candidate.name,
+            percent: 76,
+            changedAt: candidate.changedAt,
+            lastSeenAt: candidate.lastSeenAt,
+            status: candidate.status
+        )
     }
 }

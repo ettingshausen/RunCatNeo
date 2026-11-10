@@ -29,12 +29,15 @@ public final class MetricsSettings: Composable {
     private let userDefaultsRepository: UserDefaultsRepository
     private let logService: LogService
     private let systemMetricsService: SystemMetricsService
+    private let keyboardBatteryService: KeyboardBatteryService
+    private let nsWorkspaceClient: NSWorkspaceClient
 
     @ObservationIgnored private var task: Task<Void, Never>?
 
     public var showsMetricsBar: Bool
     public var showingMetricsBarNotesSheet: Bool
     public var systemMetricsConfiguration: SystemMetricsConfiguration
+    public var keyboardBatteryConfiguration: KeyboardBatteryConfiguration
     public let customMetricsSettings: CustomMetricsSettings
     public let action: (Action) async -> Void
 
@@ -50,9 +53,12 @@ public final class MetricsSettings: Composable {
         self.userDefaultsRepository = .init(appDependencies.userDefaultsClient)
         self.logService = .init(appDependencies)
         self.systemMetricsService = .init(appDependencies)
+        self.keyboardBatteryService = .init(appDependencies)
+        self.nsWorkspaceClient = appDependencies.nsWorkspaceClient
         self.showsMetricsBar = showsMetricsBar ?? userDefaultsRepository.showsMetricsBar
         self.showingMetricsBarNotesSheet = showingMetricsBarNotesSheet
         self.systemMetricsConfiguration = systemMetricsConfiguration ?? userDefaultsRepository.systemMetricsConfiguration
+        self.keyboardBatteryConfiguration = userDefaultsRepository.keyboardBatteryConfiguration
         weak var weakSelf: MetricsSettings? = nil
         self.customMetricsSettings = customMetricsSettings ??
             .init(appDependencies, action: { await weakSelf?.send(.customMetricsSettings($0)) })
@@ -128,6 +134,23 @@ public final class MetricsSettings: Composable {
             userDefaultsRepository.systemMetricsConfiguration = systemMetricsConfiguration
             systemMetricsService.emitConfigurationChange()
 
+        case let .monitorsKeyboardBatteryToggleSwitched(isOn):
+            var configuration = userDefaultsRepository.keyboardBatteryConfiguration
+            configuration.isEnabled = isOn
+            userDefaultsRepository.keyboardBatteryConfiguration = configuration
+            keyboardBatteryConfiguration = configuration
+            if isOn {
+                keyboardBatteryService.startMonitoring()
+                _ = nsWorkspaceClient.open(URL.privacyListenEvent)
+            } else {
+                keyboardBatteryService.stopMonitoring()
+                keyboardBatteryService.updateMetrics(from: [])
+                var metricsBarConfiguration = userDefaultsRepository.metricsBarConfiguration
+                metricsBarConfiguration.showsKeyboardBattery = false
+                userDefaultsRepository.metricsBarConfiguration = metricsBarConfiguration
+            }
+            systemMetricsService.emitConfigurationChange()
+
         case .customMetricsSettings:
             return
         }
@@ -145,6 +168,7 @@ public final class MetricsSettings: Composable {
         case showButtonTapped
         case monitorsSystemMetricsToggleSwitched(SystemInfoType, Bool)
         case monitorsFanToggleSwitched(Bool)
+        case monitorsKeyboardBatteryToggleSwitched(Bool)
         case customMetricsSettings(CustomMetricsSettings.Action)
     }
 }

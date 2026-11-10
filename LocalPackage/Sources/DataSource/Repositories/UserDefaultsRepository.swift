@@ -60,6 +60,23 @@ public struct UserDefaultsRepository: Sendable {
         }
     }
 
+    public var keyboardBatteryConfiguration: KeyboardBatteryConfiguration {
+        get {
+            guard let data = userDefaultsClient.data(.keyboardBatteryConfiguration),
+                  let value = try? JSONDecoder().decode(KeyboardBatteryConfiguration.self, from: data) else {
+                return .default
+            }
+            return value
+        }
+        nonmutating set {
+            if let data = try? JSONEncoder().encode(newValue) {
+                userDefaultsClient.set(data, .keyboardBatteryConfiguration)
+            } else {
+                userDefaultsClient.removeObject(.keyboardBatteryConfiguration)
+            }
+        }
+    }
+
     public var showsMetricsBar: Bool {
         get { userDefaultsClient.bool(.showsMetricsBar) }
         nonmutating set { userDefaultsClient.set(newValue, .showsMetricsBar) }

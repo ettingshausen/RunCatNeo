@@ -48,4 +48,8 @@ extension URL {
     public static let manageSubscriptions = URL(
         string: "itms-apps://apps.apple.com/account/subscriptions"
     )!
+
+    public static let privacyListenEvent = URL(
+        string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ListenEvent"
+    )!
 }

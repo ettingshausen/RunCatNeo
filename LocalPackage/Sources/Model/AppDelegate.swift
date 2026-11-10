@@ -35,8 +35,10 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         logService.bootstrap()
         let nsWorkspaceClient = appDependencies.nsWorkspaceClient
         let systemInfoObserverClient = appDependencies.systemInfoObserverClient
+        let userDefaultsRepository = UserDefaultsRepository(appDependencies.userDefaultsClient)
         let customMetricsService = CustomMetricsService(appDependencies)
         let systemMetricsService = SystemMetricsService(appDependencies)
+        let keyboardBatteryService = KeyboardBatteryService(appDependencies)
         let runnerService = RunnerService(appDependencies)
         Task {
             await withTaskGroup { group in
@@ -45,6 +47,7 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
                     for await _ in publisher.values {
                         customMetricsService.stopMonitoring()
                         systemMetricsService.stopMonitoring()
+                        keyboardBatteryService.stopMonitoring()
                     }
                 }
                 group.addTask {
@@ -52,6 +55,9 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
                     for await _ in publisher.values {
                         customMetricsService.startMonitoring()
                         systemMetricsService.startMonitoring()
+                        if userDefaultsRepository.keyboardBatteryConfiguration.isEnabled {
+                            keyboardBatteryService.startMonitoring()
+                        }
                     }
                 }
                 group.addTask {
@@ -61,11 +67,20 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
                         runnerService.updateRunnerSpeed(from: value.cpuInfo)
                     }
                 }
+                group.addTask {
+                    let stream = keyboardBatteryService.observe()
+                    for await infos in stream {
+                        keyboardBatteryService.updateMetrics(from: infos)
+                    }
+                }
             }
         }
         logService.notice(.launchApp)
         customMetricsService.startMonitoring()
         systemMetricsService.startMonitoring()
+        if userDefaultsRepository.keyboardBatteryConfiguration.isEnabled {
+            keyboardBatteryService.startMonitoring()
+        }
         do {
             try runnerService.setup()
         } catch {
@@ -76,5 +91,6 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
     public func applicationWillTerminate(_ notification: Notification) {
         CustomMetricsService(appDependencies).stopMonitoring()
         SystemMetricsService(appDependencies).stopMonitoring()
+        KeyboardBatteryService(appDependencies).stopMonitoring()
     }
 }

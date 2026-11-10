@@ -29,6 +29,7 @@ public final class MetricsBarSettings: Composable {
     private let userDefaultsRepository: UserDefaultsRepository
     private let logService: LogService
     private let systemMetricsService: SystemMetricsService
+    private let keyboardBatteryService: KeyboardBatteryService
 
     @ObservationIgnored private var task: Task<Void, Never>?
 
@@ -46,6 +47,7 @@ public final class MetricsBarSettings: Composable {
         self.userDefaultsRepository = .init(appDependencies.userDefaultsClient)
         self.logService = .init(appDependencies)
         self.systemMetricsService = .init(appDependencies)
+        self.keyboardBatteryService = .init(appDependencies)
         self.metricsBarConfiguration = metricsBarConfiguration ?? userDefaultsRepository.metricsBarConfiguration
         self.customMetricsSources = customMetricsSources ?? userDefaultsRepository.customMetricsConfiguration.sources
         self.action = action
@@ -113,6 +115,17 @@ public final class MetricsBarSettings: Composable {
             userDefaultsRepository.systemMetricsConfiguration = configuration
             systemMetricsService.emitConfigurationChange()
 
+        case let .showsKeyboardBatteryToggleSwitched(isOn):
+            var keyboardBatteryConfiguration = userDefaultsRepository.keyboardBatteryConfiguration
+            metricsBarConfiguration.showsKeyboardBattery = isOn
+            if isOn {
+                keyboardBatteryConfiguration.isEnabled = true
+                keyboardBatteryService.startMonitoring()
+            }
+            userDefaultsRepository.metricsBarConfiguration = metricsBarConfiguration
+            userDefaultsRepository.keyboardBatteryConfiguration = keyboardBatteryConfiguration
+            systemMetricsService.emitConfigurationChange()
+
         case let .showsCustomMetricsToggleSwitched(id, isOn):
             if isOn {
                 metricsBarConfiguration.visibleCustomMetricsSourceIDs.insert(id)
@@ -134,6 +147,7 @@ public final class MetricsBarSettings: Composable {
         case viewDisappeared
         case showsSystemMetricsToggleSwitched(SystemInfoType, Bool)
         case showsFanToggleSwitched(Bool)
+        case showsKeyboardBatteryToggleSwitched(Bool)
         case showsCustomMetricsToggleSwitched(UUID, Bool)
     }
 }

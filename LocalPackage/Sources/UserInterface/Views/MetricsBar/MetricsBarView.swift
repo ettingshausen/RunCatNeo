@@ -53,6 +53,10 @@ struct MetricsBarView: View {
            let fanInfo = store.fanInfo?.simulated(store.isPreview), !fanInfo.fans.isEmpty {
             widthArray.append(iconWidth + IndicatorKind.usageFullLabel.size.width)
         }
+        if store.metricsBarConfiguration.showsKeyboardBattery,
+           let keyboardBattery = store.keyboardBatteries.simulated(store.isPreview) {
+            widthArray.append(iconWidth + IndicatorKind.usageFullLabel.size.width)
+        }
         for bundle in store.customMetricsBundles where store.metricsBarConfiguration.showsCustomMetrics(of: bundle.id) {
             widthArray.append(iconWidth + IndicatorKind.customValueLabelSize(for: bundle.metricsBarLabel).width)
         }
@@ -90,6 +94,10 @@ struct MetricsBarView: View {
                 if store.metricsBarConfiguration.showsFan,
                    let fanInfo = store.fanInfo?.simulated(store.isPreview), !fanInfo.fans.isEmpty {
                     drawFan(context: &context, point: &point, fanInfo: fanInfo)
+                }
+                if store.metricsBarConfiguration.showsKeyboardBattery,
+                   let keyboardBattery = store.keyboardBatteries.simulated(store.isPreview) {
+                    drawKeyboardBattery(context: &context, point: &point, keyboardBattery: keyboardBattery)
                 }
                 for bundle in store.customMetricsBundles where store.metricsBarConfiguration.showsCustomMetrics(of: bundle.id) {
                     drawCustomMetrics(context: &context, point: &point, bundle: bundle)
@@ -156,6 +164,21 @@ struct MetricsBarView: View {
         point.x += iconSize.width
         context.drawBlackText(origin: point, size: IndicatorKind.usageFullLabel.size) {
             Text(verbatim: "\(Int(fanInfo.fans[0].rpm.rounded()))")
+                .monospacedDigit()
+        }
+        point.x += IndicatorKind.usageFullLabel.size.width + IndicatorKind.spacer.size.width
+    }
+
+    private func drawKeyboardBattery(
+        context: inout GraphicsContext,
+        point: inout CGPoint,
+        keyboardBattery: BluetoothKeyboardInfo
+    ) {
+        let iconSize = IndicatorKind.categoryIcon.size
+        context.drawIcon(systemName: "keyboard", point: point, size: iconSize)
+        point.x += iconSize.width
+        context.drawBlackText(origin: point, size: IndicatorKind.usageFullLabel.size) {
+            Text(verbatim: keyboardBattery.percent.map { "\($0)%" } ?? "--")
                 .monospacedDigit()
         }
         point.x += IndicatorKind.usageFullLabel.size.width + IndicatorKind.spacer.size.width

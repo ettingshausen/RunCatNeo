@@ -25,6 +25,7 @@ public struct Metrics: Sendable {
     public var cpuRingBuffer: RingBuffer
     public var memoryRingBuffer: RingBuffer
     public var fanInfo: FanInfo?
+    public var keyboardBatteries: [BluetoothKeyboardInfo]
     public var customMetricsBundles: [CustomMetricsBundle]
 
     public init(
@@ -32,12 +33,14 @@ public struct Metrics: Sendable {
         cpuRingBuffer: RingBuffer = .init(),
         memoryRingBuffer: RingBuffer = .init(),
         fanInfo: FanInfo? = nil,
+        keyboardBatteries: [BluetoothKeyboardInfo] = [],
         customMetricsBundles: [CustomMetricsBundle] = []
     ) {
         self.systemInfoBundle = systemInfoBundle
         self.cpuRingBuffer = cpuRingBuffer
         self.memoryRingBuffer = memoryRingBuffer
         self.fanInfo = fanInfo
+        self.keyboardBatteries = keyboardBatteries
         self.customMetricsBundles = customMetricsBundles
     }
 }

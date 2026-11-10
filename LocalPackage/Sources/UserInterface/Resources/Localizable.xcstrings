@@ -6006,6 +6006,204 @@
           }
         }
       }
+    },
+    "enableKeyboardBatteryMonitoring" : {
+      "comment" : "A title of the toggle switch to monitor the battery level of Bluetooth keyboards.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enable Keyboard Battery Monitoring"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "启用键盘电量监控"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "啟用鍵盤電量監控"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "キーボードバッテリーの監視を有効"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "키보드 배터리 모니터링 활성화"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Activer la surveillance de la batterie du clavier"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Überwachung der Tastaturbatterie aktivieren"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Activar la monitorización de la batería del teclado"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Включить мониторинг заряда клавиатуры"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bật giám sát pin bàn phím"
+          }
+        }
+      }
+    },
+    "showKeyboardBattery" : {
+      "comment" : "A title of the toggle switch to show the Bluetooth keyboard battery in the metrics bar.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Show Keyboard Battery"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "显示键盘电量"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "顯示鍵盤電量"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "キーボードバッテリーを表示"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "키보드 배터리 표시"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Afficher la batterie du clavier"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tastaturbatterie anzeigen"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mostrar la batería del teclado"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Показывать заряд клавиатуры"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hiển thị pin bàn phím"
+          }
+        }
+      }
+    },
+    "keyboardBatteryPermissionNote" : {
+      "comment" : "A footnote under the keyboard battery monitoring toggle explaining the Input Monitoring permission.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Only the battery level is read — no keystrokes are recorded. Allow the app under Input Monitoring in Privacy & Security, then relaunch it."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "只读取电量，不记录任何按键。请在“隐私与安全性 › 输入监控”中允许本应用，然后重新启动。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "只讀取電量，不記錄任何按鍵。請在「隱私權與安全性 › 輸入監控」中允許本應用程式，然後重新啟動。"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "バッテリー残量のみを読み取り、キー入力は記録しません。「プライバシーとセキュリティ › 入力監視」でこのアプリを許可し、再起動してください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "배터리 잔량만 읽으며 키 입력은 기록하지 않습니다. '개인정보 보호 및 보안 › 입력 모니터링'에서 이 앱을 허용한 뒤 다시 시작하세요."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Seul le niveau de batterie est lu — aucune frappe n’est enregistrée. Autorisez l’app sous Surveillance des entrées dans Confidentialité et sécurité, puis relancez-la."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Es wird nur der Batteriestand gelesen — keine Tastenanschläge werden aufgezeichnet. Erlaube die App unter Eingabeüberwachung in Datenschutz & Sicherheit und starte sie neu."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Solo se lee el nivel de batería; no se registran pulsaciones. Permite la app en Monitorización de entradas de Privacidad y seguridad y reiníciala."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Считывается только уровень заряда — нажатия клавиш не записываются. Разрешите приложение в «Мониторинге ввода» (Конфиденциальность и безопасность) и перезапустите его."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chỉ đọc mức pin — không ghi lại phím bấm. Hãy cho phép ứng dụng trong Giám sát đầu vào của Quyền riêng tư & Bảo mật, rồi khởi động lại."
+          }
+        }
+      }
     }
   },
   "version" : "1.2"

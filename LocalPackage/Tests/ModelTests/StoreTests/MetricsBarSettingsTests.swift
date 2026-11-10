@@ -96,6 +96,33 @@ struct MetricsBarSettingsTests {
     }
 
     @MainActor @Test
+    func send_showsKeyboardBatteryToggleSwitched_persists_configuration_and_starts_monitoring() async throws {
+        let appState = AllocatedUnfairLock<AppState>(initialState: .init())
+        let startMonitoringCount = AllocatedUnfairLock<Int>(initialState: 0)
+        let storage = UserDefaultsClient.storage()
+        let sut = MetricsBarSettings(.testDependencies(
+            appStateClient: .testDependency(appState),
+            keyboardBatteryObserverClient: testDependency(of: KeyboardBatteryObserverClient.self) {
+                $0.startMonitoring = {
+                    startMonitoringCount.withLock { $0 += 1 }
+                }
+            },
+            userDefaultsClient: storage.client
+        ))
+        await sut.send(.showsKeyboardBatteryToggleSwitched(true))
+        #expect(sut.metricsBarConfiguration.showsKeyboardBattery)
+        let storedBarConfiguration = try #require(storage.currentMetricsBarConfiguration())
+        #expect(storedBarConfiguration.showsKeyboardBattery)
+        let storedConfiguration = try JSONDecoder().decode(
+            KeyboardBatteryConfiguration.self,
+            from: try #require(storage.lock.withLock { $0[.keyboardBatteryConfiguration] })
+        )
+        #expect(storedConfiguration.isEnabled)
+        #expect(startMonitoringCount.withLock(\.self) == 1)
+        #expect(appState.withLock(\.systemMetricsConfigurationChanges.latestValue) != nil)
+    }
+
+    @MainActor @Test
     func send_showsFanToggleSwitched_persists_configuration_and_enables_monitoring() async throws {
         let appState = AllocatedUnfairLock<AppState>(initialState: .init())
         let activationRequests = AllocatedUnfairLock<[SystemInfoType: Bool]?>(initialState: nil)

@@ -32,6 +32,20 @@ struct MetricsBarTests {
     }
 
     @MainActor @Test
+    func send_viewAppeared_loads_latest_keyboardBatteries_and_observes_stream() async {
+        let appState = AllocatedUnfairLock<AppState>(initialState: .init())
+        let infos = [BluetoothKeyboardInfo(id: "Keychron K6|ABC", name: "Keychron K6", percent: 36, status: .ok)]
+        appState.withLock { $0.metrics.send(Metrics(keyboardBatteries: infos)) }
+        let sut = MetricsBar(.testDependencies(appStateClient: .testDependency(appState)))
+        await sut.send(.viewAppeared("MetricsBarTests"))
+        #expect(sut.keyboardBatteries == infos)
+        let updated = [BluetoothKeyboardInfo(id: "Keychron K6|ABC", name: "Keychron K6", percent: 35, status: .ok)]
+        appState.withLock { $0.metrics.send(Metrics(keyboardBatteries: updated)) }
+        await waitUntil { sut.keyboardBatteries == updated }
+        await sut.send(.viewDisappeared)
+    }
+
+    @MainActor @Test
     func send_viewAppeared_loads_latest_fanInfo_and_observes_stream() async {
         let appState = AllocatedUnfairLock<AppState>(initialState: .init())
         appState.withLock { $0.metrics.send(Metrics(fanInfo: FanInfo(fans: [FanInfo.Fan(rpm: 1218)]))) }

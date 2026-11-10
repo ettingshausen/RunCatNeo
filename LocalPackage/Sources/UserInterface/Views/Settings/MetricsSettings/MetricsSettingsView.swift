@@ -70,6 +70,17 @@ struct MetricsSettingsView: View {
                 )) {
                     Text("enableFanSpeedMonitoring", bundle: .module)
                 }
+                Toggle(isOn: Binding<Bool>(
+                    get: { store.keyboardBatteryConfiguration.isEnabled },
+                    asyncSet: { await store.send(.monitorsKeyboardBatteryToggleSwitched($0)) }
+                )) {
+                    Text("enableKeyboardBatteryMonitoring", bundle: .module)
+                }
+                if store.keyboardBatteryConfiguration.isEnabled {
+                    Text("keyboardBatteryPermissionNote", bundle: .module)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
             } header: {
                 Text("systemMetrics", bundle: .module)
             }
