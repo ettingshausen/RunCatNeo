@@ -56,7 +56,7 @@ struct MetricsBarView: View {
         }
         if store.metricsBarConfiguration.showsKeyboardBattery,
            let keyboardBattery = store.keyboardBatteries.simulated(store.isPreview) {
-            widthArray.append(iconWidth + IndicatorKind.usageFullLabel.size.width)
+            widthArray.append(iconWidth + IndicatorKind.customValueLabelSize(for: keyboardBatteryLabel(keyboardBattery)).width)
         }
         for bundle in store.customMetricsBundles where store.metricsBarConfiguration.showsCustomMetrics(of: bundle.id) {
             widthArray.append(iconWidth + IndicatorKind.customValueLabelSize(for: bundle.metricsBarLabel).width)
@@ -171,6 +171,10 @@ struct MetricsBarView: View {
         point.x += IndicatorKind.usageFullLabel.size.width + IndicatorKind.spacer.size.width
     }
 
+    private func keyboardBatteryLabel(_ keyboardBattery: BluetoothKeyboardInfo) -> String {
+        keyboardBattery.percent.map { "\($0)%" } ?? "--"
+    }
+
     private func drawKeyboardBattery(
         context: inout GraphicsContext,
         point: inout CGPoint,
@@ -179,11 +183,12 @@ struct MetricsBarView: View {
         let iconSize = IndicatorKind.categoryIcon.size
         context.drawIcon(systemName: "keyboard", point: point, size: iconSize)
         point.x += iconSize.width
-        context.drawBlackText(origin: point, size: IndicatorKind.usageFullLabel.size) {
-            Text(verbatim: keyboardBattery.percent.map { "\($0)%" } ?? "--")
+        let labelSize = IndicatorKind.customValueLabelSize(for: keyboardBatteryLabel(keyboardBattery))
+        context.drawBlackText(origin: point, size: labelSize) {
+            Text(verbatim: keyboardBatteryLabel(keyboardBattery))
                 .monospacedDigit()
         }
-        point.x += IndicatorKind.usageFullLabel.size.width + IndicatorKind.spacer.size.width
+        point.x += labelSize.width + IndicatorKind.spacer.size.width
     }
 
     private func drawCustomMetrics(
