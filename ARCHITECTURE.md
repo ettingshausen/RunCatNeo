@@ -45,6 +45,17 @@ Stores implement `Composable`: they expose an `Action` enum and a `reduce(_ acti
 - All state mutation and control flow initiated by the UI must go through `Action` + `reduce(_:)`. Views call `store.send(...)` and read `@Observable` state — nothing else.
 - **Views must not contain logic.** No conditionals over multiple state fields, no derived computations beyond trivial formatting, no direct dependency calls, no `Task { ... }` blocks that reach for repositories or services. If a view feels like it wants an `if`, express that decision in the store and expose the result as state.
 
+## Parent and child stores
+
+Split a store into a child `Composable` when a part of the screen owns an independent group of state and actions. Judge by what that part owns, not by how it is presented: a `Form` `Section` with its own state and actions becomes a child; a sheet becomes a child when it has state and a lifecycle of its own; a sheet that only flips a flag the parent already holds stays in the parent. When several views instead read across one shared state, decompose the views and keep the store whole — decomposing a view and decomposing a store are separate decisions.
+
+- **Resident children (a `Section`)** are held as a non-optional `let` and built in the parent's `init`, with a `weak var weakSelf` wiring the child's `action` closure back to `self`.
+- **Transient children (a sheet)** are held as an optional `var`, conform to `Identifiable`, and are presented with `.sheet(item:)`. Rebuilding one on each presentation is what resets its state, so no dismissal action is needed to clear fields by hand.
+- **Children report upward** through output cases on their own `Action` (`errorOccurred`, `customRunnerAdded`): the child calls `send` inside `reduce`, and `send` forwards to the parent-provided closure.
+- **Parents interpret only the child actions that govern the child's existence** (`cancelButtonTapped`, `customRunnerAdded`). Everything else passes through as `case .child: return`.
+- **The store where an error occurs is the store that shows it.** It holds `showingAlert` and `error`, and its own view carries the `.alert`. A parent never holds alert state for a screen below it.
+- **A parent that builds children holds `AppDependencies` itself**, as a `private let` when it creates a child lazily inside `reduce`. The container never travels through an `Action`: a view reads `\.appDependencies` only to construct a store it owns, and routing the container back in from the UI would let a caller hand the child a different container than the parent was built with.
+
 ## Cross-cutting state
 
 Global app state flows through `AppStateClient` (an `AllocatedUnfairLock<AppState>`). Async streams in `AppState` (e.g. `metrics`, `runnerBundles`, `runnerSpeeds`) are produced by services and consumed by stores via `for await` loops launched inside `reduce(.task)`.

@@ -27,8 +27,6 @@ import SystemInfoKit
 public final class MetricsSettings: Composable {
     private let appStateClient: AppStateClient
     private let userDefaultsRepository: UserDefaultsRepository
-    private let nsWorkspaceClient: NSWorkspaceClient
-    private let customMetricsService: CustomMetricsService
     private let logService: LogService
     private let systemMetricsService: SystemMetricsService
 
@@ -37,8 +35,6 @@ public final class MetricsSettings: Composable {
     public var showsMetricsBar: Bool
     public var showingMetricsBarNotesSheet: Bool
     public var systemMetricsConfiguration: SystemMetricsConfiguration
-    public var showingAlert: Bool
-    public var error: RCNError?
     public let customMetricsSettings: CustomMetricsSettings
     public let action: (Action) async -> Void
 
@@ -47,22 +43,16 @@ public final class MetricsSettings: Composable {
         showsMetricsBar: Bool? = nil,
         showingMetricsBarNotesSheet: Bool = false,
         systemMetricsConfiguration: SystemMetricsConfiguration? = nil,
-        showingAlert: Bool = false,
-        error: RCNError? = nil,
         customMetricsSettings: CustomMetricsSettings? = nil,
         action: @escaping (Action) async -> Void = { _ in }
     ) {
         self.appStateClient = appDependencies.appStateClient
         self.userDefaultsRepository = .init(appDependencies.userDefaultsClient)
-        self.nsWorkspaceClient = appDependencies.nsWorkspaceClient
-        self.customMetricsService = .init(appDependencies)
         self.logService = .init(appDependencies)
         self.systemMetricsService = .init(appDependencies)
         self.showsMetricsBar = showsMetricsBar ?? userDefaultsRepository.showsMetricsBar
         self.showingMetricsBarNotesSheet = showingMetricsBarNotesSheet
         self.systemMetricsConfiguration = systemMetricsConfiguration ?? userDefaultsRepository.systemMetricsConfiguration
-        self.showingAlert = showingAlert
-        self.error = error
         weak var weakSelf: MetricsSettings? = nil
         self.customMetricsSettings = customMetricsSettings ??
             .init(appDependencies, action: { await weakSelf?.send(.customMetricsSettings($0)) })
@@ -137,10 +127,6 @@ public final class MetricsSettings: Composable {
             systemMetricsConfiguration.monitorsFan = isOn
             userDefaultsRepository.systemMetricsConfiguration = systemMetricsConfiguration
             systemMetricsService.emitConfigurationChange()
-
-        case let .customMetricsSettings(.errorOccurred(error)):
-            self.error = error
-            showingAlert = true
 
         case .customMetricsSettings:
             return

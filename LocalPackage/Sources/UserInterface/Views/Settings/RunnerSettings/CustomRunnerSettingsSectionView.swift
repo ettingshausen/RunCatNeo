@@ -41,6 +41,12 @@ struct CustomRunnerSettingsSectionView: View {
                     }
                 }
             }
+            .alert(
+                isPresented: $store.showingAlert,
+                error: store.error,
+                actions: { _ in },
+                message: { _ in }
+            )
             HStack {
                 Spacer()
                 Button {
@@ -54,11 +60,7 @@ struct CustomRunnerSettingsSectionView: View {
                         Image(systemName: "plus")
                     }
                 }
-                .sheet(isPresented: $store.showingCustomRunnerEditorSheet) {
-                    Task {
-                        await store.send(.sheetDismissed)
-                    }
-                } content: {
+                .sheet(item: $store.customRunnerEditor) { store in
                     CustomRunnerEditorView(store: store)
                 }
                 Button {
@@ -87,11 +89,6 @@ struct CustomRunnerSettingsSectionView: View {
         }
         .task {
             await store.send(.viewAppeared)
-        }
-        .onDisappear {
-            Task {
-                await store.send(.viewDisappeared)
-            }
         }
     }
 }

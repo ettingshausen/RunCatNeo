@@ -18,8 +18,8 @@
  limitations under the License.
  */
 
-import AppKit
 import DataSource
+import Foundation
 import Observation
 import SystemInfoKit
 
@@ -27,11 +27,7 @@ import SystemInfoKit
 public final class Dashboard: Composable {
     private let appStateClient: AppStateClient
     private let dateClient: DateClient
-    private let nsAppClient: NSAppClient
-    private let nsWorkspaceClient: NSWorkspaceClient
-    private let userDefaultsRepository: UserDefaultsRepository
     private let logService: LogService
-    private let runnerService: RunnerService
 
     @ObservationIgnored private var task: Task<Void, Never>?
 
@@ -42,9 +38,8 @@ public final class Dashboard: Composable {
     public var fanInfo: FanInfo?
     public var customMetricsBundles: [CustomMetricsBundle]
     public var displayedDate: Date
-    public var currentRunner: Runner?
-    public var runnerBundleList: [RunnerBundle]
     public let isPreview: Bool
+    public let dashboardMenu: DashboardMenu
     public let action: (Action) async -> Void
 
     public init(
@@ -56,18 +51,13 @@ public final class Dashboard: Composable {
         fanInfo: FanInfo? = nil,
         customMetricsBundles: [CustomMetricsBundle] = [],
         displayedDate: Date? = nil,
-        currentRunner: Runner? = nil,
-        runnerBundleList: [RunnerBundle] = [],
         isPreview: Bool? = nil,
+        dashboardMenu: DashboardMenu? = nil,
         action: @escaping (Action) async -> Void =  { _ in }
     ) {
         self.appStateClient = appDependencies.appStateClient
         self.dateClient = appDependencies.dateClient
-        self.nsAppClient = appDependencies.nsAppClient
-        self.nsWorkspaceClient = appDependencies.nsWorkspaceClient
-        self.userDefaultsRepository = .init(appDependencies.userDefaultsClient)
         self.logService = .init(appDependencies)
-        self.runnerService = .init(appDependencies)
         self.appName = appName ?? appStateClient.withLock(\.name)
         self.systemInfoBundle = systemInfoBundle
         self.cpuRingBuffer = cpuRingBuffer
@@ -75,10 +65,12 @@ public final class Dashboard: Composable {
         self.fanInfo = fanInfo
         self.customMetricsBundles = customMetricsBundles
         self.displayedDate = displayedDate ?? dateClient.now()
-        self.currentRunner = currentRunner
-        self.runnerBundleList = runnerBundleList
         self.isPreview = isPreview ?? ProcessInfo.isPreview
+        weak var weakSelf: Dashboard? = nil
+        self.dashboardMenu = dashboardMenu ??
+            .init(appDependencies, action: { await weakSelf?.send(.dashboardMenu($0)) })
         self.action = action
+        weakSelf = self
     }
 
     public func reduce(_ action: Action) async {
@@ -89,31 +81,11 @@ public final class Dashboard: Composable {
             if let metrics = appStateClient.withLock(\.metrics.latestValue) {
                 updateMetrics(metrics)
             }
-            if let runnerBundle = appStateClient.withLock(\.runnerBundles.latestValue) {
-                currentRunner = runnerBundle.runner
-            }
-            runnerBundleList = appStateClient.withLock(\.runnerBundleLists.latestValue) ?? []
             task?.cancel()
             task = Task.immediate { [weak self, appStateClient] in
-                await withTaskGroup { group in
-                    group.addImmediateTask {
-                        let stream = appStateClient.withLock(\.metrics.stream)
-                        for await value in stream {
-                            self?.updateMetrics(value)
-                        }
-                    }
-                    group.addImmediateTask {
-                        let stream = appStateClient.withLock(\.runnerBundles.stream)
-                        for await value in stream {
-                            self?.updateCurrentRunner(from: value)
-                        }
-                    }
-                    group.addImmediateTask {
-                        let stream = appStateClient.withLock(\.runnerBundleLists.stream)
-                        for await value in stream {
-                            self?.update(runnerBundleList: value)
-                        }
-                    }
+                let stream = appStateClient.withLock(\.metrics.stream)
+                for await value in stream {
+                    self?.updateMetrics(value)
                 }
             }
 
@@ -121,43 +93,8 @@ public final class Dashboard: Composable {
             task?.cancel()
             task = nil
 
-        case let .runnerKindPickerSelected(runner):
-            guard let runner else { return }
-            do {
-                try runnerService.update(runner: runner)
-                currentRunner = runner
-            } catch {
-                logService.error(.switchingRunnerFailed(error))
-            }
-
-        case .settingsButtonTapped:
-            nsAppClient.activate(true)
-
-        case .activityMonitorButtonTapped:
-            guard let url = nsWorkspaceClient.urlForApplication(.activityMonitor) else { return }
-            nsWorkspaceClient.openApplication(url, .init())
-
-        case let .aboutButtonTapped(body):
-            nsAppClient.activate(true)
-            nsAppClient.orderFrontStandardAboutPanel([
-                NSApplication.AboutPanelOptionKey.credits: NSAttributedString(body)
-            ])
-
-        case let .openSourceLicenseButtonTapped(openWindow):
-            nsAppClient.activate(true)
-            openWindow(id: .openSourceLicense, value: Int.zero)
-
-        case .reportIssueButtonTapped:
-            _ = nsWorkspaceClient.open(URL.githubIssues)
-
-        case .quitButtonTapped:
-            nsAppClient.terminate(nil)
-
-        case .debugSleepButtonTapped:
-            nsWorkspaceClient.post(NSWorkspace.willSleepNotification, nil)
-
-        case .debugWakeUpButtonTapped:
-            nsWorkspaceClient.post(NSWorkspace.didWakeNotification, nil)
+        case .dashboardMenu:
+            return
         }
     }
 
@@ -169,25 +106,9 @@ public final class Dashboard: Composable {
         customMetricsBundles = metrics.customMetricsBundles
     }
 
-    private func updateCurrentRunner(from runnerBundle: RunnerBundle) {
-        currentRunner = runnerBundle.runner
-    }
-
-    private func update(runnerBundleList: [RunnerBundle]) {
-        self.runnerBundleList = runnerBundleList
-    }
-
     public enum Action: Sendable {
         case viewAppeared(String)
         case viewDisappeared
-        case runnerKindPickerSelected(Runner?)
-        case settingsButtonTapped
-        case activityMonitorButtonTapped
-        case aboutButtonTapped(AttributedString)
-        case openSourceLicenseButtonTapped(OpenWindowActionWrapper)
-        case reportIssueButtonTapped
-        case quitButtonTapped
-        case debugSleepButtonTapped
-        case debugWakeUpButtonTapped
+        case dashboardMenu(DashboardMenu.Action)
     }
 }
