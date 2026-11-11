@@ -23,6 +23,10 @@ import Foundation
 import Logging
 
 struct LogService {
+    /// The label only identifies log lines; a plain `swift test` run has no
+    /// bundle identifier, so fall back instead of crashing the suite.
+    private static let loggerLabel = Bundle.main.bundleIdentifier ?? "LocalPackage"
+
     private let appStateClient: AppStateClient
     private let loggingSystemClient: LoggingSystemClient
 
@@ -50,7 +54,7 @@ struct LogService {
         function: String = #function,
         line: UInt = #line
     ) {
-        Logger(label: Bundle.main.bundleIdentifier!).notice(
+        Logger(label: Self.loggerLabel).notice(
             event.message,
             metadata: event.metadata,
             source: source(),
@@ -67,7 +71,7 @@ struct LogService {
         function: String = #function,
         line: UInt = #line
     ) {
-        Logger(label: Bundle.main.bundleIdentifier!).error(
+        Logger(label: Self.loggerLabel).error(
             event.message,
             metadata: event.metadata,
             source: source(),
@@ -84,7 +88,7 @@ struct LogService {
         function: String = #function,
         line: UInt = #line
     ) {
-        Logger(label: Bundle.main.bundleIdentifier!).critical(
+        Logger(label: Self.loggerLabel).critical(
             event.message,
             metadata: event.metadata,
             source: source(),
