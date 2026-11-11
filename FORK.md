@@ -11,7 +11,7 @@
 | 项目 | 当前状态 |
 |---|---|
 | Xcode | `/Applications/Xcode.app`，版本 **27.2**（`xcode-select -p` 已指向它） |
-| 签名证书 | `Apple Development: ettingshausen@outlook.com (HXJVLST8RM)` |
+| 签名证书 | 唯一可用身份：`Apple Development: ettingshausen@outlook.com (HXJVLST8RM)`；**注意 CN 里的团队号是错的**，证书真实 OU（TeamIdentifier）是 **`L2H4AP63QB`** |
 | GitHub 网络 | 直连常超时，需要代理：`export https_proxy=http://127.0.0.1:7897 http_proxy=http://127.0.0.1:7897 all_proxy=socks5://127.0.0.1:7897` |
 | Git remote | `origin` = 上游 `runcat-dev/RunCatNeo`；`fork` = `ettingshausen/RunCatNeo`（SSH 免密可用） |
 
@@ -62,15 +62,32 @@ identifier "com.kyome.Neo.RunCat" and anchor apple generic and
 certificate leaf[subject.CN] = "Apple Development: ettingshausen@outlook.com (HXJVLST8RM)" and …
 ```
 
-它与二进制内容无关，**重建、重签名、重装都不影响授权**。
+它访问与二进制内容无关，**重建、重签名、重装都不影响授权**。
 
 验证当前包的 requirement：
 
 ```bash
 codesign -d --requirements - /Applications/RunCatNeo.app 2>&1 | tail -1
+codesign -dv /Applications/RunCatNeo.app 2>&1 | grep TeamIdentifier    # 应为 L2H4AP63QB
 ```
 
 只要输出里出现 `identifier "com.kyome.Neo.RunCat"` + 证书 CN，就是稳定签名；若只看到 `cdhash`，说明退化成了 ad-hoc，授权会在下次构建后失效。
+
+### 团队号（OU）的坑
+
+证书 CN 里写的 `(HXJVLST8RM)` **不是真实团队号**，真实 OU 是 `L2H4AP63QB`。
+
+- 用 `codesign --sign "Apple Development: …"`（按 CN 字符串匹配）：**不受影响**，`scripts/install-local.sh` 走的就是这条路；
+- 用 **xcodebuild 自己签名**（`CODE_SIGN_STYLE=Manual`）时：xcodebuild 按 **OU** 匹配证书，`DEVELOPMENT_TEAM=HXJVLST8RM` 会报 "No certificate for team … matching"；项目自带的 `DEVELOPMENT_TEAM=VJ5N2X84K8` 在纯 CLI 下会报 "No Account for Team"。可行写法：
+
+```bash
+xcodebuild -configuration Release -derivedDataPath /tmp/rnc-release \
+  -skipPackagePluginValidation \
+  CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM=L2H4AP63QB \
+  CODE_SIGN_IDENTITY="Apple Development: ettingshausen@outlook.com (HXJVLST8RM)" build
+```
+
+这条路径依赖 Xcode 的钥匙串访问，**必须在非沙盒 shell 里跑**（沙盒会挡住 keychain）。它与 `install-local.sh` 的"先不签、后手工签"是两条等价路线，选一条即可。
 
 > CI 产物（`build-app.yml`）仍是 ad-hoc 签名——那是为了下载即用，不涉及 TCC。**日常开发请用本地脚本安装**，才能保住输入监控授权。
 
@@ -197,6 +214,23 @@ rm -rf ~/Library/Caches/org.swift.swiftpm/repositories/swift-log-* \
        /tmp/rnc-dd
 ```
 
+**第二个缓存位置**：`LocalPackage/.build/repositories/<name>-<hash>` 也会残留旧 tag，而且 `swift package resolve` 会优先读它。两者都删：
+
+```bash
+rm -rf LocalPackage/.build/repositories
+```
+
+### 想用 `swift test` 而不是 xcodebuild
+
+裸 Swift CLI 下，LicenseList 的 `PrepareLicenseList` 插件会向上查找 `SourcePackages` 目录，找不到就抛 `SourcePackages not found`，**连不依赖该插件的 target 也无法规划构建**。补一个环境变量即可：
+
+```bash
+export PLL_SOURCE_PACKAGES_PATH=$(ls -d ~/Library/Developer/Xcode/DerivedData/RunCatNeo-*/SourcePackages | head -1)
+cd LocalPackage && swift test
+```
+
+（该目录由至少成功跑过一次 xcodebuild 后才会存在。）
+
 ### 需要临时加诊断
 
 推荐两种不改代码的方式：
@@ -267,6 +301,7 @@ git merge origin/main          # 或走 PR：main → feat/fan-metrics
 | 签名权限 | `RunCatNeo/RunCatNeo.entitlements`（`device.hid` + 书签权限，沙盒已关闭） |
 | 风扇采集 | `LocalPackage/Sources/DataSource/Dependencies/SMCClient.swift`、`Model/Services/SystemMetricsService.swift` |
 | 键盘电量采集 | `DataSource/Services/KeyboardBatteryObserver.swift`、`Sources/HIDShim/`（C shim）、`Model/Services/KeyboardBatteryService.swift` |
+| AI Token 用量采集 | `DataSource/Entities/AITokenUsage/`、`Model/Services/AITokenUsage{Service,Scanner,Parser}.swift`、`DataSource/Dependencies/{FileSlice,SQLite}Client.swift`（15 秒固定刷新） |
 | 指标栏绘制 | `UserInterface/Views/MetricsBar/MetricsBarView.swift` |
 | 本地化 | `UserInterface/Resources/Localizable.xcstrings`（新增文案需补全 10 种语言） |
 | CI | `.github/workflows/build-app.yml` |
