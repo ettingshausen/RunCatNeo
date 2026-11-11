@@ -39,13 +39,17 @@ private struct DeviceHandle: @unchecked Sendable {
 /// quasi-static metric: GET_REPORT always succeeds but returns the firmware's
 /// cached report, and the keyboard never pushes the report on its own.
 nonisolated final class KeyboardBatteryObserver: @unchecked Sendable {
+    private struct Reading {
+        var percent: Int
+        var changedAt: Date?
+        var lastSeenAt: Date
+    }
+
     private struct DeviceState {
         var key: String
         var name: String
         var handle: DeviceHandle?
-        var percent: Int?
-        var changedAt: Date?
-        var lastSeenAt: Date?
+        var reading: Reading?
         var status: BluetoothKeyboardInfo.Status = .noReport
         var valueStampAge: UInt64?
         var freshReadInFlight = false
@@ -54,9 +58,9 @@ nonisolated final class KeyboardBatteryObserver: @unchecked Sendable {
             BluetoothKeyboardInfo(
                 id: key,
                 name: name,
-                percent: percent,
-                changedAt: changedAt,
-                lastSeenAt: lastSeenAt,
+                percent: reading?.percent,
+                changedAt: reading?.changedAt,
+                lastSeenAt: reading?.lastSeenAt,
                 status: status
             )
         }
@@ -65,6 +69,9 @@ nonisolated final class KeyboardBatteryObserver: @unchecked Sendable {
     private struct State: Sendable {
         var managerOpened = false
         var devices: [String: DeviceState] = [:]
+        /// Survives disconnects: a reconnected keyboard needs a moment before it
+        /// answers again, and keeping the last value avoids a visible blank.
+        var lastReadings: [String: Reading] = [:]
         var infos: [BluetoothKeyboardInfo] = []
         var continuations: [UUID: AsyncStream<[BluetoothKeyboardInfo]>.Continuation] = [:]
     }
@@ -78,7 +85,9 @@ nonisolated final class KeyboardBatteryObserver: @unchecked Sendable {
     private let manager: IOHIDManager
     private let lock: AllocatedUnfairLock<State>
     private var pollTask: Task<Void, Never>?
+    private var retryTask: Task<Void, Never>?
     private static let pollInterval: Duration = .seconds(300)
+    private static let retryInterval: Duration = .seconds(3)
     private static let reportBufferSize = 4096
 
     private init() {
@@ -110,14 +119,8 @@ nonisolated final class KeyboardBatteryObserver: @unchecked Sendable {
     func startMonitoring() {
         openManager()
         scan()
-        guard pollTask == nil else { return }
-        pollTask = Task { @MainActor [weak self] in
-            while !Task.isCancelled {
-                try? await Task.sleep(for: Self.pollInterval)
-                guard !Task.isCancelled else { break }
-                self?.poll()
-            }
-        }
+        startPolling()
+        startRetrying()
     }
 
     /// Stops polling and drops every device handle. Handles go stale across
@@ -127,6 +130,8 @@ nonisolated final class KeyboardBatteryObserver: @unchecked Sendable {
     func stopMonitoring() {
         pollTask?.cancel()
         pollTask = nil
+        retryTask?.cancel()
+        retryTask = nil
         lock.withLock { state in
             for (_, deviceState) in state.devices {
                 if let handle = deviceState.handle {
@@ -135,6 +140,9 @@ nonisolated final class KeyboardBatteryObserver: @unchecked Sendable {
                 }
             }
             state.devices.removeAll()
+            state.lastReadings.removeAll()
+            state.infos.removeAll()
+            emit(&state)
         }
     }
 
@@ -163,6 +171,62 @@ nonisolated final class KeyboardBatteryObserver: @unchecked Sendable {
         guard !alreadyOpened else { return }
         let result = IOHIDManagerOpen(manager, IOOptionBits(kIOHIDOptionsTypeNone))
         lock.withLock { $0.managerOpened = (result == kIOReturnSuccess) }
+    }
+
+    private func startPolling() {
+        guard pollTask == nil else { return }
+        pollTask = Task { @MainActor [weak self] in
+            while !Task.isCancelled {
+                try? await Task.sleep(for: Self.pollInterval)
+                guard !Task.isCancelled else { break }
+                self?.refreshAll()
+                self?.scan()
+            }
+        }
+    }
+
+    /// A reconnected keyboard answers late, so a single failed read must not
+    /// leave the row empty until the next five-minute poll.
+    private func startRetrying() {
+        guard retryTask == nil else { return }
+        retryTask = Task { @MainActor [weak self] in
+            while !Task.isCancelled {
+                try? await Task.sleep(for: Self.retryInterval)
+                guard !Task.isCancelled else { break }
+                self?.refreshUnread()
+            }
+        }
+    }
+
+    private func refreshAll() {
+        let handles = lock.withLock { state -> [(key: String, handle: DeviceHandle)] in
+            state.devices.compactMap { key, deviceState in
+                guard let handle = deviceState.handle else { return nil }
+                return (key, handle)
+            }
+        }
+        for entry in handles {
+            refresh(handle: entry.handle, key: entry.key)
+        }
+    }
+
+    private func refreshUnread() {
+        let handles = lock.withLock { state -> [(key: String, handle: DeviceHandle)] in
+            state.devices.compactMap { key, deviceState in
+                guard let handle = deviceState.handle, deviceState.status != .ok else { return nil }
+                return (key, handle)
+            }
+        }
+        for entry in handles {
+            refresh(handle: entry.handle, key: entry.key)
+        }
+    }
+
+    private func refresh(handle: DeviceHandle, key: String) {
+        if let cached = readCached(handle: handle) {
+            adopt(value: cached.value, age: cached.age, key: key)
+        }
+        scheduleFreshRead(handle: handle, key: key)
     }
 
     private func forget(_ device: IOHIDDevice) {
@@ -204,7 +268,7 @@ nonisolated final class KeyboardBatteryObserver: @unchecked Sendable {
             guard let elements = IOHIDDeviceCopyMatchingElements(device, nil, IOOptionBits(0)) as? [IOHIDElement] else {
                 // Keyboard-class devices need Input Monitoring before their
                 // elements are readable; surface that instead of dropping the row.
-                if isKeyboardEntry {
+                if isKeyboardEntry, !isAccessGranted {
                     found.append(BluetoothKeyboardInfo(id: key, name: product, status: .needsPermission))
                 }
                 continue
@@ -218,12 +282,8 @@ nonisolated final class KeyboardBatteryObserver: @unchecked Sendable {
             }
 
             reopenIfNeeded(device: device, element: element, key: key, name: product)
-            let openedHandle = lock.withLock { $0.devices[key]?.handle }
-            if let handle = openedHandle {
-                if let cached = readCached(handle: handle) {
-                    adopt(value: cached.value, age: cached.age, key: key)
-                }
-                scheduleFreshRead(handle: handle, key: key)
+            if let handle = lock.withLock({ $0.devices[key]?.handle }) {
+                refresh(handle: handle, key: key)
             }
             if let info = lock.withLock({ $0.devices[key]?.info }) {
                 found.append(info)
@@ -259,21 +319,21 @@ nonisolated final class KeyboardBatteryObserver: @unchecked Sendable {
             }
             state.infos = deduplicated.values.sorted { $0.name < $1.name }
             emit(&state)
-        }    }
+        }
+    }
 
     private func reopenIfNeeded(device: IOHIDDevice, element: IOHIDElement, key: String, name: String) {
         let deviceIdentity = UInt(bitPattern: UnsafeRawPointer(Unmanaged.passUnretained(device).toOpaque()))
-        let previous = lock.withLock { state -> (handle: DeviceHandle?, percent: Int?, changedAt: Date?, lastSeenAt: Date?)? in
-            guard let held = state.devices[key] else { return nil }
-            guard let handle = held.handle else { return nil }
+        let staleHandle = lock.withLock { state -> DeviceHandle? in
+            guard let held = state.devices[key]?.handle else { return nil }
             // A reconnected keyboard arrives as a NEW IOHIDDevice object.
             // Comparing identity — not just "is there a handle" — is what
             // makes the reading follow the reconnect.
-            guard handle.deviceIdentity != deviceIdentity else { return nil }
+            guard held.deviceIdentity != deviceIdentity else { return nil }
             state.devices.removeValue(forKey: key)
-            return (handle, held.percent, held.changedAt, held.lastSeenAt)
+            return held
         }
-        if let staleHandle = previous?.handle {
+        if let staleHandle {
             IOHIDDeviceClose(staleHandle.device, IOOptionBits(kIOHIDOptionsTypeNone))
             staleHandle.buffer.deallocate()
         }
@@ -292,30 +352,15 @@ nonisolated final class KeyboardBatteryObserver: @unchecked Sendable {
         }()
         lock.withLock { state in
             guard state.devices[key] == nil else { return }
-            // Keep the last reading across a reconnect: the firmware needs a
-            // moment before it answers with a new sample, and showing nothing
-            // in the meantime looks like the feature stopped working.
-            if let newHandle {
-                state.devices[key] = DeviceState(
-                    key: key,
-                    name: name,
-                    handle: newHandle,
-                    percent: previous?.percent,
-                    changedAt: previous?.changedAt,
-                    lastSeenAt: previous?.lastSeenAt,
-                    status: .noReport
-                )
-            } else {
-                state.devices[key] = DeviceState(
-                    key: key,
-                    name: name,
-                    handle: nil,
-                    percent: previous?.percent,
-                    changedAt: previous?.changedAt,
-                    lastSeenAt: previous?.lastSeenAt,
-                    status: result == kIOReturnNotPermitted ? .needsPermission : .noReport
-                )
-            }
+            state.devices[key] = DeviceState(
+                key: key,
+                name: name,
+                handle: newHandle,
+                // Keep the last known reading across the reconnect: the firmware
+                // needs a moment before it answers with a new sample.
+                reading: state.lastReadings[key],
+                status: result == kIOReturnNotPermitted ? .needsPermission : .noReport
+            )
         }
         if newHandle != nil {
             installInputReportHook(device: device, context: Unmanaged.passUnretained(self).toOpaque())
@@ -382,38 +427,26 @@ nonisolated final class KeyboardBatteryObserver: @unchecked Sendable {
                 return false
             }
             deviceState.valueStampAge = age
-            let previous = deviceState.percent
-            deviceState.percent = value
-            deviceState.lastSeenAt = Date()
-            deviceState.status = .ok
-            if previous != value || deviceState.changedAt == nil {
-                deviceState.changedAt = Date()
+            let previous = deviceState.reading?.percent
+            let now = Date()
+            var reading = deviceState.reading ?? Reading(percent: value, changedAt: nil, lastSeenAt: now)
+            if previous != value || reading.changedAt == nil {
+                reading.changedAt = now
             }
+            reading.percent = value
+            reading.lastSeenAt = now
+            deviceState.reading = reading
+            deviceState.status = .ok
             state.devices[key] = deviceState
+            state.lastReadings[key] = reading
             if let index = state.infos.firstIndex(where: { $0.id == key }) {
                 state.infos[index] = deviceState.info
             }
-            return previous != value
+            return previous != value || previous == nil
         }
         if changed {
             emitAll()
         }
-    }
-
-    private func poll() {
-        let handles = lock.withLock { state -> [(key: String, handle: DeviceHandle)] in
-            state.devices.compactMap { key, deviceState in
-                guard let handle = deviceState.handle else { return nil }
-                return (key, handle)
-            }
-        }
-        for entry in handles {
-            if let cached = readCached(handle: entry.handle) {
-                adopt(value: cached.value, age: cached.age, key: entry.key)
-            }
-            scheduleFreshRead(handle: entry.handle, key: entry.key)
-        }
-        scan()
     }
 
     private func emitAll() {
