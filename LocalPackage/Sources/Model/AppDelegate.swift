@@ -80,6 +80,11 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         systemMetricsService.startMonitoring()
         if userDefaultsRepository.keyboardBatteryConfiguration.isEnabled {
             keyboardBatteryService.startMonitoring()
+            if !keyboardBatteryService.isAccessGranted() {
+                // Makes the app appear in the Input Monitoring list so the user
+                // can grant it; a denied grant would otherwise look like a bug.
+                keyboardBatteryService.requestAccess()
+            }
         }
         do {
             try runnerService.setup()
