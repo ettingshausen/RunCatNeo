@@ -10,6 +10,9 @@ xcuserdata/
 .swiftpm/
 .build/
 
+# ZCode session artifacts
+.zcode/
+
 # Test
 DerivedData/
 TestResults/
