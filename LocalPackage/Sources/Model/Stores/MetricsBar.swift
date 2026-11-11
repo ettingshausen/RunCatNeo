@@ -35,6 +35,7 @@ public final class MetricsBar: Composable {
     public var systemInfoBundle: SystemInfoBundle
     public var fanInfo: FanInfo?
     public var keyboardBatteries: [BluetoothKeyboardInfo]
+    public var aiTokenUsage: AITokenUsage?
     public var customMetricsBundles: [CustomMetricsBundle]
     public let isPreview: Bool
     public let action: (Action) async -> Void
@@ -100,6 +101,7 @@ public final class MetricsBar: Composable {
         systemInfoBundle = metrics.systemInfoBundle
         fanInfo = metrics.fanInfo
         keyboardBatteries = metrics.keyboardBatteries
+        aiTokenUsage = metrics.aiTokenUsage
         customMetricsBundles = metrics.customMetricsBundles
     }
 

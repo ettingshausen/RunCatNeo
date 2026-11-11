@@ -51,6 +51,7 @@ let package = Package(
             swiftSettings: swiftSettings,
             linkerSettings: [
                 .linkedFramework("IOKit"),
+                .linkedLibrary("sqlite3"),
             ]
         ),
         .target(

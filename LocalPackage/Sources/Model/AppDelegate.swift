@@ -39,6 +39,7 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         let customMetricsService = CustomMetricsService(appDependencies)
         let systemMetricsService = SystemMetricsService(appDependencies)
         let keyboardBatteryService = KeyboardBatteryService(appDependencies)
+        let aiTokenUsageService = AITokenUsageService(appDependencies)
         let runnerService = RunnerService(appDependencies)
         Task {
             await withTaskGroup { group in
@@ -48,6 +49,7 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
                         customMetricsService.stopMonitoring()
                         systemMetricsService.stopMonitoring()
                         keyboardBatteryService.stopMonitoring()
+                        aiTokenUsageService.stopMonitoring()
                     }
                 }
                 group.addTask {
@@ -57,6 +59,9 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
                         systemMetricsService.startMonitoring()
                         if userDefaultsRepository.keyboardBatteryConfiguration.isEnabled {
                             keyboardBatteryService.startMonitoring()
+                        }
+                        if userDefaultsRepository.aiTokenUsageConfiguration.isEnabled {
+                            aiTokenUsageService.startMonitoring()
                         }
                     }
                 }
@@ -86,6 +91,9 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
                 keyboardBatteryService.requestAccess()
             }
         }
+        if userDefaultsRepository.aiTokenUsageConfiguration.isEnabled {
+            aiTokenUsageService.startMonitoring()
+        }
         do {
             try runnerService.setup()
         } catch {
@@ -97,5 +105,6 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         CustomMetricsService(appDependencies).stopMonitoring()
         SystemMetricsService(appDependencies).stopMonitoring()
         KeyboardBatteryService(appDependencies).stopMonitoring()
+        AITokenUsageService(appDependencies).stopMonitoring()
     }
 }

@@ -75,6 +75,12 @@ struct MetricsBarSettingsView: View {
                 )) {
                     Text("showKeyboardBattery", bundle: .module)
                 }
+                Toggle(isOn: Binding<Bool>(
+                    get: { store.metricsBarConfiguration.showsAITokenUsage },
+                    asyncSet: { await store.send(.showsAITokenUsageToggleSwitched($0)) }
+                )) {
+                    Text("showAITokenUsage", bundle: .module)
+                }
             } header: {
                 Text("metricsBarSettings", bundle: .module)
             }

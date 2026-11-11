@@ -19,6 +19,7 @@
  */
 
 extension String {
+    static let aiTokenUsageConfiguration = "AI_TOKEN_USAGE_CONFIGURATION"
     static let customMetricsConfiguration = "CUSTOM_METRICS_CONFIGURATION"
     static let customRunners = "CUSTOM_RUNNERS"
     static let isFlippedHorizontally = "IS_FLIPPED_HORIZONTALLY"

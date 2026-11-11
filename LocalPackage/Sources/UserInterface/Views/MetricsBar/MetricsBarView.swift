@@ -58,6 +58,10 @@ struct MetricsBarView: View {
            let keyboardBattery = store.keyboardBatteries.simulated(store.isPreview) {
             widthArray.append(iconWidth + IndicatorKind.customValueLabelSize(for: keyboardBatteryLabel(keyboardBattery)).width)
         }
+        if store.metricsBarConfiguration.showsAITokenUsage,
+           let aiTokenUsage = store.aiTokenUsage {
+            widthArray.append(iconWidth + IndicatorKind.customValueLabelSize(for: aiTokenUsage.barLabel).width)
+        }
         for bundle in store.customMetricsBundles where store.metricsBarConfiguration.showsCustomMetrics(of: bundle.id) {
             widthArray.append(iconWidth + IndicatorKind.customValueLabelSize(for: bundle.metricsBarLabel).width)
         }
@@ -100,6 +104,10 @@ struct MetricsBarView: View {
                 if store.metricsBarConfiguration.showsKeyboardBattery,
                    let keyboardBattery = store.keyboardBatteries.simulated(store.isPreview) {
                     drawKeyboardBattery(context: &context, point: &point, keyboardBattery: keyboardBattery)
+                }
+                if store.metricsBarConfiguration.showsAITokenUsage,
+                   let aiTokenUsage = store.aiTokenUsage {
+                    drawAITokenUsage(context: &context, point: &point, aiTokenUsage: aiTokenUsage)
                 }
                 for bundle in store.customMetricsBundles where store.metricsBarConfiguration.showsCustomMetrics(of: bundle.id) {
                     drawCustomMetrics(context: &context, point: &point, bundle: bundle)
@@ -186,6 +194,22 @@ struct MetricsBarView: View {
         let labelSize = IndicatorKind.customValueLabelSize(for: keyboardBatteryLabel(keyboardBattery))
         context.drawBlackText(origin: point, size: labelSize) {
             Text(verbatim: keyboardBatteryLabel(keyboardBattery))
+                .monospacedDigit()
+        }
+        point.x += labelSize.width + IndicatorKind.spacer.size.width
+    }
+
+    private func drawAITokenUsage(
+        context: inout GraphicsContext,
+        point: inout CGPoint,
+        aiTokenUsage: AITokenUsage
+    ) {
+        let iconSize = IndicatorKind.categoryIcon.size
+        context.drawIcon(systemName: "chart.bar.xaxis", point: point, size: iconSize)
+        point.x += iconSize.width
+        let labelSize = IndicatorKind.customValueLabelSize(for: aiTokenUsage.barLabel)
+        context.drawBlackText(origin: point, size: labelSize) {
+            Text(verbatim: aiTokenUsage.barLabel)
                 .monospacedDigit()
         }
         point.x += labelSize.width + IndicatorKind.spacer.size.width

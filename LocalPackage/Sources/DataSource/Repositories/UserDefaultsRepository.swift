@@ -77,6 +77,23 @@ public struct UserDefaultsRepository: Sendable {
         }
     }
 
+    public var aiTokenUsageConfiguration: AITokenUsageConfiguration {
+        get {
+            guard let data = userDefaultsClient.data(.aiTokenUsageConfiguration),
+                  let value = try? JSONDecoder().decode(AITokenUsageConfiguration.self, from: data) else {
+                return .default
+            }
+            return value
+        }
+        nonmutating set {
+            if let data = try? JSONEncoder().encode(newValue) {
+                userDefaultsClient.set(data, .aiTokenUsageConfiguration)
+            } else {
+                userDefaultsClient.removeObject(.aiTokenUsageConfiguration)
+            }
+        }
+    }
+
     public var showsMetricsBar: Bool {
         get { userDefaultsClient.bool(.showsMetricsBar) }
         nonmutating set { userDefaultsClient.set(newValue, .showsMetricsBar) }

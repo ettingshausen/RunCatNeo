@@ -81,6 +81,17 @@ struct MetricsSettingsView: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
+                Toggle(isOn: Binding<Bool>(
+                    get: { store.aiTokenUsageConfiguration.isEnabled },
+                    asyncSet: { await store.send(.monitorsAITokenUsageToggleSwitched($0)) }
+                )) {
+                    Text("enableAITokenUsageMonitoring", bundle: .module)
+                }
+                if store.aiTokenUsageConfiguration.isEnabled {
+                    Text("aiTokenUsagePrivacyNote", bundle: .module)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
             } header: {
                 Text("systemMetrics", bundle: .module)
             }

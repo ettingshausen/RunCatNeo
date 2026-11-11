@@ -30,6 +30,7 @@ public final class MetricsBarSettings: Composable {
     private let logService: LogService
     private let systemMetricsService: SystemMetricsService
     private let keyboardBatteryService: KeyboardBatteryService
+    private let aiTokenUsageService: AITokenUsageService
 
     @ObservationIgnored private var task: Task<Void, Never>?
 
@@ -48,6 +49,7 @@ public final class MetricsBarSettings: Composable {
         self.logService = .init(appDependencies)
         self.systemMetricsService = .init(appDependencies)
         self.keyboardBatteryService = .init(appDependencies)
+        self.aiTokenUsageService = .init(appDependencies)
         self.metricsBarConfiguration = metricsBarConfiguration ?? userDefaultsRepository.metricsBarConfiguration
         self.customMetricsSources = customMetricsSources ?? userDefaultsRepository.customMetricsConfiguration.sources
         self.action = action
@@ -126,6 +128,19 @@ public final class MetricsBarSettings: Composable {
             userDefaultsRepository.keyboardBatteryConfiguration = keyboardBatteryConfiguration
             systemMetricsService.emitConfigurationChange()
 
+        case let .showsAITokenUsageToggleSwitched(isOn):
+            metricsBarConfiguration.showsAITokenUsage = isOn
+            if isOn {
+                var aiTokenUsageConfiguration = userDefaultsRepository.aiTokenUsageConfiguration
+                if !aiTokenUsageConfiguration.isEnabled {
+                    aiTokenUsageConfiguration.isEnabled = true
+                    userDefaultsRepository.aiTokenUsageConfiguration = aiTokenUsageConfiguration
+                    aiTokenUsageService.startMonitoring()
+                }
+            }
+            userDefaultsRepository.metricsBarConfiguration = metricsBarConfiguration
+            systemMetricsService.emitConfigurationChange()
+
         case let .showsCustomMetricsToggleSwitched(id, isOn):
             if isOn {
                 metricsBarConfiguration.visibleCustomMetricsSourceIDs.insert(id)
@@ -148,6 +163,7 @@ public final class MetricsBarSettings: Composable {
         case showsSystemMetricsToggleSwitched(SystemInfoType, Bool)
         case showsFanToggleSwitched(Bool)
         case showsKeyboardBatteryToggleSwitched(Bool)
+        case showsAITokenUsageToggleSwitched(Bool)
         case showsCustomMetricsToggleSwitched(UUID, Bool)
     }
 }

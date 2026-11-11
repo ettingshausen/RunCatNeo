@@ -30,6 +30,7 @@ public final class MetricsSettings: Composable {
     private let logService: LogService
     private let systemMetricsService: SystemMetricsService
     private let keyboardBatteryService: KeyboardBatteryService
+    private let aiTokenUsageService: AITokenUsageService
     private let nsWorkspaceClient: NSWorkspaceClient
 
     @ObservationIgnored private var task: Task<Void, Never>?
@@ -38,6 +39,7 @@ public final class MetricsSettings: Composable {
     public var showingMetricsBarNotesSheet: Bool
     public var systemMetricsConfiguration: SystemMetricsConfiguration
     public var keyboardBatteryConfiguration: KeyboardBatteryConfiguration
+    public var aiTokenUsageConfiguration: AITokenUsageConfiguration
     public let customMetricsSettings: CustomMetricsSettings
     public let action: (Action) async -> Void
 
@@ -46,6 +48,7 @@ public final class MetricsSettings: Composable {
         showsMetricsBar: Bool? = nil,
         showingMetricsBarNotesSheet: Bool = false,
         systemMetricsConfiguration: SystemMetricsConfiguration? = nil,
+        aiTokenUsageConfiguration: AITokenUsageConfiguration? = nil,
         customMetricsSettings: CustomMetricsSettings? = nil,
         action: @escaping (Action) async -> Void = { _ in }
     ) {
@@ -54,11 +57,13 @@ public final class MetricsSettings: Composable {
         self.logService = .init(appDependencies)
         self.systemMetricsService = .init(appDependencies)
         self.keyboardBatteryService = .init(appDependencies)
+        self.aiTokenUsageService = .init(appDependencies)
         self.nsWorkspaceClient = appDependencies.nsWorkspaceClient
         self.showsMetricsBar = showsMetricsBar ?? userDefaultsRepository.showsMetricsBar
         self.showingMetricsBarNotesSheet = showingMetricsBarNotesSheet
         self.systemMetricsConfiguration = systemMetricsConfiguration ?? userDefaultsRepository.systemMetricsConfiguration
         self.keyboardBatteryConfiguration = userDefaultsRepository.keyboardBatteryConfiguration
+        self.aiTokenUsageConfiguration = aiTokenUsageConfiguration ?? userDefaultsRepository.aiTokenUsageConfiguration
         weak var weakSelf: MetricsSettings? = nil
         self.customMetricsSettings = customMetricsSettings ??
             .init(appDependencies, action: { await weakSelf?.send(.customMetricsSettings($0)) })
@@ -151,6 +156,21 @@ public final class MetricsSettings: Composable {
             }
             systemMetricsService.emitConfigurationChange()
 
+        case let .monitorsAITokenUsageToggleSwitched(isOn):
+            var configuration = userDefaultsRepository.aiTokenUsageConfiguration
+            configuration.isEnabled = isOn
+            userDefaultsRepository.aiTokenUsageConfiguration = configuration
+            aiTokenUsageConfiguration = configuration
+            if isOn {
+                aiTokenUsageService.startMonitoring()
+            } else {
+                aiTokenUsageService.stopMonitoring()
+                var metricsBarConfiguration = userDefaultsRepository.metricsBarConfiguration
+                metricsBarConfiguration.showsAITokenUsage = false
+                userDefaultsRepository.metricsBarConfiguration = metricsBarConfiguration
+            }
+            systemMetricsService.emitConfigurationChange()
+
         case .customMetricsSettings:
             return
         }
@@ -169,6 +189,7 @@ public final class MetricsSettings: Composable {
         case monitorsSystemMetricsToggleSwitched(SystemInfoType, Bool)
         case monitorsFanToggleSwitched(Bool)
         case monitorsKeyboardBatteryToggleSwitched(Bool)
+        case monitorsAITokenUsageToggleSwitched(Bool)
         case customMetricsSettings(CustomMetricsSettings.Action)
     }
 }

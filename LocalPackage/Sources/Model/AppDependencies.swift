@@ -26,6 +26,7 @@ public struct AppDependencies: Sendable {
     public var dataClient = DataClient.liveValue
     public var dateClient = DateClient.liveValue
     public var fileManagerClient = FileManagerClient.liveValue
+    public var fileSliceClient = FileSliceClient.liveValue
     public var fileWatcherClient = FileWatcherClient.liveValue
     public var loggingSystemClient = LoggingSystemClient.liveValue
     public var nsAppClient = NSAppClient.liveValue
@@ -33,6 +34,7 @@ public struct AppDependencies: Sendable {
     public var keyboardBatteryObserverClient = KeyboardBatteryObserverClient.liveValue
     public var smAppServiceClient = SMAppServiceClient.liveValue
     public var smcClient = SMCClient.liveValue
+    public var sqliteClient = SQLiteClient.liveValue
     public var systemInfoObserverClient = SystemInfoObserverClient.liveValue
     public var urlClient = URLClient.liveValue
     public var userDefaultsClient = UserDefaultsClient.liveValue
@@ -51,6 +53,7 @@ extension AppDependencies {
         dataClient: DataClient = .testValue,
         dateClient: DateClient = .testValue,
         fileManagerClient: FileManagerClient = .testValue,
+        fileSliceClient: FileSliceClient = .testValue,
         fileWatcherClient: FileWatcherClient = .testValue,
         loggingSystemClient: LoggingSystemClient = .testValue,
         nsAppClient: NSAppClient = .testValue,
@@ -58,6 +61,7 @@ extension AppDependencies {
         keyboardBatteryObserverClient: KeyboardBatteryObserverClient = .testValue,
         smAppServiceClient: SMAppServiceClient = .testValue,
         smcClient: SMCClient = .testValue,
+        sqliteClient: SQLiteClient = .testValue,
         systemInfoObserverClient: SystemInfoObserverClient = .testValue,
         urlClient: URLClient = .testValue,
         userDefaultsClient: UserDefaultsClient = .testValue,
@@ -68,6 +72,7 @@ extension AppDependencies {
             dataClient: dataClient,
             dateClient: dateClient,
             fileManagerClient: fileManagerClient,
+            fileSliceClient: fileSliceClient,
             fileWatcherClient: fileWatcherClient,
             loggingSystemClient: loggingSystemClient,
             nsAppClient: nsAppClient,
@@ -75,6 +80,7 @@ extension AppDependencies {
             keyboardBatteryObserverClient: keyboardBatteryObserverClient,
             smAppServiceClient: smAppServiceClient,
             smcClient: smcClient,
+            sqliteClient: sqliteClient,
             systemInfoObserverClient: systemInfoObserverClient,
             urlClient: urlClient,
             userDefaultsClient: userDefaultsClient,

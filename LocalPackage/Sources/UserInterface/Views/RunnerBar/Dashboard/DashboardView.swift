@@ -40,6 +40,9 @@ struct DashboardView: View {
                 fanInfo: store.fanInfo,
                 isPreview: store.isPreview
             )
+            if let aiTokenUsage = store.aiTokenUsage, !aiTokenUsage.tools.isEmpty {
+                AITokenUsageCardView(aiTokenUsage: aiTokenUsage)
+            }
             ForEach(store.customMetricsBundles) { customMetricsBundle in
                 CustomMetricsCardView(
                     customMetricsBundle: customMetricsBundle,

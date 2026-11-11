@@ -36,6 +36,7 @@ public final class Dashboard: Composable {
     public var cpuRingBuffer: RingBuffer
     public var memoryRingBuffer: RingBuffer
     public var fanInfo: FanInfo?
+    public var aiTokenUsage: AITokenUsage?
     public var customMetricsBundles: [CustomMetricsBundle]
     public var displayedDate: Date
     public let isPreview: Bool
@@ -103,6 +104,7 @@ public final class Dashboard: Composable {
         cpuRingBuffer = metrics.cpuRingBuffer
         memoryRingBuffer = metrics.memoryRingBuffer
         fanInfo = metrics.fanInfo
+        aiTokenUsage = metrics.aiTokenUsage
         customMetricsBundles = metrics.customMetricsBundles
     }
 

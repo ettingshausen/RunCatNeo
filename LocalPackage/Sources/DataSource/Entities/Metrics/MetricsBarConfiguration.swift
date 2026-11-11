@@ -28,11 +28,12 @@ public struct MetricsBarConfiguration: Codable, Sendable, Equatable {
     public var showsNetwork: Bool
     public var showsFan: Bool = false
     public var showsKeyboardBattery: Bool = false
+    public var showsAITokenUsage: Bool = false
     public var visibleCustomMetricsSourceIDs: Set<UUID>
 
     public var isEmpty: Bool {
         !showsCPU && !showsMemory && !showsStorage && !showsBattery && !showsNetwork
-            && !showsFan && !showsKeyboardBattery
+            && !showsFan && !showsKeyboardBattery && !showsAITokenUsage
             && visibleCustomMetricsSourceIDs.isEmpty
     }
 
@@ -57,6 +58,7 @@ public struct MetricsBarConfiguration: Codable, Sendable, Equatable {
         showsNetwork: Bool,
         showsFan: Bool = false,
         showsKeyboardBattery: Bool = false,
+        showsAITokenUsage: Bool = false,
         visibleCustomMetricsSourceIDs: Set<UUID>
     ) {
         self.showsCPU = showsCPU
@@ -66,6 +68,7 @@ public struct MetricsBarConfiguration: Codable, Sendable, Equatable {
         self.showsNetwork = showsNetwork
         self.showsFan = showsFan
         self.showsKeyboardBattery = showsKeyboardBattery
+        self.showsAITokenUsage = showsAITokenUsage
         self.visibleCustomMetricsSourceIDs = visibleCustomMetricsSourceIDs
     }
 
@@ -78,6 +81,7 @@ public struct MetricsBarConfiguration: Codable, Sendable, Equatable {
         showsNetwork = try container.decode(Bool.self, forKey: .showsNetwork)
         showsFan = try container.decodeIfPresent(Bool.self, forKey: .showsFan) ?? false
         showsKeyboardBattery = try container.decodeIfPresent(Bool.self, forKey: .showsKeyboardBattery) ?? false
+        showsAITokenUsage = try container.decodeIfPresent(Bool.self, forKey: .showsAITokenUsage) ?? false
         visibleCustomMetricsSourceIDs = try container.decode(Set<UUID>.self, forKey: .visibleCustomMetricsSourceIDs)
     }
 }
