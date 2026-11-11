@@ -34,14 +34,15 @@ extension Array where Element == CGFloat {
 }
 
 extension [BluetoothKeyboardInfo] {
-    /// Picks the first keyboard worth showing, simulating a healthy reading in
-    /// previews. A permission-denied row still occupies the bar so the user
-    /// notices something needs attention; rows without any reading stay hidden
-    /// rather than showing a misleading placeholder.
+    /// Picks the keyboard worth showing, simulating a healthy reading in
+    /// previews. A row without a reading is still shown, because a connected
+    /// keyboard that has not reported yet must look pending rather than vanish.
     func simulated(_ simulated: Bool) -> BluetoothKeyboardInfo? {
-        let candidate = first { $0.status == .ok } ?? first { $0.status == .needsPermission }
+        let candidate = first { $0.status == .ok }
+            ?? first { $0.status == .needsPermission }
+            ?? first
         guard let candidate else { return nil }
-        guard simulated, candidate.status == .ok, candidate.percent == nil else { return candidate }
+        guard simulated, candidate.percent == nil else { return candidate }
         return BluetoothKeyboardInfo(
             id: candidate.id,
             name: candidate.name,

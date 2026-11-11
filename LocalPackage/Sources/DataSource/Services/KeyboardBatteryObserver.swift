@@ -259,21 +259,21 @@ nonisolated final class KeyboardBatteryObserver: @unchecked Sendable {
             }
             state.infos = deduplicated.values.sorted { $0.name < $1.name }
             emit(&state)
-        }
-    }
+        }    }
 
     private func reopenIfNeeded(device: IOHIDDevice, element: IOHIDElement, key: String, name: String) {
         let deviceIdentity = UInt(bitPattern: UnsafeRawPointer(Unmanaged.passUnretained(device).toOpaque()))
-        let staleHandle = lock.withLock { state -> DeviceHandle? in
-            guard let held = state.devices[key]?.handle else { return nil }
+        let previous = lock.withLock { state -> (handle: DeviceHandle?, percent: Int?, changedAt: Date?, lastSeenAt: Date?)? in
+            guard let held = state.devices[key] else { return nil }
+            guard let handle = held.handle else { return nil }
             // A reconnected keyboard arrives as a NEW IOHIDDevice object.
             // Comparing identity — not just "is there a handle" — is what
             // makes the reading follow the reconnect.
-            guard held.deviceIdentity != deviceIdentity else { return nil }
+            guard handle.deviceIdentity != deviceIdentity else { return nil }
             state.devices.removeValue(forKey: key)
-            return held
+            return (handle, held.percent, held.changedAt, held.lastSeenAt)
         }
-        if let staleHandle {
+        if let staleHandle = previous?.handle {
             IOHIDDeviceClose(staleHandle.device, IOOptionBits(kIOHIDOptionsTypeNone))
             staleHandle.buffer.deallocate()
         }
@@ -292,11 +292,17 @@ nonisolated final class KeyboardBatteryObserver: @unchecked Sendable {
         }()
         lock.withLock { state in
             guard state.devices[key] == nil else { return }
+            // Keep the last reading across a reconnect: the firmware needs a
+            // moment before it answers with a new sample, and showing nothing
+            // in the meantime looks like the feature stopped working.
             if let newHandle {
                 state.devices[key] = DeviceState(
                     key: key,
                     name: name,
                     handle: newHandle,
+                    percent: previous?.percent,
+                    changedAt: previous?.changedAt,
+                    lastSeenAt: previous?.lastSeenAt,
                     status: .noReport
                 )
             } else {
@@ -304,6 +310,9 @@ nonisolated final class KeyboardBatteryObserver: @unchecked Sendable {
                     key: key,
                     name: name,
                     handle: nil,
+                    percent: previous?.percent,
+                    changedAt: previous?.changedAt,
+                    lastSeenAt: previous?.lastSeenAt,
                     status: result == kIOReturnNotPermitted ? .needsPermission : .noReport
                 )
             }
