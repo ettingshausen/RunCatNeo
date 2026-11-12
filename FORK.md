@@ -162,8 +162,35 @@ open /Applications/RunCatNeo.app     # 重新登记
 | 风扇（指标栏） | 打开开关后出现转速读数；**转速为 0 时不显示**（设置弹窗有说明小字） |
 | 键盘电量 | `⌨ 94%` 形式；未授权显示 `⌨ --`；断开连接则整项隐藏 |
 | 重连回归 | 关键盘电源 → 项隐藏；重开 → **数秒内**恢复显示（先显示上次值，再跟随新采样） |
+| Touch Bar | 见下方专节 |
 
 重连回归是最容易退化的点，改过 `KeyboardBatteryObserver` 后务必测。
+
+### Touch Bar 指标栏
+
+设置 →「指标」→「Touch Bar」区块。仅在带 DFR 硬件的机器上出现（检测见下）。
+
+| 显示模式 | 行为 | 适用 |
+|---|---|---|
+| 仅锚点图标 | Control Strip 里只有一个小仪表盘图标，点它才展开、点 `−` 收起 | 零配置、不抢任何应用的 Touch Bar（推荐给不想维护列表的人） |
+| 常驻展开 | 全宽指标条一直挂着，无视排除列表 | 想随时一眼看到 |
+| 智能让位 | 前台应用在**排除列表**里时自动收起，切走自动展开 | 既要常驻又要让位 |
+
+**为什么需要排除列表（而不是自动识别）：** 实机验证过三条自动识别通道全部不可用——`CGWindowList` 里看不到 Touch Bar 表面（我们是呈现者时也没有任何窗口）、分布式通知全量监听无 TB 相关推送、`DFRFoundation` 里 174 个 TB 类没有可从外部进程查询“当前呈现者”的共享对象（状态在独立守护进程里，打通需逆向 XPC 协议）。所以判断依据只能是 bundle id 列表。
+
+排除列表操作：「**排除当前前台应用**」一键加入（它取的是**最后一个非本应用的前台应用**，因为点按钮时设置窗口自己会变成前台）；「**添加应用…**」打开系统原生选择器，可搜索、可多选。
+
+**实现要点与坑（改这块前务必读）：**
+
+1. **私有 API**：`NSTouchBarItem.addSystemTrayItem:`（Control Strip 锚点）、`NSTouchBar.presentSystemModalTouchBar:systemTrayItemIdentifier:` / `minimizeSystemModalTouchBar:` / `dismissSystemModalTouchBar:`。10.13 的 `...FunctionBar` 命名已不存在，仅 10.14+ 的 `TouchBar` 命名可用。封装在 `DataSource/Dependencies/TouchBarClient.swift`，纯薄封装 + `responds(to:)` 守卫。
+2. **硬件检测**：Apple Silicon 上 DFR 屏在 IORegistry 里叫 `lcddfr` / `dispdfr`（**不是 Intel 时代的 `AppleDFR` 类名**），`TouchBarClient` 里的 `TouchBarHardwareProbe` 用 `IOServiceNameMatching` 匹配。
+3. **锚点不显示**：Control Strip 只在系统**见过该 bar 被 present 一次**后才渲染 tray item。仅锚点图标模式启动时从不 present，锚点会整个隐形——所以启动时做一次 `present → 下一 runloop minimize` 的预热（`primeTrayItemIfNeeded`）。
+4. **宽度被压成 70pt → 文字变 `…`**（最坑的一个）：Touch Bar 给自定义 item 的宽度**只在插入那一刻读一次固有尺寸**，之后 SwiftUI 内容变宽不会重查；裸 `NSHostingView` 的固有尺寸也不随内容更新。表现就是启动时内容还没到、宽度锁死在 70pt，之后所有数值都被压成 `…`。解法是 `UserInterface/Views/MetricsBar/TouchBarMetricsContainerView.swift`：把子视图 `fittingSize` 作为自身 `intrinsicContentSize`，并在内容尺寸变化时（`layout()`）主动 `setFrameSize` 同步过去。
+5. **不要给指标条写死宽度**：曾用固定 600pt 绕过宽度问题，结果是铺满整个 Touch Bar，用户要的是紧凑布局。当前布局按内容自适应（典型 476pt），每个文字都 `lineLimit(1)` + `fixedSize()` 防止压缩。
+6. **指标内容**：Touch Bar 有**自己的一套指标开关**（`TouchBarConfiguration.visibleMetrics`，8 个标准指标 + 每个自定义指标源），与菜单栏指标条的 `MetricsBarConfiguration` **互不影响**——两个界面的显示集合可以完全不同。设置页「系统指标」是一张**两列表格**：每行一个指标，「指标栏」「Touch Bar」各一列开关；某个表面关闭时该列自动隐藏，没有 Touch Bar 硬件的机器整页退化成单列（区块标题也降级为「指标栏」）。`MetricsBar.touchBarIndicators` 把可见集合折算成纯值 `TouchBarIndicator`（图标 + 文案），视图只做渲染（符合 LUCA「视图不含逻辑」）。老配置（没有 `visibleMetrics` 字段）解码为“全部显示”，避免升级后指标栏突然变空；Touch Bar 侧开关打开时会**自动补齐该指标的采集**（否则采集关着就永远没数据可显示）。
+7. **菜单栏指标条与 Touch Bar 互不影响**：两个开关各自独立；关掉「在 Touch Bar 上显示指标栏」会移除锚点（不只是收起）。注意「系统指标」那一组是**监控开关**（决定是否采集数据），它仍会级联写菜单栏指标条的显示开关，但**不再影响 Touch Bar 的显示集合**。
+
+改成 ad-hoc 签名跑 Debug 时，键盘电量会显示 `--`——不是 bug，是 TCC 授权绑在稳定签名上，见第 2、4 节。
 
 ---
 
