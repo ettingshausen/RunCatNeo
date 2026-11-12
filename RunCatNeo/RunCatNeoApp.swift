@@ -18,6 +18,7 @@
  limitations under the License.
  */
 
+import AppKit
 import DataSource
 import Model
 import SwiftUI
@@ -27,6 +28,14 @@ import UserInterface
 struct RunCatNeoApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @AppStorage(.showsMetricsBar) private var showsMetricsBar = false
+
+    init() {
+        TouchBarMetricsService.metricsContentViewProvider = { appDependencies in
+            // The container reports the content's ideal width as its intrinsic
+            // size; the Touch Bar sizes custom items from exactly that.
+            TouchBarMetricsContainerView(appDependencies)
+        }
+    }
 
     var body: some Scene {
         RunnerBarScene()

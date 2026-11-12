@@ -1,8 +1,8 @@
 /*
- CustomMetricsSnapshot+Extension.swift
- UserInterface
+ CustomMetricsBundle+Extension.swift
+ DataSource
 
- Created by Takuto Nakamura on 2026/06/10.
+ Created by Takuto Nakamura on 2026/06/22.
  Copyright 2026 Kyome22 (Takuto Nakamura)
 
  Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,10 +18,14 @@
  limitations under the License.
  */
 
-import DataSource
+import Foundation
 
-extension CustomMetricsSnapshot {
-    var displaySymbol: String {
-        symbol ?? "chart.bar.horizontal.page.fill"
+extension CustomMetricsBundle {
+    public var metricsBarLabel: String {
+        if isFailed {
+            "---"
+        } else {
+            snapshot.metricsBarValue ?? "---"
+        }
     }
 }

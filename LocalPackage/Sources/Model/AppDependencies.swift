@@ -36,11 +36,12 @@ public struct AppDependencies: Sendable {
     public var smcClient = SMCClient.liveValue
     public var sqliteClient = SQLiteClient.liveValue
     public var systemInfoObserverClient = SystemInfoObserverClient.liveValue
+    public var touchBarClient = TouchBarClient.liveValue
     public var urlClient = URLClient.liveValue
     public var userDefaultsClient = UserDefaultsClient.liveValue
     public var uuidClient = UUIDClient.liveValue
 
-    static let shared = AppDependencies()
+    public static let shared = AppDependencies()
 }
 
 extension EnvironmentValues {
@@ -63,6 +64,7 @@ extension AppDependencies {
         smcClient: SMCClient = .testValue,
         sqliteClient: SQLiteClient = .testValue,
         systemInfoObserverClient: SystemInfoObserverClient = .testValue,
+        touchBarClient: TouchBarClient = .testValue,
         urlClient: URLClient = .testValue,
         userDefaultsClient: UserDefaultsClient = .testValue,
         uuidClient: UUIDClient = .testValue
@@ -82,6 +84,7 @@ extension AppDependencies {
             smcClient: smcClient,
             sqliteClient: sqliteClient,
             systemInfoObserverClient: systemInfoObserverClient,
+            touchBarClient: touchBarClient,
             urlClient: urlClient,
             userDefaultsClient: userDefaultsClient,
             uuidClient: uuidClient

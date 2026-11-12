@@ -1,8 +1,8 @@
 /*
- ByteData+Extension.swift
- UserInterface
+ Percentage+Extension.swift
+ DataSource
 
- Created by Takuto Nakamura on 2026/05/25.
+ Created by Takuto Nakamura on 2026/05/24.
  Copyright 2026 Kyome22 (Takuto Nakamura)
 
  Licensed under the Apache License, Version 2.0 (the "License");
@@ -20,16 +20,12 @@
 
 import SystemInfoKit
 
-extension ByteData {
-    func menuBarDescription(type: SystemInfoType) -> String {
-        let (value, unit) = readableValue
-        return switch type {
-        case .storage:
-            String(format: "%5.2f %@", locale: .current, value, unit)
-        case .network:
-            String(format: value < 100 ? "%4.1f %@/s" : "%4.0f %@/s", locale: .current, value, unit)
-        default:
-            description
-        }
+extension Percentage {
+    public var menuBarDescription: String {
+        String(
+            format: value < 100 ? "%4.1f%%" : "%4.0f%%",
+            locale: .current,
+            value
+        )
     }
 }

@@ -106,6 +106,133 @@ struct MetricsSettingsTests {
     }
 
     @MainActor @Test
+    func send_showsMetricsBarOnTouchBarToggleSwitched_persists_flag_and_emits_change() async {
+        let appState = AllocatedUnfairLock<AppState>(initialState: .init())
+        let setCallStack = AllocatedUnfairLock<[String]>(initialState: [])
+        let sut = MetricsSettings(.testDependencies(
+            appStateClient: .testDependency(appState),
+            userDefaultsClient: testDependency(of: UserDefaultsClient.self) {
+                $0.set = { value, key in
+                    let entry = "set: \(key) = \(value ?? "nil")"
+                    setCallStack.withLock { $0.append(entry) }
+                }
+            }
+        ))
+        #expect(appState.withLock(\.touchBarConfigurationChanges.latestValue) == nil)
+        await sut.send(.showsMetricsBarOnTouchBarToggleSwitched(true))
+        #expect(sut.showsMetricsBarOnTouchBar)
+        #expect(setCallStack.withLock(\.self) == ["set: SHOWS_METRICS_BAR_ON_TOUCH_BAR = true"])
+        #expect(appState.withLock(\.touchBarConfigurationChanges.latestValue) != nil)
+    }
+
+    @MainActor @Test
+    func send_touchBarDisplayModeSelected_persists_configuration_and_emits_change() async throws {
+        let appState = AllocatedUnfairLock<AppState>(initialState: .init())
+        let storage = UserDefaultsClient.storage()
+        let sut = MetricsSettings(.testDependencies(
+            appStateClient: .testDependency(appState),
+            userDefaultsClient: storage.client
+        ))
+        await sut.send(.touchBarDisplayModeSelected(.anchorOnly))
+        #expect(sut.touchBarConfiguration.mode == .anchorOnly)
+        let saved = storage.lock.withLock { $0[.touchBarConfiguration] }
+            .flatMap { try? JSONDecoder().decode(TouchBarConfiguration.self, from: $0) }
+        #expect(saved?.mode == .anchorOnly)
+        #expect(appState.withLock(\.touchBarConfigurationChanges.latestValue) != nil)
+    }
+
+    @MainActor @Test
+    func send_touchBarExcludeCurrentAppButtonTapped_appends_frontmost_app_once() async throws {
+        let appState = AllocatedUnfairLock<AppState>(initialState: .init())
+        let storage = UserDefaultsClient.storage()
+        let sut = MetricsSettings(.testDependencies(
+            appStateClient: .testDependency(appState),
+            nsWorkspaceClient: testDependency(of: NSWorkspaceClient.self) {
+                $0.frontmostApplication = {
+                    FrontmostApplicationInfo(bundleIdentifier: "com.apple.Safari", localizedName: "Safari")
+                }
+            },
+            userDefaultsClient: storage.client
+        ))
+        await sut.send(.touchBarExcludeCurrentAppButtonTapped)
+        #expect(sut.touchBarConfiguration.excludedBundleIdentifiers == ["com.apple.Safari"])
+        await sut.send(.touchBarExcludeCurrentAppButtonTapped)
+        #expect(sut.touchBarConfiguration.excludedBundleIdentifiers == ["com.apple.Safari"])
+        let saved = storage.lock.withLock { $0[.touchBarConfiguration] }
+            .flatMap { try? JSONDecoder().decode(TouchBarConfiguration.self, from: $0) }
+        #expect(saved?.excludedBundleIdentifiers == ["com.apple.Safari"])
+    }
+
+    @MainActor @Test
+    func send_touchBarExcludeCurrentAppButtonTapped_uses_the_last_external_frontmost_app() async throws {
+        let appState = AllocatedUnfairLock<AppState>(initialState: .init())
+        let storage = UserDefaultsClient.storage()
+        appState.withLock {
+            $0.lastExternalFrontmostApplication = FrontmostApplicationInfo(
+                bundleIdentifier: "com.apple.Safari",
+                localizedName: "Safari"
+            )
+        }
+        let sut = MetricsSettings(.testDependencies(
+            appStateClient: .testDependency(appState),
+            nsWorkspaceClient: testDependency(of: NSWorkspaceClient.self) {
+                // Clicking the button makes this app frontmost; the remembered
+                // app must win over the live frontmost application.
+                $0.frontmostApplication = {
+                    FrontmostApplicationInfo(bundleIdentifier: Bundle.main.bundleIdentifier ?? "", localizedName: "Self")
+                }
+            },
+            userDefaultsClient: storage.client
+        ))
+        await sut.send(.touchBarExcludeCurrentAppButtonTapped)
+        #expect(sut.touchBarConfiguration.excludedBundleIdentifiers == ["com.apple.Safari"])
+    }
+
+    @MainActor @Test
+    func send_touchBarAppsImported_adds_resolved_bundle_identifiers_without_duplicates() async throws {
+        let appState = AllocatedUnfairLock<AppState>(initialState: .init())
+        let storage = UserDefaultsClient.storage(initialTouchBarConfiguration: TouchBarConfiguration(
+            mode: .smart,
+            excludedBundleIdentifiers: ["com.apple.Safari"]
+        ))
+        let sut = MetricsSettings(.testDependencies(
+            appStateClient: .testDependency(appState),
+            nsWorkspaceClient: testDependency(of: NSWorkspaceClient.self) {
+                $0.bundleIdentifier = { url in
+                    url.lastPathComponent == "Safari.app" ? "com.apple.Safari" : "com.jetbrains.intellij"
+                }
+            },
+            userDefaultsClient: storage.client
+        ))
+        await sut.send(.touchBarAppsImported([
+            URL(fileURLWithPath: "/Applications/Safari.app"),
+            URL(fileURLWithPath: "/Applications/IntelliJ IDEA.app"),
+        ]))
+        #expect(sut.touchBarConfiguration.excludedBundleIdentifiers == ["com.apple.Safari", "com.jetbrains.intellij"])
+        let saved = storage.lock.withLock { $0[.touchBarConfiguration] }
+            .flatMap { try? JSONDecoder().decode(TouchBarConfiguration.self, from: $0) }
+        #expect(saved?.excludedBundleIdentifiers == ["com.apple.Safari", "com.jetbrains.intellij"])
+    }
+
+    @MainActor @Test
+    func send_touchBarExcludedAppRemoved_removes_only_the_given_identifier() async throws {
+        let appState = AllocatedUnfairLock<AppState>(initialState: .init())
+        let storage = UserDefaultsClient.storage(initialTouchBarConfiguration: TouchBarConfiguration(
+            mode: .smart,
+            excludedBundleIdentifiers: ["com.apple.Safari", "com.jetbrains.intellij"]
+        ))
+        let sut = MetricsSettings(.testDependencies(
+            appStateClient: .testDependency(appState),
+            userDefaultsClient: storage.client
+        ))
+        await sut.send(.touchBarExcludedAppRemoved("com.apple.Safari"))
+        #expect(sut.touchBarConfiguration.excludedBundleIdentifiers == ["com.jetbrains.intellij"])
+        let saved = storage.lock.withLock { $0[.touchBarConfiguration] }
+            .flatMap { try? JSONDecoder().decode(TouchBarConfiguration.self, from: $0) }
+        #expect(saved?.excludedBundleIdentifiers == ["com.jetbrains.intellij"])
+    }
+
+    @MainActor @Test
     func send_showButtonTapped_enables_metrics_bar_and_persists_flag() async {
         let setCallStack = AllocatedUnfairLock<[String]>(initialState: [])
         let sut = MetricsSettings(.testDependencies(
@@ -162,6 +289,15 @@ struct MetricsSettingsTests {
         #expect(!storedBarConfiguration.showsMemory)
         #expect(activationRequests.withLock(\.self) == [.memory: false])
         #expect(appState.withLock(\.systemMetricsConfigurationChanges.latestValue) != nil)
+        await sut.send(.monitorsSystemMetricsToggleSwitched(.memory, true))
+        #expect(sut.systemMetricsConfiguration.monitorsMemory)
+        let restoredBarConfigurationData = storage.lock.withLock { $0[.metricsBarConfiguration] }
+        let restoredBarConfiguration = try JSONDecoder().decode(
+            MetricsBarConfiguration.self,
+            from: try #require(restoredBarConfigurationData)
+        )
+        #expect(restoredBarConfiguration.showsMemory)
+        #expect(activationRequests.withLock(\.self) == [.memory: true])
     }
 
     @MainActor @Test

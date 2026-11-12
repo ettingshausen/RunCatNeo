@@ -28,10 +28,12 @@ extension String {
     static let runnerID = "RUNNER_ID"
     static let speedDecreasesUnderLoad = "SPEED_DECREASES_UNDER_LOAD"
     static let systemMetricsConfiguration = "SYSTEM_METRICS_CONFIGURATION"
+    static let touchBarConfiguration = "TOUCH_BAR_METRICS_CONFIGURATION"
     static let updateInterval = "UPDATE_INTERVAL"
 
     public static let activityMonitor = "com.apple.ActivityMonitor"
     public static let finder = "com.apple.finder"
     public static let openSourceLicense = "OPEN_SOURCE_LICENSE"
     public static let showsMetricsBar = "SHOWS_METRICS_BAR"
+    public static let showsMetricsBarOnTouchBar = "SHOWS_METRICS_BAR_ON_TOUCH_BAR"
 }

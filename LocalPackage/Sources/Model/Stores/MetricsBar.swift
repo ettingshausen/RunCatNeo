@@ -32,6 +32,7 @@ public final class MetricsBar: Composable {
     @ObservationIgnored private var task: Task<Void, Never>?
 
     public var metricsBarConfiguration: MetricsBarConfiguration
+    public var touchBarConfiguration: TouchBarConfiguration
     public var systemInfoBundle: SystemInfoBundle
     public var fanInfo: FanInfo?
     public var keyboardBatteries: [BluetoothKeyboardInfo]
@@ -43,6 +44,7 @@ public final class MetricsBar: Composable {
     public init(
         _ appDependencies: AppDependencies,
         metricsBarConfiguration: MetricsBarConfiguration? = nil,
+        touchBarConfiguration: TouchBarConfiguration? = nil,
         systemInfoBundle: SystemInfoBundle = .init(),
         keyboardBatteries: [BluetoothKeyboardInfo] = [],
         customMetricsBundles: [CustomMetricsBundle] = [],
@@ -53,6 +55,7 @@ public final class MetricsBar: Composable {
         self.userDefaultsRepository = .init(appDependencies.userDefaultsClient)
         self.logService = .init(appDependencies)
         self.metricsBarConfiguration = metricsBarConfiguration ?? userDefaultsRepository.metricsBarConfiguration
+        self.touchBarConfiguration = touchBarConfiguration ?? userDefaultsRepository.touchBarConfiguration
         self.systemInfoBundle = systemInfoBundle
         self.keyboardBatteries = keyboardBatteries
         self.customMetricsBundles = customMetricsBundles
@@ -88,6 +91,12 @@ public final class MetricsBar: Composable {
                             self?.updateMetricsBarConfiguration()
                         }
                     }
+                    group.addImmediateTask {
+                        let stream = appStateClient.withLock(\.touchBarConfigurationChanges.stream)
+                        for await _ in stream {
+                            self?.updateTouchBarConfiguration()
+                        }
+                    }
                 }
             }
 
@@ -107,6 +116,79 @@ public final class MetricsBar: Composable {
 
     private func updateMetricsBarConfiguration() {
         metricsBarConfiguration = userDefaultsRepository.metricsBarConfiguration
+    }
+
+    private func updateTouchBarConfiguration() {
+        touchBarConfiguration = userDefaultsRepository.touchBarConfiguration
+    }
+
+    /// The visible metrics rendered as plain icon + label values for the
+    /// Touch Bar. The visible set is the Touch Bar's own configuration, which
+    /// is independent of the menu bar metrics bar's visibility flags.
+    public var touchBarIndicators: [TouchBarIndicator] {
+        var indicators = [TouchBarIndicator]()
+        if touchBarConfiguration.shows(.cpu), let cpuInfo = systemInfoBundle.cpuInfo {
+            indicators.append(TouchBarIndicator(
+                systemIcon: cpuInfo.icon,
+                primaryText: cpuInfo.percentage.menuBarDescription
+            ))
+        }
+        if touchBarConfiguration.shows(.memory), let memoryInfo = systemInfoBundle.memoryInfo {
+            indicators.append(TouchBarIndicator(
+                systemIcon: memoryInfo.icon,
+                primaryText: memoryInfo.percentage.menuBarDescription
+            ))
+        }
+        if touchBarConfiguration.shows(.storage), let storageInfo = systemInfoBundle.storageInfo {
+            indicators.append(TouchBarIndicator(
+                systemIcon: storageInfo.icon,
+                primaryText: storageInfo.percentage.menuBarDescription
+            ))
+        }
+        if touchBarConfiguration.shows(.battery),
+           let batteryInfo = systemInfoBundle.batteryInfo,
+           batteryInfo.isInstalled {
+            indicators.append(TouchBarIndicator(
+                systemIcon: batteryInfo.icon,
+                primaryText: batteryInfo.percentage.menuBarDescription
+            ))
+        }
+        if touchBarConfiguration.shows(.network), let networkInfo = systemInfoBundle.networkInfo {
+            indicators.append(TouchBarIndicator(
+                systemIcon: networkInfo.icon,
+                primaryText: "\u{2B06}\(networkInfo.upload.menuBarDescription(type: .network))",
+                secondaryText: "\u{2B07}\(networkInfo.download.menuBarDescription(type: .network))"
+            ))
+        }
+        if touchBarConfiguration.shows(.fan),
+           let fanInfo = fanInfo, !fanInfo.fans.isEmpty,
+           fanInfo.fans[0].rpm > 0 {
+            indicators.append(TouchBarIndicator(
+                systemIcon: "fanblades",
+                primaryText: "\(Int(fanInfo.fans[0].rpm.rounded()))"
+            ))
+        }
+        if touchBarConfiguration.shows(.keyboardBattery),
+           let keyboardBattery = keyboardBatteries.first {
+            indicators.append(TouchBarIndicator(
+                systemIcon: "keyboard",
+                primaryText: keyboardBattery.percent.map { "\($0)%" } ?? "--"
+            ))
+        }
+        if touchBarConfiguration.shows(.aiTokenUsage),
+           let aiTokenUsage = aiTokenUsage {
+            indicators.append(TouchBarIndicator(
+                systemIcon: "chart.bar.xaxis",
+                primaryText: aiTokenUsage.barLabel
+            ))
+        }
+        for bundle in customMetricsBundles where touchBarConfiguration.showsCustomMetrics(of: bundle.id) {
+            indicators.append(TouchBarIndicator(
+                systemIcon: bundle.snapshot.displaySymbol,
+                primaryText: bundle.metricsBarLabel
+            ))
+        }
+        return indicators
     }
 
     public enum Action: Sendable {

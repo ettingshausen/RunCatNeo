@@ -27,6 +27,8 @@ public struct AppState: Sendable {
     public var hasAlreadyBootstrap: Bool
     public var metrics = AsyncStreamBundle<Metrics>()
     public var systemMetricsConfigurationChanges = AsyncStreamBundle<Void>()
+    public var touchBarConfigurationChanges = AsyncStreamBundle<Void>()
+    public var lastExternalFrontmostApplication: FrontmostApplicationInfo?
     public var keyboardBatteries = AsyncStreamBundle<[BluetoothKeyboardInfo]>()
     public var customMetricsReconcileObserver: Task<Void, Never>?
     public var customMetricsObservers = [UUID: Task<Void, Never>]()

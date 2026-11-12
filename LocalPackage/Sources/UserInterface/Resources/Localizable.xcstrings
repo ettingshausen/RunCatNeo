@@ -401,22 +401,28 @@
       "comment" : "A title of the card showing today's AI token usage.",
       "extractionState" : "manual",
       "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "KI-Tokenverbrauch"
+          }
+        },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "AI Token Usage"
           }
         },
-        "zh-Hans" : {
+        "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "AI Token 用量"
+            "value" : "Uso de tokens de IA"
           }
         },
-        "zh-Hant" : {
+        "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "AI Token 用量"
+            "value" : "Consommation de tokens IA"
           }
         },
         "ja" : {
@@ -431,24 +437,6 @@
             "value" : "AI 토큰 사용량"
           }
         },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Consommation de tokens IA"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "KI-Tokenverbrauch"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Uso de tokens de IA"
-          }
-        },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
@@ -460,6 +448,18 @@
             "state" : "translated",
             "value" : "Mức dùng token AI"
           }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AI Token 用量"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AI Token 用量"
+          }
         }
       }
     },
@@ -467,22 +467,28 @@
       "comment" : "A note explaining that AI token usage is counted from local logs only.",
       "extractionState" : "manual",
       "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Liest die lokalen Claude Code-, ZCode- und Codex-CLI-Protokolle auf diesem Mac, um die heutigen Token zu zählen. Nichts verlässt Ihren Rechner."
+          }
+        },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Reads the local Claude Code, ZCode and Codex CLI logs on this Mac to count today's tokens. Nothing leaves your machine."
           }
         },
-        "zh-Hans" : {
+        "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "读取本机 Claude Code、ZCode 与 Codex CLI 的本地日志统计今日 Token 用量，数据不会离开这台 Mac。"
+            "value" : "Lee los registros locales de Claude Code, ZCode y Codex CLI en este Mac para contar los tokens de hoy. Nada sale de tu equipo."
           }
         },
-        "zh-Hant" : {
+        "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "讀取本機 Claude Code、ZCode 與 Codex CLI 的本機日誌統計今日 Token 用量，資料不會離開這台 Mac。"
+            "value" : "Lit les journaux locaux de Claude Code, ZCode et Codex CLI sur ce Mac pour comptabiliser les tokens du jour. Rien ne quitte votre machine."
           }
         },
         "ja" : {
@@ -497,24 +503,6 @@
             "value" : "이 Mac의 Claude Code, ZCode, Codex CLI 로컬 로그를 읽어 오늘의 토큰 사용량을 집계합니다. 데이터는 이 Mac 밖으로 나가지 않습니다."
           }
         },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Lit les journaux locaux de Claude Code, ZCode et Codex CLI sur ce Mac pour comptabiliser les tokens du jour. Rien ne quitte votre machine."
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Liest die lokalen Claude Code-, ZCode- und Codex-CLI-Protokolle auf diesem Mac, um die heutigen Token zu zählen. Nichts verlässt Ihren Rechner."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Lee los registros locales de Claude Code, ZCode y Codex CLI en este Mac para contar los tokens de hoy. Nada sale de tu equipo."
-          }
-        },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
@@ -525,6 +513,18 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Đọc nhật ký cục bộ của Claude Code, ZCode và Codex CLI trên máy này để đếm token hôm nay. Dữ liệu không rời khỏi máy."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "读取本机 Claude Code、ZCode 与 Codex CLI 的本地日志统计今日 Token 用量，数据不会离开这台 Mac。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "讀取本機 Claude Code、ZCode 與 Codex CLI 的本機日誌統計今日 Token 用量，資料不會離開這台 Mac。"
           }
         }
       }
@@ -1589,22 +1589,28 @@
       "comment" : "A title of the toggle switch to monitor AI token usage.",
       "extractionState" : "manual",
       "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "KI-Tokenverbrauch-Monitoring aktivieren"
+          }
+        },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Enable AI Token Usage Monitoring"
           }
         },
-        "zh-Hans" : {
+        "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "启用 AI Token 用量统计"
+            "value" : "Activar la supervisión del uso de tokens de IA"
           }
         },
-        "zh-Hant" : {
+        "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "啟用 AI Token 用量統計"
+            "value" : "Activer la surveillance de la consommation de tokens IA"
           }
         },
         "ja" : {
@@ -1619,24 +1625,6 @@
             "value" : "AI 토큰 사용량 모니터링 활성화"
           }
         },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Activer la surveillance de la consommation de tokens IA"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "KI-Tokenverbrauch-Monitoring aktivieren"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Activar la supervisión del uso de tokens de IA"
-          }
-        },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
@@ -1647,6 +1635,18 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Bật giám sát mức dùng token AI"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "启用 AI Token 用量统计"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "啟用 AI Token 用量統計"
           }
         }
       }
@@ -1713,6 +1713,138 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "啟用電池狀態監控"
+          }
+        }
+      }
+    },
+    "enableFanSpeedMonitoring" : {
+      "comment" : "A title of the toggle switch to monitor fan speed.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Überwachung der Lüfterdrehzahl aktivieren"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enable Fan Speed Monitoring"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Activar la monitorización de la velocidad del ventilador"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Activer la surveillance de la vitesse des ventilateurs"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ファン回転速度の監視を有効"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "팬 속도 모니터링 활성화"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Включить мониторинг скорости вентиляторов"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bật giám sát tốc độ quạt"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "启用风扇转速监控"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "啟用風扇轉速監控"
+          }
+        }
+      }
+    },
+    "enableKeyboardBatteryMonitoring" : {
+      "comment" : "A title of the toggle switch to monitor the battery level of Bluetooth keyboards.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Überwachung der Tastaturbatterie aktivieren"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enable Keyboard Battery Monitoring"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Activar la monitorización de la batería del teclado"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Activer la surveillance de la batterie du clavier"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "キーボードバッテリーの監視を有効"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "키보드 배터리 모니터링 활성화"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Включить мониторинг заряда клавиатуры"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bật giám sát pin bàn phím"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "启用键盘电量监控"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "啟用鍵盤電量監控"
           }
         }
       }
@@ -2043,6 +2175,204 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "失敗"
+          }
+        }
+      }
+    },
+    "fanRowFormat" : {
+      "comment" : "A detail row of the fan section in the dashboard when the Mac has multiple fans. The first placeholder is the fan number, the second is the fan speed in rpm.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lüfter %1$lld: %2$lld U/min"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fan %1$lld: %2$lld rpm"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ventilador %1$lld: %2$lld rpm"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ventilateur %1$lld : %2$lld tr/min"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ファン %1$lld: %2$lld rpm"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "팬 %1$lld: %2$lld rpm"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Вентилятор %1$lld: %2$lld об/мин"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quạt %1$lld: %2$lld v/ph"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "风扇 %1$lld：%2$lld rpm"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "風扇 %1$lld：%2$lld rpm"
+          }
+        }
+      }
+    },
+    "fanSummaryFormat" : {
+      "comment" : "The fan summary of the fan section in the dashboard. The first placeholder is the fan speed in rpm.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lüfter: %lld U/min"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fan: %lld rpm"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ventilador: %lld rpm"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ventilateur : %lld tr/min"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ファン: %lld rpm"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "팬: %lld rpm"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Вентилятор: %lld об/мин"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quạt: %lld v/ph"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "风扇：%lld rpm"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "風扇：%lld rpm"
+          }
+        }
+      }
+    },
+    "fanZeroSpeedNote" : {
+      "comment" : "A footnote under the fan speed toggle in the metrics bar settings, explaining that a zero reading hides the indicator.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Das Symbol bleibt ausgeblendet, solange die Lüfterdrehzahl null beträgt."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The indicator stays hidden while the fan speed reads zero."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "El indicador permanece oculto mientras la velocidad del ventilador sea cero."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "L’indicateur reste masqué tant que la vitesse du ventilateur est à zéro."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ファン回転速度が 0 の間、この表示は隠れます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "팬 속도가 0이면 이 표시는 숨겨집니다."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Индикатор скрыт, пока скорость вентилятора равна нулю."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Biểu tượng bị ẩn khi tốc độ quạt bằng 0."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "风扇转速为 0 时不显示该图标。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "風扇轉速為 0 時不顯示該圖示。"
           }
         }
       }
@@ -2641,6 +2971,72 @@
         }
       }
     },
+    "keyboardBatteryPermissionNote" : {
+      "comment" : "A footnote under the keyboard battery monitoring toggle explaining the Input Monitoring permission.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Es wird nur der Batteriestand gelesen — keine Tastenanschläge werden aufgezeichnet. Erlaube die App unter Eingabeüberwachung in Datenschutz & Sicherheit und starte sie neu."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Only the battery level is read — no keystrokes are recorded. Allow the app under Input Monitoring in Privacy & Security, then relaunch it."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Solo se lee el nivel de batería; no se registran pulsaciones. Permite la app en Monitorización de entradas de Privacidad y seguridad y reiníciala."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Seul le niveau de batterie est lu — aucune frappe n’est enregistrée. Autorisez l’app sous Surveillance des entrées dans Confidentialité et sécurité, puis relancez-la."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "バッテリー残量のみを読み取り、キー入力は記録しません。「プライバシーとセキュリティ › 入力監視」でこのアプリを許可し、再起動してください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "배터리 잔량만 읽으며 키 입력은 기록하지 않습니다. '개인정보 보호 및 보안 › 입력 모니터링'에서 이 앱을 허용한 뒤 다시 시작하세요."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Считывается только уровень заряда — нажатия клавиш не записываются. Разрешите приложение в «Мониторинге ввода» (Конфиденциальность и безопасность) и перезапустите его."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chỉ đọc mức pin — không ghi lại phím bấm. Hãy cho phép ứng dụng trong Giám sát đầu vào của Quyền riêng tư & Bảo mật, rồi khởi động lại."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "只读取电量，不记录任何按键。请在“隐私与安全性 › 输入监控”中允许本应用，然后重新启动。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "只讀取電量，不記錄任何按鍵。請在「隱私權與安全性 › 輸入監控」中允許本應用程式，然後重新啟動。"
+          }
+        }
+      }
+    },
     "lastUpdated:%@" : {
       "comment" : "A label that shows the last time the metric was updated. The argument is the string “missing”.",
       "isCommentAutoGenerated" : true,
@@ -3037,6 +3433,72 @@
         }
       }
     },
+    "metric" : {
+      "comment" : "A column header naming the metric column in the per-surface switch table.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Messwert"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Metric"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Métrica"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Métrique"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "指標"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "지표"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Метрика"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chỉ số"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "指标"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "指標"
+          }
+        }
+      }
+    },
     "metricsBar" : {
       "comment" : "A heading for the settings related to the metrics bar.",
       "isCommentAutoGenerated" : true,
@@ -3231,6 +3693,72 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "指標列設定"
+          }
+        }
+      }
+    },
+    "metricsBarSurfaces" : {
+      "comment" : "A header grouping the menu bar metrics bar and Touch Bar switches.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Menüleisten-Leiste & Touch Bar"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Metrics Bar & Touch Bar"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Barra de métricas y Touch Bar"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Barre de métriques et Touch Bar"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "メトリクスバーとTouch Bar"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "지표 바 및 Touch Bar"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Панель метрик и Touch Bar"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Thanh chỉ số và Touch Bar"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "指标栏与 Touch Bar"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "指標列與 Touch Bar"
           }
         }
       }
@@ -5021,22 +5549,28 @@
       "comment" : "A title of the toggle switch to show AI token usage in the Metrics Bar.",
       "extractionState" : "manual",
       "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "KI-Tokenverbrauch anzeigen"
+          }
+        },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Show AI Token Usage"
           }
         },
-        "zh-Hans" : {
+        "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "显示 AI Token 用量"
+            "value" : "Mostrar uso de tokens de IA"
           }
         },
-        "zh-Hant" : {
+        "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "顯示 AI Token 用量"
+            "value" : "Afficher la consommation de tokens IA"
           }
         },
         "ja" : {
@@ -5051,24 +5585,6 @@
             "value" : "AI 토큰 사용량 표시"
           }
         },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Afficher la consommation de tokens IA"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "KI-Tokenverbrauch anzeigen"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Mostrar uso de tokens de IA"
-          }
-        },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
@@ -5079,6 +5595,18 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Hiển thị mức dùng token AI"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "显示 AI Token 用量"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "顯示 AI Token 用量"
           }
         }
       }
@@ -5215,6 +5743,138 @@
         }
       }
     },
+    "showFanSpeed" : {
+      "comment" : "A title of the toggle switch to show the fan speed in the metrics bar.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lüfterdrehzahl anzeigen"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Show Fan Speed"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mostrar la velocidad del ventilador"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Afficher la vitesse des ventilateurs"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ファン回転速度を表示"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "팬 속도 표시"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Показывать скорость вентиляторов"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hiển thị tốc độ quạt"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "显示风扇转速"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "顯示風扇轉速"
+          }
+        }
+      }
+    },
+    "showKeyboardBattery" : {
+      "comment" : "A title of the toggle switch to show the Bluetooth keyboard battery in the metrics bar.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tastaturbatterie anzeigen"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Show Keyboard Battery"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mostrar la batería del teclado"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Afficher la batterie du clavier"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "キーボードバッテリーを表示"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "키보드 배터리 표시"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Показывать заряд клавиатуры"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hiển thị pin bàn phím"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "显示键盘电量"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "顯示鍵盤電量"
+          }
+        }
+      }
+    },
     "showMemoryUsage" : {
       "comment" : "A toggle to show or hide the memory usage information.",
       "isCommentAutoGenerated" : true,
@@ -5343,6 +6003,72 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "顯示指標列"
+          }
+        }
+      }
+    },
+    "showMetricsBarOnTouchBar" : {
+      "comment" : "A title of the toggle switch to show the metrics bar on the Touch Bar.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Messleiste auf der Touch Bar anzeigen"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Show Metrics Bar on Touch Bar"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mostrar la barra de métricas en la Touch Bar"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Afficher la barre de métriques sur la Touch Bar"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Touch Barにメトリクスバーを表示"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Touch Bar에 지표 바 표시"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Показывать панель метрик на Touch Bar"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hiển thị thanh chỉ số trên Touch Bar"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在 Touch Bar 上显示指标栏"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在 Touch Bar 上顯示指標欄"
           }
         }
       }
@@ -5809,6 +6535,666 @@
         }
       }
     },
+    "touchBar" : {
+      "comment" : "A header of the Touch Bar settings section.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Touch Bar"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Touch Bar"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Touch Bar"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Touch Bar"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Touch Bar"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Touch Bar"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Touch Bar"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Touch Bar"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Touch Bar"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Touch Bar"
+          }
+        }
+      }
+    },
+    "touchBarAddApps" : {
+      "comment" : "A title of the button that opens the app picker for the Touch Bar exclusion list.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apps hinzufügen …"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add Apps…"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Añadir apps…"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ajouter des apps…"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Appを追加…"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "앱 추가…"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Добавить приложения…"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Thêm ứng dụng…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "添加应用…"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "加入應用程式…"
+          }
+        }
+      }
+    },
+    "touchBarDisplayMode" : {
+      "comment" : "A title of the Touch Bar display mode picker.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Anzeigemodus"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Display Mode"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Modo de visualización"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mode d'affichage"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "表示モード"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "표시 모드"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Режим отображения"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chế độ hiển thị"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "显示模式"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "顯示模式"
+          }
+        }
+      }
+    },
+    "touchBarExcludeCurrentApp" : {
+      "comment" : "A title of the button that adds the current frontmost app to the Touch Bar exclusion list.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vorderste App ausschließen"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Exclude Current Frontmost App"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Excluir la aplicación en primer plano"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Exclure l'application au premier plan"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "最前面アプリを除外に追加"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "현재 최전면 앱 제외"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Исключить активное приложение"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Loại trừ ứng dụng đang ở trước"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "排除当前前台应用"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "排除目前前景應用程式"
+          }
+        }
+      }
+    },
+    "touchBarModeAlwaysExpanded" : {
+      "comment" : "A title of the always-expanded Touch Bar display mode.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Immer ausgeklappt"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Always Expanded"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Siempre expandida"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Toujours dépliée"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "常に展開"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "항상 펼치기"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Всегда развёрнута"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Luôn mở rộng"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "常驻展开"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "常駐展開"
+          }
+        }
+      }
+    },
+    "touchBarModeAnchorOnly" : {
+      "comment" : "A title of the anchor-only Touch Bar display mode.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nur Ankersymbol"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Anchor Icon Only"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Solo icono de anclaje"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Icône d'ancrage uniquement"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "アンカーアイコンのみ"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "앵커 아이콘만"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Только значок-якорь"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chỉ biểu tượng neo"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "仅锚点图标"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "僅錨點圖示"
+          }
+        }
+      }
+    },
+    "touchBarModeSmart" : {
+      "comment" : "A title of the smart-yield Touch Bar display mode.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Automatisch ausweichen"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Auto Yield"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ceder automáticamente"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cession automatique"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自動譲り"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "자동 양보"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Автоматическая уступка"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tự động nhường"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "智能让位"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "智慧讓位"
+          }
+        }
+      }
+    },
+    "touchBarNoExcludedApps" : {
+      "comment" : "A caption shown when the Touch Bar exclusion list is empty.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keine ausgeschlossenen Apps"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No excluded apps"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No hay aplicaciones excluidas"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aucune application exclue"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "除外アプリはありません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "제외된 앱이 없습니다"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Нет исключённых приложений"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Không có ứng dụng bị loại trừ"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "暂无排除的应用"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "尚無排除的應用"
+          }
+        }
+      }
+    },
+    "touchBarSmartModeNote" : {
+      "comment" : "A caption explaining the smart display mode and the exclusion list.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die ausgeklappte Leiste überdeckt die eigene Touch Bar der vordersten App. Fügen Sie solche Apps zur Ausschlussliste hinzu, um sie automatisch einzuklappen."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The expanded bar covers the frontmost app's own Touch Bar. Add such apps to the exclusion list to collapse the bar automatically."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La barra expandida cubre la Touch Bar de la aplicación en primer plano. Añade esas aplicaciones a la lista de exclusión para replegarla automáticamente."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La barre dépliée recouvre la Touch Bar propre de l'application au premier plan. Ajoutez ces applications à la liste d'exclusion pour la replier automatiquement."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "展開されたバーは最前面アプリのTouch Barの内容を覆います。そのようなアプリを除外リストに追加すると、自動的に縮みます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "펼쳐진 바는 최전면 앱의 Touch Bar 내용을 가립니다. 해당 앱을 제외 목록에 추가하면 자동으로 접힙니다."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Развёрнутая панель перекрывает собственную Touch Bar активного приложения. Добавьте такие приложения в список исключений, чтобы панель сворачивалась автоматически."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Thanh đã mở rộng sẽ che phần Touch Bar của ứng dụng đang ở trước. Thêm các ứng dụng đó vào danh sách loại trừ để thanh tự động thu lại."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "展开的指标条会覆盖前台应用自己的 Touch Bar 内容。将这类应用加入排除列表后，指标条会自动收起。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "展開的指標條會覆蓋前台應用自己的 Touch Bar 內容。將這類應用加入排除清單後，指標條會自動收起。"
+          }
+        }
+      }
+    },
+    "touchBarVisibilityNote" : {
+      "comment" : "A caption noting that the Touch Bar metrics are chosen independently of the menu bar.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Auf der Touch Bar können Sie unabhängig von der Menüleisten-Leiste eigene Messwerte auswählen."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choose independently which metrics appear on the Touch Bar."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Elige de forma independiente qué métricas aparecen en la Touch Bar."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choisissez indépendamment les métriques affichées sur la Touch Bar."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Touch Bar に表示する指標はメニューバーのメトリクスバーとは別に選択できます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Touch Bar에 표시할 지표를 메뉴 막대 지표 바와 별도로 선택할 수 있습니다."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Метрики для Touch Bar выбираются независимо от панели метрик в строке меню."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chọn riêng các chỉ số hiển thị trên Touch Bar, độc lập với thanh chỉ số của thanh menu."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Touch Bar 上的指标可单独选择，与菜单栏指标条互不影响。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Touch Bar 上的指標可單獨選擇，與選單列指標列互不影響。"
+          }
+        }
+      }
+    },
     "updateInterval" : {
       "comment" : "A label displayed above a picker that lets the user select the update interval.",
       "isCommentAutoGenerated" : true,
@@ -6003,534 +7389,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "查看 Runner Gallery"
-          }
-        }
-      }
-    },
-    "fanSummaryFormat" : {
-      "comment" : "The fan summary of the fan section in the dashboard. The first placeholder is the fan speed in rpm.",
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Fan: %lld rpm"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "风扇：%lld rpm"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "風扇：%lld rpm"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ファン: %lld rpm"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "팬: %lld rpm"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ventilateur : %lld tr/min"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Lüfter: %lld U/min"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ventilador: %lld rpm"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Вентилятор: %lld об/мин"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Quạt: %lld v/ph"
-          }
-        }
-      }
-    },
-    "fanRowFormat" : {
-      "comment" : "A detail row of the fan section in the dashboard when the Mac has multiple fans. The first placeholder is the fan number, the second is the fan speed in rpm.",
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Fan %1$lld: %2$lld rpm"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "风扇 %1$lld：%2$lld rpm"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "風扇 %1$lld：%2$lld rpm"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ファン %1$lld: %2$lld rpm"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "팬 %1$lld: %2$lld rpm"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ventilateur %1$lld : %2$lld tr/min"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Lüfter %1$lld: %2$lld U/min"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ventilador %1$lld: %2$lld rpm"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Вентилятор %1$lld: %2$lld об/мин"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Quạt %1$lld: %2$lld v/ph"
-          }
-        }
-      }
-    },
-    "enableFanSpeedMonitoring" : {
-      "comment" : "A title of the toggle switch to monitor fan speed.",
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Enable Fan Speed Monitoring"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "启用风扇转速监控"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "啟用風扇轉速監控"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ファン回転速度の監視を有効"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "팬 속도 모니터링 활성화"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Activer la surveillance de la vitesse des ventilateurs"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Überwachung der Lüfterdrehzahl aktivieren"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Activar la monitorización de la velocidad del ventilador"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Включить мониторинг скорости вентиляторов"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Bật giám sát tốc độ quạt"
-          }
-        }
-      }
-    },
-    "showFanSpeed" : {
-      "comment" : "A title of the toggle switch to show the fan speed in the metrics bar.",
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Show Fan Speed"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "显示风扇转速"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "顯示風扇轉速"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ファン回転速度を表示"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "팬 속도 표시"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Afficher la vitesse des ventilateurs"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Lüfterdrehzahl anzeigen"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Mostrar la velocidad del ventilador"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Показывать скорость вентиляторов"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Hiển thị tốc độ quạt"
-          }
-        }
-      }
-    },
-    "enableKeyboardBatteryMonitoring" : {
-      "comment" : "A title of the toggle switch to monitor the battery level of Bluetooth keyboards.",
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Enable Keyboard Battery Monitoring"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "启用键盘电量监控"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "啟用鍵盤電量監控"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "キーボードバッテリーの監視を有効"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "키보드 배터리 모니터링 활성화"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Activer la surveillance de la batterie du clavier"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Überwachung der Tastaturbatterie aktivieren"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Activar la monitorización de la batería del teclado"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Включить мониторинг заряда клавиатуры"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Bật giám sát pin bàn phím"
-          }
-        }
-      }
-    },
-    "showKeyboardBattery" : {
-      "comment" : "A title of the toggle switch to show the Bluetooth keyboard battery in the metrics bar.",
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Show Keyboard Battery"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "显示键盘电量"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "顯示鍵盤電量"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "キーボードバッテリーを表示"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "키보드 배터리 표시"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Afficher la batterie du clavier"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tastaturbatterie anzeigen"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Mostrar la batería del teclado"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Показывать заряд клавиатуры"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Hiển thị pin bàn phím"
-          }
-        }
-      }
-    },
-    "keyboardBatteryPermissionNote" : {
-      "comment" : "A footnote under the keyboard battery monitoring toggle explaining the Input Monitoring permission.",
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Only the battery level is read — no keystrokes are recorded. Allow the app under Input Monitoring in Privacy & Security, then relaunch it."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "只读取电量，不记录任何按键。请在“隐私与安全性 › 输入监控”中允许本应用，然后重新启动。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "只讀取電量，不記錄任何按鍵。請在「隱私權與安全性 › 輸入監控」中允許本應用程式，然後重新啟動。"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "バッテリー残量のみを読み取り、キー入力は記録しません。「プライバシーとセキュリティ › 入力監視」でこのアプリを許可し、再起動してください。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "배터리 잔량만 읽으며 키 입력은 기록하지 않습니다. '개인정보 보호 및 보안 › 입력 모니터링'에서 이 앱을 허용한 뒤 다시 시작하세요."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Seul le niveau de batterie est lu — aucune frappe n’est enregistrée. Autorisez l’app sous Surveillance des entrées dans Confidentialité et sécurité, puis relancez-la."
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Es wird nur der Batteriestand gelesen — keine Tastenanschläge werden aufgezeichnet. Erlaube die App unter Eingabeüberwachung in Datenschutz & Sicherheit und starte sie neu."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Solo se lee el nivel de batería; no se registran pulsaciones. Permite la app en Monitorización de entradas de Privacidad y seguridad y reiníciala."
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Считывается только уровень заряда — нажатия клавиш не записываются. Разрешите приложение в «Мониторинге ввода» (Конфиденциальность и безопасность) и перезапустите его."
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Chỉ đọc mức pin — không ghi lại phím bấm. Hãy cho phép ứng dụng trong Giám sát đầu vào của Quyền riêng tư & Bảo mật, rồi khởi động lại."
-          }
-        }
-      }
-    },
-    "fanZeroSpeedNote" : {
-      "comment" : "A footnote under the fan speed toggle in the metrics bar settings, explaining that a zero reading hides the indicator.",
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "The indicator stays hidden while the fan speed reads zero."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "风扇转速为 0 时不显示该图标。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "風扇轉速為 0 時不顯示該圖示。"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ファン回転速度が 0 の間、この表示は隠れます。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "팬 속도가 0이면 이 표시는 숨겨집니다."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "L’indicateur reste masqué tant que la vitesse du ventilateur est à zéro."
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Das Symbol bleibt ausgeblendet, solange die Lüfterdrehzahl null beträgt."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "El indicador permanece oculto mientras la velocidad del ventilador sea cero."
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Индикатор скрыт, пока скорость вентилятора равна нулю."
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Biểu tượng bị ẩn khi tốc độ quạt bằng 0."
           }
         }
       }

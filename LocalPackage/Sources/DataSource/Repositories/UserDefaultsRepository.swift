@@ -99,6 +99,28 @@ public struct UserDefaultsRepository: Sendable {
         nonmutating set { userDefaultsClient.set(newValue, .showsMetricsBar) }
     }
 
+    public var showsMetricsBarOnTouchBar: Bool {
+        get { userDefaultsClient.bool(.showsMetricsBarOnTouchBar) }
+        nonmutating set { userDefaultsClient.set(newValue, .showsMetricsBarOnTouchBar) }
+    }
+
+    public var touchBarConfiguration: TouchBarConfiguration {
+        get {
+            guard let data = userDefaultsClient.data(.touchBarConfiguration),
+                  let value = try? JSONDecoder().decode(TouchBarConfiguration.self, from: data) else {
+                return .default
+            }
+            return value
+        }
+        nonmutating set {
+            if let data = try? JSONEncoder().encode(newValue) {
+                userDefaultsClient.set(data, .touchBarConfiguration)
+            } else {
+                userDefaultsClient.removeObject(.touchBarConfiguration)
+            }
+        }
+    }
+
     public var metricsBarConfiguration: MetricsBarConfiguration {
         get {
             guard let data = userDefaultsClient.data(.metricsBarConfiguration),
@@ -140,6 +162,7 @@ public struct UserDefaultsRepository: Sendable {
         }
         userDefaultsClient.register([
             .runnerID: RunnerKind.cat.id,
+            .showsMetricsBarOnTouchBar: true,
             .speedDecreasesUnderLoad: false,
             .isFlippedHorizontally: false,
             .updateInterval: UpdateInterval.default.rawValue,

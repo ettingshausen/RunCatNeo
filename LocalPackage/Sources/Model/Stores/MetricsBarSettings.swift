@@ -63,9 +63,21 @@ public final class MetricsBarSettings: Composable {
             customMetricsSources = userDefaultsRepository.customMetricsConfiguration.sources
             task?.cancel()
             task = Task.immediate { [weak self, appStateClient] in
-                let stream = appStateClient.withLock(\.customMetricsConfigurationChanges.stream)
-                for await _ in stream {
-                    self?.updateCustomMetricsConfiguration()
+                await withTaskGroup { group in
+                    group.addImmediateTask {
+                        let stream = appStateClient.withLock(\.customMetricsConfigurationChanges.stream)
+                        for await _ in stream {
+                            self?.updateCustomMetricsConfiguration()
+                        }
+                    }
+                    // The settings screen writes the same visibility flags, so
+                    // this popover must follow those changes to stay in sync.
+                    group.addImmediateTask {
+                        let stream = appStateClient.withLock(\.systemMetricsConfigurationChanges.stream)
+                        for await _ in stream {
+                            self?.updateMetricsBarConfiguration()
+                        }
+                    }
                 }
             }
 
@@ -154,6 +166,10 @@ public final class MetricsBarSettings: Composable {
 
     private func updateCustomMetricsConfiguration() {
         customMetricsSources = userDefaultsRepository.customMetricsConfiguration.sources
+        metricsBarConfiguration = userDefaultsRepository.metricsBarConfiguration
+    }
+
+    private func updateMetricsBarConfiguration() {
         metricsBarConfiguration = userDefaultsRepository.metricsBarConfiguration
     }
 

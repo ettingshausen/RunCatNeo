@@ -23,6 +23,7 @@ import Logging
 public enum NoticeEvent {
     case launchApp
     case screenView(name: String)
+    case touchBarSetup(step: String, detail: String)
 
     public var message: Logger.Message {
         switch self {
@@ -30,6 +31,8 @@ public enum NoticeEvent {
             "launch_app"
         case .screenView:
             "screen_view"
+        case .touchBarSetup:
+            "touch_bar_setup"
         }
     }
 
@@ -39,6 +42,8 @@ public enum NoticeEvent {
             [:]
         case let .screenView(name):
             ["screen": .string(name)]
+        case let .touchBarSetup(step, detail):
+            ["step": .string(step), "detail": .string(detail)]
         }
     }
 }

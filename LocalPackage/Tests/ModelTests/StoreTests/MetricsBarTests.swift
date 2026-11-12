@@ -118,4 +118,47 @@ struct MetricsBarTests {
         try? await Task.sleep(for: .milliseconds(50))
         #expect(sut.systemInfoBundle.cpuInfo == nil)
     }
+
+    @MainActor @Test
+    func touchBarIndicators_follow_the_touch_bar_visibility_not_the_menu_bar_one() {
+        // The menu bar shows CPU only; the Touch Bar is allowed the fan only.
+        let storage = UserDefaultsClient.storage(
+            initialMetricsBarConfiguration: MetricsBarConfiguration(
+                showsCPU: true,
+                showsMemory: false,
+                showsStorage: false,
+                showsBattery: false,
+                showsNetwork: false,
+                showsFan: false,
+                visibleCustomMetricsSourceIDs: []
+            ),
+            initialTouchBarConfiguration: TouchBarConfiguration(
+                mode: .smart,
+                excludedBundleIdentifiers: [],
+                visibleMetrics: [.fan]
+            )
+        )
+        let sut = MetricsBar(.testDependencies(userDefaultsClient: storage.client))
+        sut.systemInfoBundle = Metrics.dummy(cpuRawValue: 0.42).systemInfoBundle
+        sut.fanInfo = FanInfo(fans: [FanInfo.Fan(rpm: 1200, maximumRPM: 3000)])
+        let indicators = sut.touchBarIndicators
+        #expect(indicators == [TouchBarIndicator(systemIcon: "fanblades", primaryText: "1200")])
+        #expect(sut.metricsBarConfiguration.showsCPU)
+        #expect(!sut.metricsBarConfiguration.showsFan)
+        #expect(!sut.touchBarConfiguration.shows(.cpu))
+    }
+
+    @MainActor @Test
+    func touchBarIndicators_hide_a_zero_rpm_fan_and_show_a_spinning_one() {
+        let storage = UserDefaultsClient.storage(initialTouchBarConfiguration: TouchBarConfiguration(
+            mode: .smart,
+            excludedBundleIdentifiers: [],
+            visibleMetrics: [.fan]
+        ))
+        let sut = MetricsBar(.testDependencies(userDefaultsClient: storage.client))
+        sut.fanInfo = FanInfo(fans: [FanInfo.Fan(rpm: 0, maximumRPM: 3000)])
+        #expect(sut.touchBarIndicators.isEmpty)
+        sut.fanInfo = FanInfo(fans: [FanInfo.Fan(rpm: 1200.4, maximumRPM: 3000)])
+        #expect(sut.touchBarIndicators == [TouchBarIndicator(systemIcon: "fanblades", primaryText: "1200")])
+    }
 }
