@@ -38,7 +38,6 @@ public final class TouchBarMetricsService: NSObject, NSTouchBarDelegate {
 
     private static let trayItemIdentifier = NSTouchBarItem.Identifier("com.kyome.Neo.RunCat.touchBar.trayItem")
     private static let metricsItemIdentifier = NSTouchBarItem.Identifier("com.kyome.Neo.RunCat.touchBar.metricsItem")
-    private static let collapseItemIdentifier = NSTouchBarItem.Identifier("com.kyome.Neo.RunCat.touchBar.collapseItem")
 
     enum Decision {
         case present
@@ -274,7 +273,7 @@ public final class TouchBarMetricsService: NSObject, NSTouchBarDelegate {
     private func setupTouchBar() {
         let touchBar = NSTouchBar()
         touchBar.delegate = self
-        touchBar.defaultItemIdentifiers = [Self.metricsItemIdentifier, Self.collapseItemIdentifier]
+        touchBar.defaultItemIdentifiers = [Self.metricsItemIdentifier]
         self.touchBar = touchBar
     }
 
@@ -285,13 +284,6 @@ public final class TouchBarMetricsService: NSObject, NSTouchBarDelegate {
         case Self.metricsItemIdentifier:
             let item = NSCustomTouchBarItem(identifier: identifier)
             item.view = Self.metricsContentViewProvider?(appDependencies) ?? NSView()
-            return item
-        case Self.collapseItemIdentifier:
-            guard let image = NSImage(systemSymbolName: "minus", accessibilityDescription: nil) else { return nil }
-            let item = NSCustomTouchBarItem(identifier: identifier)
-            let button = NSButton(image: image, target: self, action: #selector(collapseButtonTapped(_:)))
-            button.isBordered = false
-            item.view = button
             return item
         default:
             return nil
@@ -306,9 +298,5 @@ public final class TouchBarMetricsService: NSObject, NSTouchBarDelegate {
         guard let touchBar, let trayItem else { return }
         isPresented = touchBarClient.presentSystemModal(touchBar, trayItem.identifier.rawValue)
         logService.notice(.touchBarSetup(step: "present(tray)", detail: "result=\(isPresented)"))
-    }
-
-    @objc private func collapseButtonTapped(_ sender: Any?) {
-        minimizeMetricsBar()
     }
 }
