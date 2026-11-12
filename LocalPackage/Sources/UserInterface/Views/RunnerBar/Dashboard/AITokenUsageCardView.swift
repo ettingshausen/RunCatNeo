@@ -34,6 +34,12 @@ extension AIToolKind {
 struct AITokenUsageCardView: View {
     var aiTokenUsage: AITokenUsage
 
+    /// Chinese locales count in 万/亿, where a three-digit-million total reads
+    /// better as 1.97亿; other locales keep the M/B abbreviations.
+    private var usesChineseUnits: Bool {
+        Locale.current.language.languageCode?.identifier.hasPrefix("zh") ?? false
+    }
+
     var body: some View {
         HStack(alignment: .center, spacing: 16) {
             Image(systemName: "chart.bar.xaxis")
@@ -43,14 +49,16 @@ struct AITokenUsageCardView: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text("aiTokenUsage", bundle: .module)
                 Group {
-                    // Token usage is a running total per tool, not a share of
-                    // anything, so no ratio bars are drawn.
+                    // The sum across tools, then each tool's own running total —
+                    // usage is a count, not a share, so no ratio bars are drawn.
+                    (
+                        Text("aiTokenTotal", bundle: .module)
+                            + Text(verbatim: ": \(aiTokenUsage.total.total.formattedTokenCount(usesChineseUnits: usesChineseUnits))")
+                    )
+                    .font(.caption)
+                    .fontWeight(.semibold)
                     ForEach(aiTokenUsage.tools) { tool in
-                        Text(verbatim: "\(tool.kind.displayName): \(tool.counts.total.formattedTokenCount)")
-                            .font(.caption)
-                    }
-                    if aiTokenUsage.tools.isEmpty {
-                        Text(verbatim: "0")
+                        Text(verbatim: "\(tool.kind.displayName): \(tool.counts.total.formattedTokenCount(usesChineseUnits: usesChineseUnits))")
                             .font(.caption)
                     }
                 }
