@@ -51,7 +51,7 @@ nonisolated final class KeyboardBatteryObserver: @unchecked Sendable {
         var handle: DeviceHandle?
         var reading: Reading?
         var status: BluetoothKeyboardInfo.Status = .noReport
-        var valueStampAge: UInt64?
+        var valueCapturedAt: Date?
         var freshReadInFlight = false
 
         var info: BluetoothKeyboardInfo {
@@ -417,16 +417,24 @@ nonisolated final class KeyboardBatteryObserver: @unchecked Sendable {
         }
     }
 
-    /// Keeps whichever reading came from the newest report (smallest age), and
-    /// records when the value actually changed — the honest description of a
-    /// quasi-static metric.
+    /// Keeps whichever reading came from the newest report, and records when the
+    /// value actually changed — the honest description of a quasi-static metric.
+    ///
+    /// Freshness is compared by the report's absolute capture time, not by the
+    /// age alone: the same cached report is answered again on every read, so its
+    /// age grows monotonically and an "is this age smaller" test would reject
+    /// every observation after the first one, freezing the readout at the value
+    /// seen when the app launched.
     private func adopt(value: Int, age: UInt64, key: String) {
         let changed = lock.withLock { state -> Bool in
             guard var deviceState = state.devices[key] else { return false }
-            if let existingAge = deviceState.valueStampAge, existingAge <= age {
+            let capturedAt = Date().addingTimeInterval(-Double(age))
+            if let existingCapturedAt = deviceState.valueCapturedAt,
+               existingCapturedAt >= capturedAt.addingTimeInterval(-0.5),
+               deviceState.reading?.percent == value {
                 return false
             }
-            deviceState.valueStampAge = age
+            deviceState.valueCapturedAt = capturedAt
             let previous = deviceState.reading?.percent
             let now = Date()
             var reading = deviceState.reading ?? Reading(percent: value, changedAt: nil, lastSeenAt: now)
