@@ -65,8 +65,11 @@ struct FanSectionView: View {
         )
     }
 
+    /// The ratio is only meaningful against a known maximum, and only while the
+    /// fan is actually spinning; otherwise it renders as a misleading empty
+    /// track.
     private var normalizedRPM: Double? {
-        guard let maximumRPM = fanInfo.fans[0].maximumRPM, maximumRPM > 0 else {
+        guard let maximumRPM = fanInfo.fans[0].maximumRPM, maximumRPM > 0, fanInfo.fans[0].rpm > 0 else {
             return nil
         }
         return min(max(fanInfo.fans[0].rpm / maximumRPM, .zero), 1)

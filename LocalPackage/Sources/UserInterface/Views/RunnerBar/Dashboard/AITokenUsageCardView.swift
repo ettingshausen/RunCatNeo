@@ -43,10 +43,11 @@ struct AITokenUsageCardView: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text("aiTokenUsage", bundle: .module)
                 Group {
+                    // Token usage is a running total per tool, not a share of
+                    // anything, so no ratio bars are drawn.
                     ForEach(aiTokenUsage.tools) { tool in
                         Text(verbatim: "\(tool.kind.displayName): \(tool.counts.total.formattedTokenCount)")
                             .font(.caption)
-                        BarGraphView(value: share(of: tool) * 100)
                     }
                     if aiTokenUsage.tools.isEmpty {
                         Text(verbatim: "0")
@@ -61,13 +62,5 @@ struct AITokenUsageCardView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(8)
         .materialCellStyle()
-    }
-
-    private func share(of tool: AITokenUsage.Tool) -> Double {
-        let total = aiTokenUsage.total.total
-        guard total > 0 else {
-            return 0
-        }
-        return Double(tool.counts.total) / Double(total)
     }
 }
