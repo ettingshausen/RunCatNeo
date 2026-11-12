@@ -41,10 +41,14 @@ public struct TouchBarMetricsBarView: View {
             } else {
                 ForEach(Array(indicators.enumerated()), id: \.offset) { _, indicator in
                     HStack(spacing: 3) {
+                        // A resizable symbol has no intrinsic width, so under a
+                        // tight proposal it would steal space from the label and
+                        // truncate it ("28.…"). Pin the width to something every
+                        // symbol can fit inside.
                         Image(systemName: indicator.systemIcon)
                             .resizable()
                             .scaledToFit()
-                            .frame(height: 13)
+                            .frame(width: 16, height: 13)
                         if let secondaryText = indicator.secondaryText {
                             VStack(spacing: 1) {
                                 Text(verbatim: indicator.primaryText)

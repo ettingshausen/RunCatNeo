@@ -35,6 +35,9 @@ public final class TouchBarMetricsContainerView: NSView {
         super.init(frame: NSRect(x: 0, y: 0, width: 1, height: Self.height))
         hostingView.autoresizingMask = [.width, .height]
         hostingView.translatesAutoresizingMaskIntoConstraints = false
+        // Labels must never be squeezed into "…": refuse any horizontal
+        // compression of the hosted SwiftUI content.
+        hostingView.setContentCompressionResistancePriority(.required, for: .horizontal)
         addSubview(hostingView)
         NSLayoutConstraint.activate([
             hostingView.leadingAnchor.constraint(equalTo: leadingAnchor),
