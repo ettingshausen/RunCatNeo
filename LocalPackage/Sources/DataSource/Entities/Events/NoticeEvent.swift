@@ -24,6 +24,7 @@ public enum NoticeEvent {
     case launchApp
     case screenView(name: String)
     case touchBarSetup(step: String, detail: String)
+    case stockAdded(symbol: String)
 
     public var message: Logger.Message {
         switch self {
@@ -33,6 +34,8 @@ public enum NoticeEvent {
             "screen_view"
         case .touchBarSetup:
             "touch_bar_setup"
+        case .stockAdded:
+            "stock_added"
         }
     }
 
@@ -44,6 +47,8 @@ public enum NoticeEvent {
             ["screen": .string(name)]
         case let .touchBarSetup(step, detail):
             ["step": .string(step), "detail": .string(detail)]
+        case let .stockAdded(symbol):
+            ["symbol": .string(symbol)]
         }
     }
 }

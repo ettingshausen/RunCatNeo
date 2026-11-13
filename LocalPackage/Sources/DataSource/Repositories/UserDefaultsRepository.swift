@@ -121,6 +121,23 @@ public struct UserDefaultsRepository: Sendable {
         }
     }
 
+    public var stockConfiguration: StockConfiguration {
+        get {
+            guard let data = userDefaultsClient.data(.stockConfiguration),
+                  let value = try? JSONDecoder().decode(StockConfiguration.self, from: data) else {
+                return .default
+            }
+            return value
+        }
+        nonmutating set {
+            if let data = try? JSONEncoder().encode(newValue) {
+                userDefaultsClient.set(data, .stockConfiguration)
+            } else {
+                userDefaultsClient.removeObject(.stockConfiguration)
+            }
+        }
+    }
+
     public var metricsBarConfiguration: MetricsBarConfiguration {
         get {
             guard let data = userDefaultsClient.data(.metricsBarConfiguration),

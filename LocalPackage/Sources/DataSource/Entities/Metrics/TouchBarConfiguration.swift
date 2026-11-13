@@ -50,24 +50,30 @@ public struct TouchBarConfiguration: Codable, Sendable, Equatable {
     public var excludedBundleIdentifiers: [String]
     public var visibleMetrics: Set<TouchBarMetric>
     public var visibleCustomMetricsSourceIDs: Set<UUID>
+    /// When true the stock watchlist is pinned and the system metrics scroll;
+    /// when false the system metrics are pinned and the stocks scroll.
+    public var prioritizeStocks: Bool
 
     public static let `default` = Self(
         mode: .smart,
         excludedBundleIdentifiers: [],
         visibleMetrics: Set(TouchBarMetric.allCases),
-        visibleCustomMetricsSourceIDs: []
+        visibleCustomMetricsSourceIDs: [],
+        prioritizeStocks: false
     )
 
     public init(
         mode: TouchBarDisplayMode,
         excludedBundleIdentifiers: [String],
         visibleMetrics: Set<TouchBarMetric> = Set(TouchBarMetric.allCases),
-        visibleCustomMetricsSourceIDs: Set<UUID> = []
+        visibleCustomMetricsSourceIDs: Set<UUID> = [],
+        prioritizeStocks: Bool = false
     ) {
         self.mode = mode
         self.excludedBundleIdentifiers = excludedBundleIdentifiers
         self.visibleMetrics = visibleMetrics
         self.visibleCustomMetricsSourceIDs = visibleCustomMetricsSourceIDs
+        self.prioritizeStocks = prioritizeStocks
     }
 
     public func shows(_ metric: TouchBarMetric) -> Bool {
@@ -90,5 +96,6 @@ public struct TouchBarConfiguration: Codable, Sendable, Equatable {
             Set<UUID>.self,
             forKey: .visibleCustomMetricsSourceIDs
         ) ?? []
+        prioritizeStocks = try container.decodeIfPresent(Bool.self, forKey: .prioritizeStocks) ?? false
     }
 }

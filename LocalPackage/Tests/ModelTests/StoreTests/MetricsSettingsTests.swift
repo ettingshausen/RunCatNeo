@@ -398,4 +398,22 @@ struct MetricsSettingsTests {
         await sut.send(.monitorsSystemMetricsToggleSwitched(.cpu, false))
         #expect(toggleActivationCount.withLock(\.self) == 0)
     }
+
+    @MainActor @Test
+    func send_stockRefreshIntervalSelected_updates_and_persists_the_cadence() async {
+        let storage = UserDefaultsClient.storage()
+        let sut = MetricsSettings(.testDependencies(userDefaultsClient: storage.client))
+        await sut.send(.stockRefreshIntervalSelected(5))
+        #expect(sut.stockConfiguration.refreshInterval == 5)
+        let saved = storage.lock.withLock { $0[.stockConfiguration] }
+            .flatMap { try? JSONDecoder().decode(StockConfiguration.self, from: $0) }
+        #expect(saved?.refreshInterval == 5)
+    }
+
+    @MainActor @Test
+    func send_stockRefreshIntervalSelected_normalizes_an_unknown_option() async {
+        let sut = MetricsSettings(.testDependencies())
+        await sut.send(.stockRefreshIntervalSelected(7))
+        #expect(sut.stockConfiguration.refreshInterval == 30)
+    }
 }

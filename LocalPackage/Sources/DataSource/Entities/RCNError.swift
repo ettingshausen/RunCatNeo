@@ -21,6 +21,7 @@
 public enum RCNError: Error, Equatable {
     case customRunner(CustomRunner)
     case customMetrics(CustomMetrics)
+    case stock(Stock)
 
     public enum CustomRunner: Error {
         case runnerInUse
@@ -34,5 +35,12 @@ public enum RCNError: Error, Equatable {
     public enum CustomMetrics: Error {
         case fileUnreadable
         case invalidFormat
+    }
+
+    public enum Stock: Error {
+        case limitExceeded
+        case duplicateSymbol
+        case invalidSymbol
+        case fetchFailed
     }
 }

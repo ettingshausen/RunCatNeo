@@ -35,6 +35,7 @@ public struct AppDependencies: Sendable {
     public var smAppServiceClient = SMAppServiceClient.liveValue
     public var smcClient = SMCClient.liveValue
     public var sqliteClient = SQLiteClient.liveValue
+    public var stockClient = StockClient.liveValue
     public var systemInfoObserverClient = SystemInfoObserverClient.liveValue
     public var touchBarClient = TouchBarClient.liveValue
     public var urlClient = URLClient.liveValue
@@ -63,6 +64,7 @@ extension AppDependencies {
         smAppServiceClient: SMAppServiceClient = .testValue,
         smcClient: SMCClient = .testValue,
         sqliteClient: SQLiteClient = .testValue,
+        stockClient: StockClient = .testValue,
         systemInfoObserverClient: SystemInfoObserverClient = .testValue,
         touchBarClient: TouchBarClient = .testValue,
         urlClient: URLClient = .testValue,
@@ -83,6 +85,7 @@ extension AppDependencies {
             smAppServiceClient: smAppServiceClient,
             smcClient: smcClient,
             sqliteClient: sqliteClient,
+            stockClient: stockClient,
             systemInfoObserverClient: systemInfoObserverClient,
             touchBarClient: touchBarClient,
             urlClient: urlClient,

@@ -41,6 +41,22 @@ extension RCNError.CustomRunner: LocalizedError {
     }
 }
 
+extension RCNError.Stock: LocalizedError {
+    public var errorDescription: String? {
+        let localizationValue: String.LocalizationValue = switch self {
+        case .limitExceeded:
+            "stockLimitExceeded"
+        case .duplicateSymbol:
+            "stockDuplicateSymbol"
+        case .invalidSymbol:
+            "stockInvalidSymbol"
+        case .fetchFailed:
+            "stockFetchFailed"
+        }
+        return String(localized: localizationValue, bundle: .module)
+    }
+}
+
 extension RCNError.CustomMetrics: LocalizedError {
     public var errorDescription: String? {
         let localizationValue: String.LocalizationValue = switch self {
@@ -59,6 +75,8 @@ extension RCNError: LocalizedError {
         case let .customRunner(detail):
             detail.errorDescription
         case let .customMetrics(detail):
+            detail.errorDescription
+        case let .stock(detail):
             detail.errorDescription
         }
     }

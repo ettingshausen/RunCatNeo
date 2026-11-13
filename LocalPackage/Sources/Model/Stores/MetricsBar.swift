@@ -33,6 +33,8 @@ public final class MetricsBar: Composable {
 
     public var metricsBarConfiguration: MetricsBarConfiguration
     public var touchBarConfiguration: TouchBarConfiguration
+    public var stockConfiguration: StockConfiguration
+    public var stockQuotes: [StockQuote]
     public var systemInfoBundle: SystemInfoBundle
     public var fanInfo: FanInfo?
     public var keyboardBatteries: [BluetoothKeyboardInfo]
@@ -45,6 +47,8 @@ public final class MetricsBar: Composable {
         _ appDependencies: AppDependencies,
         metricsBarConfiguration: MetricsBarConfiguration? = nil,
         touchBarConfiguration: TouchBarConfiguration? = nil,
+        stockConfiguration: StockConfiguration? = nil,
+        stockQuotes: [StockQuote] = [],
         systemInfoBundle: SystemInfoBundle = .init(),
         keyboardBatteries: [BluetoothKeyboardInfo] = [],
         customMetricsBundles: [CustomMetricsBundle] = [],
@@ -56,6 +60,8 @@ public final class MetricsBar: Composable {
         self.logService = .init(appDependencies)
         self.metricsBarConfiguration = metricsBarConfiguration ?? userDefaultsRepository.metricsBarConfiguration
         self.touchBarConfiguration = touchBarConfiguration ?? userDefaultsRepository.touchBarConfiguration
+        self.stockConfiguration = stockConfiguration ?? userDefaultsRepository.stockConfiguration
+        self.stockQuotes = stockQuotes
         self.systemInfoBundle = systemInfoBundle
         self.keyboardBatteries = keyboardBatteries
         self.customMetricsBundles = customMetricsBundles
@@ -97,12 +103,48 @@ public final class MetricsBar: Composable {
                             self?.updateTouchBarConfiguration()
                         }
                     }
+                    group.addImmediateTask {
+                        let stream = appStateClient.withLock(\.stockConfigurationChanges.stream)
+                        for await _ in stream {
+                            self?.updateStockConfiguration()
+                        }
+                    }
+                    group.addImmediateTask {
+                        let stream = appStateClient.withLock(\.stocks.stream)
+                        for await quotes in stream {
+                            self?.stockQuotes = quotes
+                        }
+                    }
                 }
             }
 
         case .viewDisappeared:
             task?.cancel()
             task = nil
+        }
+    }
+
+    /// The configured stocks joined with their latest quotes, in configuration
+    /// order. Stocks without a quote yet are skipped.
+    public var stockIndicators: [StockIndicator] {
+        stockConfiguration.stocks.compactMap { stock in
+            guard let quote = stockQuotes.first(where: { $0.symbol == stock.symbol }),
+                  let changePercent = quote.changePercent else {
+                return nil
+            }
+            let direction: StockDirection = switch changePercent {
+            case ..<0: .down
+            case 0: .flat
+            default: .up
+            }
+            return StockIndicator(
+                id: stock.id,
+                abbreviation: stock.abbreviation,
+                name: quote.name,
+                changePercent: changePercent,
+                direction: direction,
+                quote: quote
+            )
         }
     }
 
@@ -120,6 +162,10 @@ public final class MetricsBar: Composable {
 
     private func updateTouchBarConfiguration() {
         touchBarConfiguration = userDefaultsRepository.touchBarConfiguration
+    }
+
+    private func updateStockConfiguration() {
+        stockConfiguration = userDefaultsRepository.stockConfiguration
     }
 
     /// The visible metrics rendered as plain icon + label values for the

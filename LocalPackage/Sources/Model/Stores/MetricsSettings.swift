@@ -40,6 +40,7 @@ public struct TouchBarExclusionRow {
 
 @MainActor @Observable
 public final class MetricsSettings: Composable {
+    private let appDependencies: AppDependencies
     private let appStateClient: AppStateClient
     private let userDefaultsRepository: UserDefaultsRepository
     private let logService: LogService
@@ -47,6 +48,7 @@ public final class MetricsSettings: Composable {
     private let keyboardBatteryService: KeyboardBatteryService
     private let aiTokenUsageService: AITokenUsageService
     private let touchBarMetricsService: TouchBarMetricsService
+    private let stockService: StockService
     private let nsWorkspaceClient: NSWorkspaceClient
 
     @ObservationIgnored private var task: Task<Void, Never>?
@@ -60,6 +62,8 @@ public final class MetricsSettings: Composable {
     public var showsMetricsBarOnTouchBar: Bool
     public var touchBarConfiguration: TouchBarConfiguration
     public var showingTouchBarAppImporter: Bool
+    public var stockConfiguration: StockConfiguration
+    public var stockEditor: StockEditor?
     public var lastExternalFrontmostApplication: FrontmostApplicationInfo?
     public let isTouchBarHardwareAvailable: Bool
     public let customMetricsSettings: CustomMetricsSettings
@@ -74,6 +78,7 @@ public final class MetricsSettings: Composable {
         customMetricsSettings: CustomMetricsSettings? = nil,
         action: @escaping (Action) async -> Void = { _ in }
     ) {
+        self.appDependencies = appDependencies
         self.appStateClient = appDependencies.appStateClient
         self.userDefaultsRepository = .init(appDependencies.userDefaultsClient)
         self.logService = .init(appDependencies)
@@ -81,6 +86,7 @@ public final class MetricsSettings: Composable {
         self.keyboardBatteryService = .init(appDependencies)
         self.aiTokenUsageService = .init(appDependencies)
         self.touchBarMetricsService = .init(appDependencies)
+        self.stockService = .init(appDependencies)
         self.nsWorkspaceClient = appDependencies.nsWorkspaceClient
         self.showsMetricsBar = showsMetricsBar ?? userDefaultsRepository.showsMetricsBar
         self.showingMetricsBarNotesSheet = showingMetricsBarNotesSheet
@@ -91,6 +97,7 @@ public final class MetricsSettings: Composable {
         self.showsMetricsBarOnTouchBar = userDefaultsRepository.showsMetricsBarOnTouchBar
         self.touchBarConfiguration = userDefaultsRepository.touchBarConfiguration
         self.showingTouchBarAppImporter = false
+        self.stockConfiguration = userDefaultsRepository.stockConfiguration
         self.lastExternalFrontmostApplication = appStateClient.withLock(\.lastExternalFrontmostApplication)
         self.isTouchBarHardwareAvailable = TouchBarMetricsService.isTouchBarHardwareAvailable
         weak var weakSelf: MetricsSettings? = nil
@@ -123,6 +130,12 @@ public final class MetricsSettings: Composable {
                         let stream = appStateClient.withLock(\.touchBarConfigurationChanges.stream)
                         for await _ in stream {
                             self?.refreshTouchBarConfiguration()
+                        }
+                    }
+                    group.addImmediateTask { [weak self] in
+                        let stream = appStateClient.withLock(\.stockConfigurationChanges.stream)
+                        for await _ in stream {
+                            self?.refreshStockConfiguration()
                         }
                     }
                 }
@@ -235,6 +248,44 @@ public final class MetricsSettings: Composable {
             }
             systemMetricsService.emitConfigurationChange()
 
+        case .addStockButtonTapped:
+            stockEditor = StockEditor(
+                appDependencies,
+                existingStocks: stockConfiguration.stocks,
+                action: { [weak self] in await self?.send(.stockEditor($0)) }
+            )
+
+        case let .stockEditor(action):
+            switch action {
+            case .cancelButtonTapped:
+                stockEditor = nil
+            case let .stockAdded(stock):
+                stockEditor = nil
+                var configuration = stockConfiguration
+                configuration.stocks.append(stock)
+                stockConfiguration = configuration
+                userDefaultsRepository.stockConfiguration = configuration
+                stockService.emitConfigurationChange()
+            default:
+                return
+            }
+
+        case let .removeStockButtonTapped(id):
+            var configuration = stockConfiguration
+            configuration.stocks.removeAll { $0.id == id }
+            stockConfiguration = configuration
+            userDefaultsRepository.stockConfiguration = configuration
+            stockService.emitConfigurationChange()
+
+        case let .stockRefreshIntervalSelected(seconds):
+            var configuration = stockConfiguration
+            configuration.refreshInterval = StockConfiguration.normalizedRefreshInterval(seconds)
+            stockConfiguration = configuration
+            userDefaultsRepository.stockConfiguration = configuration
+            // The service re-reads the cadence on its next tick, and a config
+            // change also refreshes the quotes right away.
+            stockService.emitConfigurationChange()
+
         case let .showsMetricsBarOnTouchBarToggleSwitched(isOn):
             showsMetricsBarOnTouchBar = isOn
             userDefaultsRepository.showsMetricsBarOnTouchBar = isOn
@@ -256,6 +307,13 @@ public final class MetricsSettings: Composable {
             if isOn {
                 startMonitoringIfNeeded(for: metric)
             }
+
+        case let .touchBarStockPrioritySwitched(prioritizeStocks):
+            var configuration = touchBarConfiguration
+            configuration.prioritizeStocks = prioritizeStocks
+            touchBarConfiguration = configuration
+            userDefaultsRepository.touchBarConfiguration = configuration
+            touchBarMetricsService.emitConfigurationChange()
 
         case let .touchBarCustomMetricsToggleSwitched(id, isOn):
             var configuration = touchBarConfiguration
@@ -318,6 +376,10 @@ public final class MetricsSettings: Composable {
     /// not, the Touch Bar section is meaningless and stays hidden.
     public var isTouchBarMetricsColumnVisible: Bool {
         isTouchBarHardwareAvailable && showsMetricsBarOnTouchBar
+    }
+
+    public var stocks: [Stock] {
+        stockConfiguration.stocks
     }
 
     /// The custom metric sources, offered as per-source toggles in the Touch
@@ -393,6 +455,10 @@ public final class MetricsSettings: Composable {
         showsMetricsBarOnTouchBar = userDefaultsRepository.showsMetricsBarOnTouchBar
     }
 
+    private func refreshStockConfiguration() {
+        stockConfiguration = userDefaultsRepository.stockConfiguration
+    }
+
     private func rememberExternalFrontmostApplication(_ info: FrontmostApplicationInfo?) {
         guard let info, info.bundleIdentifier != Bundle.main.bundleIdentifier else { return }
         lastExternalFrontmostApplication = info
@@ -415,6 +481,11 @@ public final class MetricsSettings: Composable {
         case touchBarAppImporterPresented(Bool)
         case touchBarAppsImported([URL])
         case touchBarMetricToggleSwitched(TouchBarMetric, Bool)
+        case addStockButtonTapped
+        case stockEditor(StockEditor.Action)
+        case removeStockButtonTapped(UUID)
+        case stockRefreshIntervalSelected(Int)
+        case touchBarStockPrioritySwitched(Bool)
         case touchBarCustomMetricsToggleSwitched(UUID, Bool)
         case touchBarExcludeCurrentAppButtonTapped
         case touchBarExcludedAppRemoved(String)

@@ -24,6 +24,7 @@ import DataSource
 public final class AppDelegate: NSObject, NSApplicationDelegate {
     private let appDependencies = AppDependencies.shared
     private var touchBarMetricsService: TouchBarMetricsService?
+    private var stockService: StockService?
 
     public func applicationDidFinishLaunching(_ notification: Notification) {
         let appStateClient = appDependencies.appStateClient
@@ -44,6 +45,8 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         let runnerService = RunnerService(appDependencies)
         let touchBarMetricsService = TouchBarMetricsService(appDependencies)
         self.touchBarMetricsService = touchBarMetricsService
+        let stockService = StockService(appDependencies)
+        self.stockService = stockService
         Task {
             await withTaskGroup { group in
                 group.addTask {
@@ -103,6 +106,7 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
             logService.critical(.setupFailed(error))
         }
         touchBarMetricsService.start()
+        stockService.start()
     }
 
     public func applicationWillTerminate(_ notification: Notification) {
@@ -111,5 +115,6 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         KeyboardBatteryService(appDependencies).stopMonitoring()
         AITokenUsageService(appDependencies).stopMonitoring()
         touchBarMetricsService?.stop()
+        stockService?.stop()
     }
 }
