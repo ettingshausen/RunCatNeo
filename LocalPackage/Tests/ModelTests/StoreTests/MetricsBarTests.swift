@@ -214,8 +214,20 @@ struct MetricsBarTests {
     }
 
     @MainActor @Test
-    func send_viewAppeared_without_image_provider_skips_the_runner_streams() async {
+    func send_viewAppeared_seeds_stockQuotes_from_the_latest_value() async {
         let appState = AllocatedUnfairLock<AppState>(initialState: .init())
+        let saved = [StockQuote(symbol: "sz000001", name: "平安银行", price: 11.02, changePercent: 0.5)]
+        // Restored before any bar exists: the stream must not be the only
+        // source, or a bar appearing later starts from nothing.
+        appState.withLock { $0.stocks.send(saved) }
+        let sut = MetricsBar(.testDependencies(appStateClient: .testDependency(appState)))
+        await sut.send(.viewAppeared("MetricsBarTests"))
+        #expect(sut.stockQuotes == saved)
+        await sut.send(.viewDisappeared)
+    }
+
+    @MainActor @Test
+    func send_viewAppeared_without_image_provider_skips_the_runner_streams() async {        let appState = AllocatedUnfairLock<AppState>(initialState: .init())
         appState.withLock {
             $0.runnerBundles.send(RunnerBundle(runner: .default, frames: [.preset("cat-frame-1")]))
         }

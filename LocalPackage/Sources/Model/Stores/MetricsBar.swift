@@ -90,6 +90,13 @@ public final class MetricsBar: Composable {
             if let metrics = appStateClient.withLock(\.metrics.latestValue) {
                 updateMetrics(from: metrics)
             }
+            // Streams do not replay their latest value to new subscribers:
+            // the stock service restores quotes at launch, before any bar is
+            // on screen, so a bar appearing later must seed explicitly or it
+            // shows nothing until the next poll (on a closed day: never).
+            if let quotes = appStateClient.withLock(\.stocks.latestValue) {
+                stockQuotes = quotes
+            }
             // The runner bundle is only published when the runner changes, so
             // a bar appearing mid-session must seed from the latest values.
             if touchBarRunnerImageProvider != nil {
