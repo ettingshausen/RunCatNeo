@@ -72,6 +72,7 @@ public final class TouchBarMetricsContainerView: NSView {
     private var pixelShiftTimer: Timer?
     private var pixelShiftIndex = 0
     private var workspaceObservers: [NSObjectProtocol] = []
+    private var defaultsObserver: NSObjectProtocol?
     private var isSessionActive = true
     private var isSystemSleeping = false
     private var lastMetricIconSymbols: [String: String] = [:]
@@ -93,13 +94,13 @@ public final class TouchBarMetricsContainerView: NSView {
     /// Stacked indicators advance one member every three seconds.
     private static let rotationInterval: TimeInterval = 3
     private static let pixelShiftInterval: TimeInterval = 300
-    private static let pixelShiftDefaultsKey = "TouchBarOLEDProtectionPixelShiftEnabled"
 
     public init(_ appDependencies: AppDependencies) {
         store = MetricsBar(appDependencies, touchBarRunnerImageProvider: { resourceName in
             NSImage(resource: .init(name: resourceName, bundle: .module))
         })
         super.init(frame: NSRect(x: 0, y: 0, width: Self.barWidth, height: Self.height))
+        TouchBarOLEDTheme.registerDefaults()
         wantsLayer = true
         layer?.backgroundColor = TouchBarOLEDTheme.background.cgColor
         layer?.cornerRadius = 5
@@ -192,12 +193,23 @@ public final class TouchBarMetricsContainerView: NSView {
         ) { [weak self] _ in
             MainActor.assumeIsolated { self?.handleSystemWake() }
         })
+        defaultsObserver = NotificationCenter.default.addObserver(
+            forName: UserDefaults.didChangeNotification,
+            object: UserDefaults.standard,
+            queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated { self?.handlePixelShiftPreferenceChanged() }
+        }
     }
 
     private func removeWorkspaceObservers() {
         let center = NSWorkspace.shared.notificationCenter
         workspaceObservers.forEach { center.removeObserver($0) }
         workspaceObservers.removeAll()
+        if let defaultsObserver {
+            NotificationCenter.default.removeObserver(defaultsObserver)
+            self.defaultsObserver = nil
+        }
     }
 
     required init?(coder: NSCoder) {
@@ -266,7 +278,7 @@ public final class TouchBarMetricsContainerView: NSView {
         guard superview != nil,
               isSessionActive,
               !isSystemSleeping,
-              UserDefaults.standard.bool(forKey: Self.pixelShiftDefaultsKey),
+              UserDefaults.standard.bool(forKey: TouchBarOLEDTheme.pixelShiftDefaultsKey),
               pixelShiftTimer == nil else { return }
         let timer = Timer(timeInterval: Self.pixelShiftInterval, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated { self?.advancePixelShift() }
@@ -278,6 +290,15 @@ public final class TouchBarMetricsContainerView: NSView {
     private func stopPixelShiftTimer() {
         pixelShiftTimer?.invalidate()
         pixelShiftTimer = nil
+    }
+
+    private func handlePixelShiftPreferenceChanged() {
+        if UserDefaults.standard.bool(forKey: TouchBarOLEDTheme.pixelShiftDefaultsKey) {
+            startPixelShiftTimer()
+        } else {
+            stopPixelShiftTimer()
+            resetPixelShift()
+        }
     }
 
     private func advancePixelShift() {
