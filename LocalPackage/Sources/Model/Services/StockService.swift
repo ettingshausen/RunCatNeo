@@ -35,6 +35,8 @@ final class StockService {
     private let stockClient: StockClient
     private let userDefaultsRepository: UserDefaultsRepository
     private var task: Task<Void, Never>?
+    private var pollingTask: Task<Void, Never>?
+    private var pollGeneration = 0
     /// Poll bookkeeping: a market found closed (a public holiday) is
     /// remembered for the rest of its local date, and a market only starts
     /// polling after its opening probe confirmed that today is a trading day.
@@ -61,6 +63,10 @@ final class StockService {
             appStateClient.send(\.stocks, saved)
         }
         task?.cancel()
+        pollingTask?.cancel()
+        pollingTask = nil
+        pollGeneration += 1
+        isPolling = false
         task = Task.immediate { [weak self] in
             await self?.observe()
         }
@@ -69,6 +75,10 @@ final class StockService {
     func stop() {
         task?.cancel()
         task = nil
+        pollGeneration += 1
+        pollingTask?.cancel()
+        pollingTask = nil
+        isPolling = false
     }
 
     func emitConfigurationChange() {
@@ -130,14 +140,23 @@ final class StockService {
         }
 
         isPolling = true
-        Task { @MainActor [weak self] in
+        let generation = pollGeneration
+        pollingTask = Task { @MainActor [weak self] in
             guard let self else { return }
-            defer { self.isPolling = false }
+            defer {
+                if self.pollGeneration == generation {
+                    self.isPolling = false
+                    self.pollingTask = nil
+                }
+            }
             var symbols = plan.symbols
             for market in plan.probeMarkets {
+                guard !Task.isCancelled, self.pollGeneration == generation else { return }
                 // A failed probe is retried on the next tick rather than
                 // guessing whether the market is open.
-                guard let asOf = await self.probe(market) else { continue }
+                guard let asOf = await self.probe(market),
+                      !Task.isCancelled,
+                      self.pollGeneration == generation else { continue }
                 if StockPollPlanner.isTradingDay(asOf, of: market, at: now) {
                     self.probedOn[market] = market.localDateKey(now)
                     symbols.append(contentsOf: stocks
@@ -147,7 +166,9 @@ final class StockService {
                     self.closedOn[market] = market.localDateKey(now)
                 }
             }
-            guard !symbols.isEmpty else { return }
+            guard !symbols.isEmpty,
+                  !Task.isCancelled,
+                  self.pollGeneration == generation else { return }
             await self.poll(symbols)
         }
     }
@@ -162,9 +183,16 @@ final class StockService {
         guard !uncovered.isEmpty else { return }
         seededSymbols.formUnion(uncovered)
         isPolling = true
-        Task { @MainActor [weak self] in
+        let generation = pollGeneration
+        pollingTask = Task { @MainActor [weak self] in
             guard let self else { return }
-            defer { self.isPolling = false }
+            defer {
+                if self.pollGeneration == generation {
+                    self.isPolling = false
+                    self.pollingTask = nil
+                }
+            }
+            guard !Task.isCancelled, self.pollGeneration == generation else { return }
             await self.poll(uncovered)
         }
     }
@@ -175,7 +203,9 @@ final class StockService {
     }
 
     private func poll(_ symbols: [String]) async {
-        guard let text = try? await stockClient.fetch(symbols), !text.isEmpty else { return }
+        guard let text = try? await stockClient.fetch(symbols),
+              !Task.isCancelled,
+              !text.isEmpty else { return }
         let fresh = StockQuoteParser.parse(text)
         guard !fresh.isEmpty else { return }
         let current = appStateClient.withLock(\.stocks.latestValue) ?? []
