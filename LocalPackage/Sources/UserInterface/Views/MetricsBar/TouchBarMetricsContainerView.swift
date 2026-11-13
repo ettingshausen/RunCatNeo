@@ -37,6 +37,11 @@ import Observation
 /// stock swaps the whole bar for its detail panel.
 public final class TouchBarMetricsContainerView: NSView {
     private let store: MetricsBar
+    /// All custom content lives in this clipped container. Moving this view
+    /// keeps AppKit hit-testing aligned with the pixels during Pixel Shift.
+    private let contentContainerView = NSView()
+    private var contentCenterXConstraint: NSLayoutConstraint!
+    private var contentCenterYConstraint: NSLayoutConstraint!
 
     /// The prioritized group's stack. It is also the host of the detail panel,
     /// which always spans the whole bar.
@@ -64,6 +69,8 @@ public final class TouchBarMetricsContainerView: NSView {
     private var lifecycleTask: Task<Void, Never>?
     private var lifecycleGeneration = 0
     private var rotationTimer: Timer?
+    private var pixelShiftTimer: Timer?
+    private var pixelShiftIndex = 0
     private var workspaceObservers: [NSObjectProtocol] = []
     private var isSessionActive = true
     private var isSystemSleeping = false
@@ -85,6 +92,8 @@ public final class TouchBarMetricsContainerView: NSView {
     private static let separatorGap: CGFloat = 10
     /// Stacked indicators advance one member every three seconds.
     private static let rotationInterval: TimeInterval = 3
+    private static let pixelShiftInterval: TimeInterval = 300
+    private static let pixelShiftDefaultsKey = "TouchBarOLEDProtectionPixelShiftEnabled"
 
     public init(_ appDependencies: AppDependencies) {
         store = MetricsBar(appDependencies, touchBarRunnerImageProvider: { resourceName in
@@ -94,6 +103,22 @@ public final class TouchBarMetricsContainerView: NSView {
         wantsLayer = true
         layer?.backgroundColor = TouchBarOLEDTheme.background.cgColor
         layer?.cornerRadius = 5
+        layer?.masksToBounds = true
+
+        contentContainerView.translatesAutoresizingMaskIntoConstraints = false
+        addSubview(contentContainerView)
+        contentCenterXConstraint = contentContainerView.centerXAnchor.constraint(
+            equalTo: centerXAnchor
+        )
+        contentCenterYConstraint = contentContainerView.centerYAnchor.constraint(
+            equalTo: contentContainerView.centerYAnchor
+        )
+        NSLayoutConstraint.activate([
+            contentCenterXConstraint,
+            contentCenterYConstraint,
+            contentContainerView.widthAnchor.constraint(equalTo: widthAnchor),
+            contentContainerView.heightAnchor.constraint(equalTo: heightAnchor),
+        ])
 
         for stack in [leadingStack, leadingStocksStack] {
             stack.orientation = .horizontal
@@ -186,6 +211,8 @@ public final class TouchBarMetricsContainerView: NSView {
     public override func viewDidMoveToSuperview() {
         super.viewDidMoveToSuperview()
         stopRotationTimer()
+        stopPixelShiftTimer()
+        resetPixelShift()
         lifecycleTask?.cancel()
         lifecycleGeneration += 1
         let generation = lifecycleGeneration
@@ -209,6 +236,7 @@ public final class TouchBarMetricsContainerView: NSView {
             self.updateRunnerIfNeeded()
             self.observeStoreChanges()
             self.startRotationTimer()
+            self.startPixelShiftTimer()
         }
     }
 
@@ -230,10 +258,57 @@ public final class TouchBarMetricsContainerView: NSView {
         rotationTimer = nil
     }
 
+    /// Pixel Shift is opt-in. Set the UserDefaults key
+    /// "TouchBarOLEDProtectionPixelShiftEnabled" to true to enable it.
+    /// A one-physical-pixel offset is applied to the complete custom content
+    /// container, so stock-cell hit testing moves with the rendered content.
+    private func startPixelShiftTimer() {
+        guard superview != nil,
+              isSessionActive,
+              !isSystemSleeping,
+              UserDefaults.standard.bool(forKey: Self.pixelShiftDefaultsKey),
+              pixelShiftTimer == nil else { return }
+        let timer = Timer(timeInterval: Self.pixelShiftInterval, repeats: true) { [weak self] _ in
+            MainActor.assumeIsolated { self?.advancePixelShift() }
+        }
+        RunLoop.main.add(timer, forMode: .common)
+        pixelShiftTimer = timer
+    }
+
+    private func stopPixelShiftTimer() {
+        pixelShiftTimer?.invalidate()
+        pixelShiftTimer = nil
+    }
+
+    private func advancePixelShift() {
+        guard let window else { return }
+        let scale = max(window.backingScaleFactor, 1)
+        let pixel = 1 / scale
+        let offsets: [(CGFloat, CGFloat)] = [
+            (pixel, 0),
+            (0, pixel),
+            (-pixel, 0),
+            (0, -pixel),
+        ]
+        let offset = offsets[pixelShiftIndex % offsets.count]
+        pixelShiftIndex += 1
+        contentCenterXConstraint.constant = offset.0
+        contentCenterYConstraint.constant = offset.1
+        needsLayout = true
+        layoutSubtreeIfNeeded()
+    }
+
+    private func resetPixelShift() {
+        pixelShiftIndex = 0
+        contentCenterXConstraint.constant = 0
+        contentCenterYConstraint.constant = 0
+    }
+
     private func handleSessionInactive() {
         isSessionActive = false
         alphaValue = 0.55
         stopRotationTimer()
+        stopPixelShiftTimer()
     }
 
     private func handleSessionActive() {
@@ -241,18 +316,21 @@ public final class TouchBarMetricsContainerView: NSView {
         if !isSystemSleeping {
             alphaValue = 1
             startRotationTimer()
+            startPixelShiftTimer()
         }
     }
 
     private func handleSystemSleep() {
         isSystemSleeping = true
         stopRotationTimer()
+        stopPixelShiftTimer()
     }
 
     private func handleSystemWake() {
         isSystemSleeping = false
         alphaValue = isSessionActive ? 1 : 0.55
         startRotationTimer()
+        startPixelShiftTimer()
     }
 
     /// Observation tracking is one-shot; re-arm after every store change.
@@ -419,11 +497,11 @@ public final class TouchBarMetricsContainerView: NSView {
             // While a stock is expanded the whole bar belongs to its detail.
             runnerView.removeFromSuperview()
             leadingStack.addArrangedSubview(makeDetailPanel(for: expanded))
-            addSubview(leadingStack)
+            contentContainerView.addSubview(leadingStack)
             layoutConstraints = [
-                leadingStack.leadingAnchor.constraint(equalTo: leadingAnchor, constant: Self.horizontalInset),
+                leadingStack.leadingAnchor.constraint(equalTo: contentContainerView.leadingAnchor, constant: Self.horizontalInset),
                 leadingStack.centerYAnchor.constraint(equalTo: centerYAnchor),
-                leadingStack.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -Self.horizontalInset),
+                leadingStack.trailingAnchor.constraint(equalTo: contentContainerView.trailingAnchor, constant: -Self.horizontalInset),
             ]
             NSLayoutConstraint.activate(layoutConstraints)
             return
@@ -455,14 +533,14 @@ public final class TouchBarMetricsContainerView: NSView {
         }
 
         if prioritizeStocks && showsStocks {
-            addSubview(leadingStocksStack)
+            contentContainerView.addSubview(leadingStocksStack)
             layoutConstraints = [
                 leadingStocksStack.leadingAnchor.constraint(equalTo: leadingAnchor, constant: Self.horizontalInset),
                 leadingStocksStack.centerYAnchor.constraint(equalTo: centerYAnchor),
             ]
             if !metricSlots.isEmpty {
-                addSubview(separatorView)
-                addSubview(scrollView)
+                contentContainerView.addSubview(separatorView)
+                contentContainerView.addSubview(scrollView)
                 scrollView.documentView = metricsScrollStack
                 sizeDocumentView(metricsScrollStack)
                 layoutConstraints.append(contentsOf: [
