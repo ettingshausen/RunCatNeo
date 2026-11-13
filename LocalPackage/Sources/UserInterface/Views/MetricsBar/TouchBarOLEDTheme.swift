@@ -12,6 +12,12 @@ import DataSource
 /// unnecessary luminance from static decoration while keeping live values
 /// legible. They cannot prevent or measure OLED wear.
 enum TouchBarOLEDTheme {
+    static let pixelShiftDefaultsKey = "TouchBarOLEDProtectionPixelShiftEnabled"
+
+    static func registerDefaults() {
+        UserDefaults.standard.register(defaults: [pixelShiftDefaultsKey: true])
+    }
+
     static let background = NSColor.black
 
     /// Fixed symbols and separators should be dimmer than live values.
