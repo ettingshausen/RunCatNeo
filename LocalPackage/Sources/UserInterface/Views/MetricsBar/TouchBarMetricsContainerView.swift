@@ -131,39 +131,48 @@ public final class TouchBarMetricsContainerView: NSView {
             separatorView.heightAnchor.constraint(equalToConstant: 20),
         ])
 
-        // Touch Bar content is dimmed while the macOS login session is
-        // inactive (for example, the screen is locked) and rotation pauses
-        // during sleep. These are system lifecycle signals, not input
-        // monitoring; no accessibility or event-monitoring permission needed.
-        let workspaceCenter = NSWorkspace.shared.notificationCenter
-        workspaceObservers.append(workspaceCenter.addObserver(
+    }
+
+    /// Register workspace notifications only while the Touch Bar view is
+    /// attached. This avoids retaining notification tokens for an inactive
+    /// Touch Bar instance.
+    private func installWorkspaceObservers() {
+        guard workspaceObservers.isEmpty else { return }
+        let center = NSWorkspace.shared.notificationCenter
+        workspaceObservers.append(center.addObserver(
             forName: NSWorkspace.sessionDidResignActiveNotification,
             object: nil,
             queue: .main
         ) { [weak self] _ in
             MainActor.assumeIsolated { self?.handleSessionInactive() }
         })
-        workspaceObservers.append(workspaceCenter.addObserver(
+        workspaceObservers.append(center.addObserver(
             forName: NSWorkspace.sessionDidBecomeActiveNotification,
             object: nil,
             queue: .main
         ) { [weak self] _ in
             MainActor.assumeIsolated { self?.handleSessionActive() }
         })
-        workspaceObservers.append(workspaceCenter.addObserver(
+        workspaceObservers.append(center.addObserver(
             forName: NSWorkspace.willSleepNotification,
             object: nil,
             queue: .main
         ) { [weak self] _ in
             MainActor.assumeIsolated { self?.handleSystemSleep() }
         })
-        workspaceObservers.append(workspaceCenter.addObserver(
+        workspaceObservers.append(center.addObserver(
             forName: NSWorkspace.didWakeNotification,
             object: nil,
             queue: .main
         ) { [weak self] _ in
             MainActor.assumeIsolated { self?.handleSystemWake() }
         })
+    }
+
+    private func removeWorkspaceObservers() {
+        let center = NSWorkspace.shared.notificationCenter
+        workspaceObservers.forEach { center.removeObserver($0) }
+        workspaceObservers.removeAll()
     }
 
     required init?(coder: NSCoder) {
@@ -182,6 +191,7 @@ public final class TouchBarMetricsContainerView: NSView {
         let generation = lifecycleGeneration
 
         guard superview != nil else {
+            removeWorkspaceObservers()
             lifecycleTask = Task { @MainActor [weak self] in
                 guard let self, self.lifecycleGeneration == generation else { return }
                 await self.store.send(.viewDisappeared)
@@ -189,6 +199,7 @@ public final class TouchBarMetricsContainerView: NSView {
             return
         }
 
+        installWorkspaceObservers()
         lifecycleTask = Task { @MainActor [weak self] in
             guard let self, self.lifecycleGeneration == generation else { return }
             await self.store.send(.viewAppeared(String(describing: TouchBarMetricsContainerView.self)))
