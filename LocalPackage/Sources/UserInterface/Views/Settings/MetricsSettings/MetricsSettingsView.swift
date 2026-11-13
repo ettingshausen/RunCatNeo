@@ -217,7 +217,7 @@ private struct TouchBarTabView: View {
                                     get: { store.touchBarConfiguration.showsCustomMetrics(of: source.id) },
                                     asyncSet: { await store.send(.touchBarCustomMetricsToggleSwitched(source.id, $0)) }
                                 )) {
-                                    Text("show\\(source.displayName)Metrics", bundle: .module)
+                                    Text("show\(source.displayName)Metrics", bundle: .module)
                                 }
                                 StackAssignmentMenu(store: store, member: .customMetric(source.id))
                                     .disabled(!store.touchBarConfiguration.showsCustomMetrics(of: source.id))
