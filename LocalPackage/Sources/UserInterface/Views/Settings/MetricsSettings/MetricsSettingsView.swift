@@ -299,9 +299,11 @@ private struct StackAssignmentMenu: View {
 /// Touch Bar behaviour: display mode, display priority and the exclusion list.
 private struct TouchBarBehaviorSectionView: View {
     @StateObject var store: MetricsSettings
+    @AppStorage(TouchBarOLEDTheme.pixelShiftDefaultsKey) private var pixelShiftEnabled = true
 
     var body: some View {
-        Section {
+        Group {
+            Section {
             Picker(selection: Binding<TouchBarDisplayMode>(
                 get: { store.touchBarConfiguration.mode },
                 asyncSet: { await store.send(.touchBarDisplayModeSelected($0)) }
@@ -400,8 +402,21 @@ private struct TouchBarBehaviorSectionView: View {
                     }
                 }
             }
-        } header: {
-            Text("touchBarBehavior", bundle: .module)
+            } header: {
+                Text("touchBarBehavior", bundle: .module)
+            }
+
+            Section {
+                Toggle(isOn: $pixelShiftEnabled) {
+                    Text("Pixel Shift (OLED protection)")
+                }
+                Text("Moves custom Touch Bar content by one physical pixel every five minutes to help reduce static pixel wear.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            } header: {
+                Text("OLED Protection")
+            }
         }
     }
 }
