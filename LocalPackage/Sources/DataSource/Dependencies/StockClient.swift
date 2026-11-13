@@ -30,6 +30,13 @@ public struct StockClient: DependencyClient {
             guard !symbols.isEmpty else { return "" }
             var request = URLRequest(url: URL(string: "https://hq.sinajs.cn/list=\(symbols.joined(separator: ","))")!)
             request.setValue("https://finance.sina.com.cn", forHTTPHeaderField: "Referer")
+            // The endpoint already gates on Referer (403 without it); a
+            // browser UA keeps the request indistinguishable from the web
+            // client so a future UA check does not cut us off either.
+            request.setValue(
+                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+                forHTTPHeaderField: "User-Agent"
+            )
             let (data, _) = try await URLSession.shared.data(for: request)
             // Sina answers in GBK; Foundation exposes the conversion via
             // CFString's encoding registry.
