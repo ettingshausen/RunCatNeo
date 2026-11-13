@@ -35,6 +35,12 @@ final class StockService {
     private let stockClient: StockClient
     private let userDefaultsRepository: UserDefaultsRepository
     private var task: Task<Void, Never>?
+    /// Poll bookkeeping: a market found closed (a public holiday) is
+    /// remembered for the rest of its local date, and a market only starts
+    /// polling after its opening probe confirmed that today is a trading day.
+    private var closedOn: [StockMarket: String] = [:]
+    private var probedOn: [StockMarket: String] = [:]
+    private var isPolling = false
 
     init(_ appDependencies: AppDependencies) {
         self.appDependencies = appDependencies
@@ -92,23 +98,54 @@ final class StockService {
         }
     }
 
-    /// The editor validates a new symbol by fetching its live quote.
-    func fetchQuote(symbol: String) async throws -> StockQuote {
-        let text = try await stockClient.fetch([symbol])
-        guard let quote = StockQuoteParser.parse(text).first else {
-            throw RCNError.stock(.fetchFailed)
+    /// Requests quotes only for markets that are open right now. Closed
+    /// sessions, weekends and holidays cost no network traffic: a market is
+    /// confirmed open once per day by probing its index quote, and a weekday
+    /// whose index still carries the previous session is treated as a holiday.
+    private func refreshQuotes() {
+        let stocks = userDefaultsRepository.stockConfiguration.stocks
+        guard !stocks.isEmpty, !isPolling else { return }
+        let now = Date()
+        let plan = StockPollPlanner.plan(
+            for: stocks,
+            closedOn: closedOn,
+            probedOn: probedOn,
+            at: now
+        )
+        guard !plan.symbols.isEmpty || !plan.probeMarkets.isEmpty else { return }
+
+        isPolling = true
+        Task { @MainActor [weak self] in
+            guard let self else { return }
+            defer { self.isPolling = false }
+            var symbols = plan.symbols
+            for market in plan.probeMarkets {
+                // A failed probe is retried on the next tick rather than
+                // guessing whether the market is open.
+                guard let asOf = await self.probe(market) else { continue }
+                if StockPollPlanner.isTradingDay(asOf, of: market, at: now) {
+                    self.probedOn[market] = market.localDateKey(now)
+                    symbols.append(contentsOf: stocks
+                        .filter { StockMarket(symbol: $0.symbol) == market }
+                        .map(\.symbol))
+                } else {
+                    self.closedOn[market] = market.localDateKey(now)
+                }
+            }
+            guard !symbols.isEmpty else { return }
+            await self.poll(symbols)
         }
-        return quote
     }
 
-    private func refreshQuotes() {
-        let symbols = userDefaultsRepository.stockConfiguration.stocks.map(\.symbol)
-        guard !symbols.isEmpty else { return }
-        Task.immediate { [weak self, stockClient, appStateClient] in
-            guard let text = try? await stockClient.fetch(symbols), !text.isEmpty else { return }
-            let quotes = StockQuoteParser.parse(text)
-            guard !quotes.isEmpty else { return }
-            appStateClient.send(\.stocks, quotes)
-        }
+    private func probe(_ market: StockMarket) async -> Date? {
+        guard let text = try? await stockClient.fetch([market.probeSymbol]) else { return nil }
+        return StockQuoteParser.parse(text).first?.asOf
+    }
+
+    private func poll(_ symbols: [String]) async {
+        guard let text = try? await stockClient.fetch(symbols), !text.isEmpty else { return }
+        let quotes = StockQuoteParser.parse(text)
+        guard !quotes.isEmpty else { return }
+        appStateClient.send(\.stocks, quotes)
     }
 }

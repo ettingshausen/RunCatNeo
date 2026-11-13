@@ -67,7 +67,14 @@ enum StockQuoteParser {
                 open: positive(fields[2]),
                 high: positive(fields[4]),
                 low: positive(fields[5]),
-                prevClose: prevClose
+                prevClose: prevClose,
+                asOf: timestamp(
+                    fields,
+                    dateIndex: 17,
+                    timeIndex: 18,
+                    format: "yyyy/MM/dd HH:mm:ss",
+                    timeZoneID: "Asia/Hong_Kong"
+                )
             )
         case code.hasPrefix("gb_"):
             guard fields.count > 26 else { return nil }
@@ -82,7 +89,13 @@ enum StockQuoteParser {
                 open: positive(fields[5]),
                 high: positive(fields[6]),
                 low: positive(fields[7]),
-                prevClose: prevClose
+                prevClose: prevClose,
+                // Sina stamps US quotes with Beijing time in field 3.
+                asOf: timestamp(
+                    fields.count > 3 ? fields[3] : "",
+                    format: "yyyy-MM-dd HH:mm:ss",
+                    timeZoneID: "Asia/Shanghai"
+                )
             )
         case code.hasPrefix("sh") || code.hasPrefix("sz"):
             guard fields.count > 5, let prevClose = positive(fields[2]) else { return nil }
@@ -97,11 +110,47 @@ enum StockQuoteParser {
                 open: positive(fields[1]),
                 high: positive(fields[4]),
                 low: positive(fields[5]),
-                prevClose: prevClose
+                prevClose: prevClose,
+                asOf: timestamp(
+                    fields,
+                    dateIndex: 30,
+                    timeIndex: 31,
+                    format: "yyyy-MM-dd HH:mm:ss",
+                    timeZoneID: "Asia/Shanghai"
+                )
             )
         default:
             return nil
         }
+    }
+
+    /// Builds an instant from two response fields (a date and a time).
+    private static func timestamp(
+        _ fields: [String],
+        dateIndex: Int,
+        timeIndex: Int,
+        format: String,
+        timeZoneID: String
+    ) -> Date? {
+        guard fields.count > max(dateIndex, timeIndex),
+              !fields[dateIndex].isEmpty,
+              !fields[timeIndex].isEmpty else {
+            return nil
+        }
+        return timestamp(
+            "\(fields[dateIndex]) \(fields[timeIndex])",
+            format: format,
+            timeZoneID: timeZoneID
+        )
+    }
+
+    private static func timestamp(_ value: String, format: String, timeZoneID: String) -> Date? {
+        guard !value.isEmpty else { return nil }
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = TimeZone(identifier: timeZoneID)
+        formatter.dateFormat = format
+        return formatter.date(from: value)
     }
 
     /// Sina reports a zero price while a market has not opened yet (the

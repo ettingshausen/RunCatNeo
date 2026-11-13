@@ -58,8 +58,41 @@ struct StockQuoteParserTests {
     }
 
     @Test
-    func parse_batch_skips_unknown_codes_and_keeps_order() {
-        let text = [aShareLine, "var hq_str_gb_badcode=\"\";", hkLine].joined(separator: "\n")
+    func parse_carries_the_quote_timestamp() {
+        let aShare = StockQuoteParser.parse(aShareLine)[0]
+        #expect(aShare.asOf == date(2026, 11, 12, 15, 34, 59, "Asia/Shanghai"))
+
+        let hk = StockQuoteParser.parse(hkLine)[0]
+        #expect(hk.asOf == date(2026, 11, 12, 16, 8, 6, "Asia/Hong_Kong"))
+
+        // Sina stamps US quotes with Beijing time.
+        let us = StockQuoteParser.parse(usLine)[0]
+        #expect(us.asOf == date(2026, 11, 13, 3, 22, 35, "Asia/Shanghai"))
+    }
+
+    private func date(
+        _ year: Int,
+        _ month: Int,
+        _ day: Int,
+        _ hour: Int,
+        _ minute: Int,
+        _ second: Int,
+        _ timeZoneID: String
+    ) -> Date {
+        var components = DateComponents()
+        components.year = year
+        components.month = month
+        components.day = day
+        components.hour = hour
+        components.minute = minute
+        components.second = second
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: timeZoneID)!
+        return calendar.date(from: components)!
+    }
+
+    @Test
+    func parse_batch_skips_unknown_codes_and_keeps_order() {        let text = [aShareLine, "var hq_str_gb_badcode=\"\";", hkLine].joined(separator: "\n")
         let quotes = StockQuoteParser.parse(text)
         #expect(quotes.map(\.symbol) == ["sh600519", "rt_hk00700"])
     }

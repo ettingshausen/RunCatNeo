@@ -32,6 +32,10 @@ public struct StockQuote: Sendable, Equatable {
     public let high: Double?
     public let low: Double?
     public let prevClose: Double?
+    /// When the market last published this quote. The poll planner compares
+    /// its market-local date with today's to detect public holidays, when a
+    /// weekday still carries the previous session's data.
+    public let asOf: Date?
 
     public init(
         symbol: String,
@@ -42,7 +46,8 @@ public struct StockQuote: Sendable, Equatable {
         open: Double? = nil,
         high: Double? = nil,
         low: Double? = nil,
-        prevClose: Double? = nil
+        prevClose: Double? = nil,
+        asOf: Date? = nil
     ) {
         self.symbol = symbol
         self.name = name
@@ -53,5 +58,6 @@ public struct StockQuote: Sendable, Equatable {
         self.high = high
         self.low = low
         self.prevClose = prevClose
+        self.asOf = asOf
     }
 }
