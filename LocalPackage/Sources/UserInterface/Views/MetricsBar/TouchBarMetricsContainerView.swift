@@ -66,8 +66,7 @@ public final class TouchBarMetricsContainerView: NSView {
     private var rotationTimer: Timer?
     private var rebuildPending = false
     private var layoutConstraints: [NSLayoutConstraint] = []
-    /// Rotation phase per stack slot. Both copies of a stack (the pinned one
-    /// and the clipping one) share the phase and advance together.
+    /// Rotation phase per stack slot, preserved across structural rebuilds.
     private var rotationPhases: [String: Int] = [:]
     private var stackViews: [(id: String, view: TouchBarStackView)] = []
 
@@ -221,7 +220,7 @@ public final class TouchBarMetricsContainerView: NSView {
                let key = field.identifier?.rawValue,
                let value = values[key] {
                 if field.stringValue != value.0 { field.stringValue = value.0 }
-                if field.textColor != value.1 { field.textColor = value.1 }
+                field.textColor = value.1
             } else if let imageView = view as? NSImageView,
                       let key = imageView.identifier?.rawValue,
                       let value = icons[key] {
@@ -618,9 +617,8 @@ public final class TouchBarMetricsContainerView: NSView {
 
     // MARK: - Rotation
 
-    /// Advances every visible stack one member. A slot exists twice in the
-    /// bookkeeping (once pinned, once in the clipping view), so the phase moves
-    /// once per slot and only the attached copy animates.
+    /// Advances each active stack one member. Inactive presentation copies
+    /// are no longer built, so every entry here is a live candidate.
     private func rotateStacks() {
         guard expandedStockID == nil else { return }
         var advanced = Set<String>()
@@ -637,8 +635,7 @@ public final class TouchBarMetricsContainerView: NSView {
         }
     }
 
-    /// The same slot is built for both the pinned and the clipping collection;
-    /// only the copy that actually hangs under this view should animate.
+    /// Returns whether a stack belongs to the currently attached hierarchy.
     private func isInHierarchy(_ view: NSView) -> Bool {
         var ancestor = view.superview
         while let current = ancestor {
