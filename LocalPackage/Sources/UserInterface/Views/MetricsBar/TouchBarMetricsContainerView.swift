@@ -310,7 +310,7 @@ public final class TouchBarMetricsContainerView: NSView {
             } else if let imageView = view as? NSImageView,
                       let key = imageView.identifier?.rawValue,
                       let value = icons[key] {
-                if lastMetricIconSymbols[key] != value.0 {
+                if imageView.image == nil || lastMetricIconSymbols[key] != value.0 {
                     imageView.image = NSImage(
                         systemSymbolName: value.0,
                         accessibilityDescription: value.0
