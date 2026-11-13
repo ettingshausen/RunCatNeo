@@ -44,8 +44,6 @@ extension RCNError.CustomRunner: LocalizedError {
 extension RCNError.Stock: LocalizedError {
     public var errorDescription: String? {
         let localizationValue: String.LocalizationValue = switch self {
-        case .limitExceeded:
-            "stockLimitExceeded"
         case .duplicateSymbol:
             "stockDuplicateSymbol"
         case .invalidSymbol:

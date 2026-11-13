@@ -38,7 +38,6 @@ public enum RCNError: Error, Equatable {
     }
 
     public enum Stock: Error {
-        case limitExceeded
         case duplicateSymbol
         case invalidSymbol
         case fetchFailed

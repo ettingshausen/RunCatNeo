@@ -90,14 +90,18 @@ struct StockEditorTests {
     }
 
     @Test
-    func add_enforces_the_five_stock_limit_before_touching_the_network() async {
-        let existing = (0..<StockEditor.maxStocks).map { index in
-            Stock(id: UUID(), symbol: "gb_x\(index)", abbreviation: "x\(index)")
+    func add_reports_an_unlisted_code_as_invalid_instead_of_a_network_failure() async {
+        // Sina answers an unlisted code with an empty payload; that is a bad
+        // code, not a failed request.
+        let (editor, outcome) = makeEditor(symbol: "gb_msft") { _ in
+            """
+            var hq_str_gb_msft="";
+            """
         }
-        let (editor, outcome) = makeEditor(symbol: "gb_msft", existingStocks: existing)
         await editor.send(.addButtonTapped)
-        #expect(outcome().errors == [.stock(.limitExceeded)])
-        #expect(outcome().fetchCount == 0)
+        #expect(outcome().errors == [.stock(.invalidSymbol)])
+        #expect(outcome().fetchCount == 1)
+        #expect(outcome().addedStocks.isEmpty)
     }
 
     @Test

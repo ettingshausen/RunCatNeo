@@ -27,11 +27,8 @@ import Observation
 /// appear on the Touch Bar — and reports the finished `Stock` to the parent.
 @MainActor @Observable
 public final class StockEditor: Composable, Identifiable {
-    public static let maxStocks = 5
-
     private let stockClient: StockClient
     private let existingSymbols: [String]
-    private let existingCount: Int
     private let logService: LogService
 
     public let id = UUID()
@@ -55,7 +52,6 @@ public final class StockEditor: Composable, Identifiable {
     ) {
         self.stockClient = appDependencies.stockClient
         self.existingSymbols = existingStocks.map(\.symbol)
-        self.existingCount = existingStocks.count
         self.logService = .init(appDependencies)
         self.symbol = symbol
         self.abbreviation = abbreviation
@@ -73,16 +69,15 @@ public final class StockEditor: Composable, Identifiable {
                 await send(.errorOccurred(.stock(.duplicateSymbol)))
                 return
             }
-            guard existingCount < Self.maxStocks else {
-                await send(.errorOccurred(.stock(.limitExceeded)))
-                return
-            }
             isFetching = true
             defer { isFetching = false }
             do {
                 let text = try await stockClient.fetch([symbol])
                 guard let quote = StockQuoteParser.parse(text).first else {
-                    throw RCNError.stock(.fetchFailed)
+                    // The request succeeded but Sina had no quote for the
+                    // code (an unlisted code answers with an empty payload),
+                    // so this is a bad code rather than a network problem.
+                    throw RCNError.stock(.invalidSymbol)
                 }
                 let abbreviation = abbreviation.trimmingCharacters(in: .whitespaces)
                 let stock = Stock(
