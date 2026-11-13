@@ -138,6 +138,25 @@ public struct UserDefaultsRepository: Sendable {
         }
     }
 
+    /// The last known quotes, so a relaunch on a closed day can still show
+    /// the previous session's level without requesting anything.
+    public var stockQuotes: [StockQuote] {
+        get {
+            guard let data = userDefaultsClient.data(.stockQuotes),
+                  let value = try? JSONDecoder().decode([StockQuote].self, from: data) else {
+                return []
+            }
+            return value
+        }
+        nonmutating set {
+            if let data = try? JSONEncoder().encode(newValue), !newValue.isEmpty {
+                userDefaultsClient.set(data, .stockQuotes)
+            } else {
+                userDefaultsClient.removeObject(.stockQuotes)
+            }
+        }
+    }
+
     public var metricsBarConfiguration: MetricsBarConfiguration {
         get {
             guard let data = userDefaultsClient.data(.metricsBarConfiguration),

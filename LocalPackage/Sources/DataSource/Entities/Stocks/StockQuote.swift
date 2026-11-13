@@ -22,7 +22,8 @@ import Foundation
 
 /// A parsed snapshot for one configured stock. Fields a market does not report
 /// stay nil; the Touch Bar skips a stock until it has a change percent.
-public struct StockQuote: Sendable, Equatable {
+/// Codable so the last known level survives a relaunch on a closed day.
+public struct StockQuote: Codable, Sendable, Equatable {
     public let symbol: String
     public let name: String
     public let price: Double?

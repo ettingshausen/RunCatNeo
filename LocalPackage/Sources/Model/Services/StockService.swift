@@ -40,6 +40,8 @@ final class StockService {
     /// polling after its opening probe confirmed that today is a trading day.
     private var closedOn: [StockMarket: String] = [:]
     private var probedOn: [StockMarket: String] = [:]
+    /// Symbols already given their one off-session seed request this run.
+    private var seededSymbols: Set<String> = []
     private var isPolling = false
 
     init(_ appDependencies: AppDependencies) {
@@ -51,6 +53,13 @@ final class StockService {
     }
 
     func start() {
+        // Show the persisted last-known level right away: a relaunch on a
+        // closed day (night, weekend, holiday) would otherwise leave the
+        // stock group empty until the next session opens.
+        let saved = userDefaultsRepository.stockQuotes
+        if !saved.isEmpty {
+            appStateClient.send(\.stocks, saved)
+        }
         task?.cancel()
         task = Task.immediate { [weak self] in
             await self?.observe()
@@ -102,17 +111,23 @@ final class StockService {
     /// sessions, weekends and holidays cost no network traffic: a market is
     /// confirmed open once per day by probing its index quote, and a weekday
     /// whose index still carries the previous session is treated as a holiday.
+    /// The sole exception is seeding: a configured symbol with no known level
+    /// at all is fetched once even off-session, so a fresh install or a stock
+    /// added on a closed day still shows its last published price.
     private func refreshQuotes() {
         let stocks = userDefaultsRepository.stockConfiguration.stocks
         guard !stocks.isEmpty, !isPolling else { return }
-        let now = Date()
+        let now = appDependencies.dateClient.now()
         let plan = StockPollPlanner.plan(
             for: stocks,
             closedOn: closedOn,
             probedOn: probedOn,
             at: now
         )
-        guard !plan.symbols.isEmpty || !plan.probeMarkets.isEmpty else { return }
+        if plan.symbols.isEmpty, plan.probeMarkets.isEmpty {
+            seedUncovered(stocks: stocks)
+            return
+        }
 
         isPolling = true
         Task { @MainActor [weak self] in
@@ -137,6 +152,23 @@ final class StockService {
         }
     }
 
+    /// Fetches the configured symbols that have no known quote yet, once per
+    /// symbol per run, so the Touch Bar is not blank on a closed day.
+    private func seedUncovered(stocks: [Stock]) {
+        let known = Set((appStateClient.withLock(\.stocks.latestValue) ?? []).map(\.symbol))
+        let uncovered = stocks.map(\.symbol).filter {
+            !known.contains($0) && !seededSymbols.contains($0)
+        }
+        guard !uncovered.isEmpty else { return }
+        seededSymbols.formUnion(uncovered)
+        isPolling = true
+        Task { @MainActor [weak self] in
+            guard let self else { return }
+            defer { self.isPolling = false }
+            await self.poll(uncovered)
+        }
+    }
+
     private func probe(_ market: StockMarket) async -> Date? {
         guard let text = try? await stockClient.fetch([market.probeSymbol]) else { return nil }
         return StockQuoteParser.parse(text).first?.asOf
@@ -144,8 +176,21 @@ final class StockService {
 
     private func poll(_ symbols: [String]) async {
         guard let text = try? await stockClient.fetch(symbols), !text.isEmpty else { return }
-        let quotes = StockQuoteParser.parse(text)
-        guard !quotes.isEmpty else { return }
-        appStateClient.send(\.stocks, quotes)
+        let fresh = StockQuoteParser.parse(text)
+        guard !fresh.isEmpty else { return }
+        let current = appStateClient.withLock(\.stocks.latestValue) ?? []
+        let configured = Set(userDefaultsRepository.stockConfiguration.stocks.map(\.symbol))
+        let merged = Self.merge(current: current, fresh: fresh)
+            .filter { configured.contains($0.symbol) }
+        appStateClient.send(\.stocks, merged)
+        userDefaultsRepository.stockQuotes = merged
+    }
+
+    /// Fresh quotes replace their previous entries; everything the batch did
+    /// not cover (e.g. a holiday-closed market) keeps its last known level
+    /// instead of vanishing from the bar.
+    static func merge(current: [StockQuote], fresh: [StockQuote]) -> [StockQuote] {
+        let freshBySymbol = Dictionary(fresh.map { ($0.symbol, $0) }, uniquingKeysWith: { _, new in new })
+        return current.filter { freshBySymbol[$0.symbol] == nil } + fresh
     }
 }

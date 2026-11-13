@@ -28,6 +28,7 @@ extension String {
     static let runnerID = "RUNNER_ID"
     static let speedDecreasesUnderLoad = "SPEED_DECREASES_UNDER_LOAD"
     static let stockConfiguration = "STOCK_CONFIGURATION"
+    static let stockQuotes = "STOCK_QUOTES"
     static let systemMetricsConfiguration = "SYSTEM_METRICS_CONFIGURATION"
     static let touchBarConfiguration = "TOUCH_BAR_METRICS_CONFIGURATION"
     static let updateInterval = "UPDATE_INTERVAL"
