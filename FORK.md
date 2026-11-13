@@ -218,6 +218,11 @@ open /Applications/RunCatNeo.app     # 重新登记
 
 **只在开市时段请求（周末/午休/节假日不再打接口）：** `StockMarket` 按代码前缀分市场，每个市场用自己的本地时区与常规时段——A 股 09:30–11:30 / 13:00–15:00，港股 09:30–12:00 / 13:00–16:00，美股 09:30–16:00 ET；周末直接跳过，午休、盘前盘后也不请求。每个交易日开市后 2 分钟（美股 5 分钟）先用**指数报价**（`sh000001` / `rt_hkHSI` / `gb_dji`）探一次当天是否开市：指数从不因停牌而缺失，报价自带时间戳（A 股字段 30/31、港股 17/18、美股字段 3，均为北京时间/当地时间的字符串），换算到该市场本地日历日；不是今天就是节假日或休市，当天不再请求该市场（每个节假日最多 1 次探针请求）。`StockQuote.asOf` 就是这个时间戳；`StockPollPlanner` 是纯函数（按 `closedOn`/`probedOn` 状态决定本次可请求的代码与需要探针的市场），`StockService` 负责执行并把探针失败留到下一轮重试。配置里混有多个市场时逐市场判定，只请求开市的那部分代码。
 
+### AI Token 用量
+
+三个工具各自读本地日志：Claude Code（`~/.claude/projects/**/*.jsonl`，按 `(message.id, requestId)` 去重）、ZCode（`~/.zcode/cli/db/db.sqlite` 的 `model_usage` 表）、Codex CLI（`~/.codex/sessions/rollout-*.jsonl`）。刷新固定 15 秒，按自然日归零。
+
+**ZCode 库的 WAL 坑（踩过）：** ZCode 的库是 WAL 模式，**干净退出时 SQLite 会把 WAL checkpoint 进主文件并删掉 `-wal`/`-shm` 两个侧文件**；此后一个只读连接打不开剩下的主库（重建 wal-index 需要写权限，报 `SQLITE_CANTOPEN`），`try?` 一吞就表现为「ZCode 关闭后用量清零，重开 ZCode 又恢复」。修复：`-wal` 缺失或为空时用 `immutable=1` URI 只读打开（`SQLiteClient.query` 第三参）——该状态下主文件已含全部已提交数据，绕过锁与侧文件读取；若 stat 判定有 WAL 但查询仍失败（两次调用之间恰好退出），退回 immutable 重试一次。不要用可写连接去读用户的库。
 
 改成 ad-hoc 签名跑 Debug 时，键盘电量会显示 `--`——不是 bug，是 TCC 授权绑在稳定签名上，见第 2、4 节。
 

@@ -202,7 +202,19 @@ struct AITokenUsageScanner {
             WHERE completed_at >= \(startMilliseconds) OR started_at >= \(startMilliseconds)
             """
         var counts = AITokenUsage.Counts()
-        if let rows = try? sqliteClient.query(databasePath, sql) {
+        // A quit ZCode checkpoints the WAL into the main file and deletes both
+        // sidecars, and a read-only connection cannot open the remaining
+        // WAL-mode database (see SQLiteClient.query) — that failure used to
+        // zero the whole reading until ZCode started again. An absent or empty
+        // -wal means the main file is current, so read it as immutable.
+        let walPath = databaseDirectory.appending(path: "db.sqlite-wal")
+        let isImmutable = (fileManagerClient.fileInfo(walPath)?.size ?? 0) == 0
+        var rows = try? sqliteClient.query(databasePath, sql, isImmutable)
+        if rows == nil, !isImmutable {
+            // ZCode may have quit between the stat above and the query.
+            rows = try? sqliteClient.query(databasePath, sql, true)
+        }
+        if let rows {
             for row in rows where row.count == 6 {
                 let timestampMilliseconds = row[4] ?? row[5]
                 guard let timestampMilliseconds, timestampMilliseconds > 0 else {

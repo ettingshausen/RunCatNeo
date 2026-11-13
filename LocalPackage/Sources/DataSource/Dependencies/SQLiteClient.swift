@@ -28,12 +28,28 @@ public struct SQLiteClient: DependencyClient {
         case stepFailed(code: Int32)
     }
 
-    public var query: @Sendable (String, String) throws -> [[Int64?]]
+    /// - Parameters:
+    ///   - databasePath: Path of the database file to open.
+    ///   - sql: The query to run; every column is read as an integer or nil.
+    ///   - isImmutable: Opens the file with SQLite's `immutable=1` URI flag.
+    ///     Required for a WAL-mode database whose writer has quit: the -wal
+    ///     and -shm sidecars are deleted on a clean exit, and a read-only
+    ///     connection may not rebuild the missing -wal-index, so the plain
+    ///     open fails. In that state the checkpointed main file holds every
+    ///     committed row, and `immutable=1` reads it without touching locks
+    ///     or sidecars.
+    public var query: @Sendable (String, String, _ isImmutable: Bool) throws -> [[Int64?]]
 
     public static let liveValue = Self(
-        query: { databasePath, sql in
+        query: { databasePath, sql, isImmutable in
+            var openPath = databasePath
+            var openFlags = SQLITE_OPEN_READONLY
+            if isImmutable {
+                openPath = URL(fileURLWithPath: databasePath).absoluteString + "?immutable=1"
+                openFlags |= SQLITE_OPEN_URI
+            }
             var database: OpaquePointer?
-            guard sqlite3_open_v2(databasePath, &database, SQLITE_OPEN_READONLY, nil) == SQLITE_OK else {
+            guard sqlite3_open_v2(openPath, &database, openFlags, nil) == SQLITE_OK else {
                 let code = sqlite3_errcode(database)
                 sqlite3_close_v2(database)
                 throw SQLiteError.openFailed(code: code)
@@ -70,6 +86,6 @@ public struct SQLiteClient: DependencyClient {
     )
 
     public static let testValue = Self(
-        query: { _, _ in [] }
+        query: { _, _, _ in [] }
     )
 }

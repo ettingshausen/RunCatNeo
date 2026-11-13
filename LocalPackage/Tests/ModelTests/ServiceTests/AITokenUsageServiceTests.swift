@@ -141,7 +141,7 @@ struct AITokenUsageServiceTests {
                 $0.read = fileSlice
             },
             sqliteClient: testDependency(of: SQLiteClient.self) {
-                $0.query = { _, _ in try rows() }
+                $0.query = { _, _, _ in try rows() }
             }
         )
     }
@@ -226,7 +226,7 @@ struct AITokenUsageServiceTests {
             },
             fileSliceClient: .testValue,
             sqliteClient: testDependency(of: SQLiteClient.self) {
-                $0.query = { _, _ in
+                $0.query = { _, _, _ in
                     queryCalls.withLock { $0 += 1 }
                     return [
                         [100, 10, 30, 20, milliseconds(now), milliseconds(now.addingTimeInterval(-1))],
@@ -245,6 +245,54 @@ struct AITokenUsageServiceTests {
         counts = try #require(scanner.scan(now: now).tools.first { $0.kind == .zcode }?.counts)
         #expect(counts == AITokenUsage.Counts(input: 55, output: 11, cacheRead: 20, cacheWrite: 30))
         #expect(queryCalls.withLock { $0 } == 1)
+    }
+
+    @Test
+    func scan_zcode_reads_immutable_after_zcode_quits_without_sidecars() throws {
+        let immutableFlags = AllocatedUnfairLock<[Bool]>(initialState: [])
+        var scanner = AITokenUsageScanner(
+            fileManagerClient: testDependency(of: FileManagerClient.self) {
+                $0.fileExists = { _ in true }
+                // Only the database exists: a clean ZCode exit deletes the -wal.
+                $0.fileInfo = { [now] url in
+                    url.pathExtension == "sqlite" ? .init(size: 4096, modificationDate: now) : nil
+                }
+            },
+            fileSliceClient: .testValue,
+            sqliteClient: testDependency(of: SQLiteClient.self) {
+                $0.query = { _, _, isImmutable in
+                    immutableFlags.withLock { $0.append(isImmutable) }
+                    return [[10, 2, nil, nil, milliseconds(now), milliseconds(now)]]
+                }
+            }
+        )
+        let counts = try #require(scanner.scan(now: now).tools.first { $0.kind == .zcode }?.counts)
+        #expect(counts == AITokenUsage.Counts(input: 10, output: 2))
+        #expect(immutableFlags.withLock { $0 } == [true])
+    }
+
+    @Test
+    func scan_zcode_falls_back_to_immutable_when_the_plain_query_fails() throws {
+        var scanner = AITokenUsageScanner(
+            fileManagerClient: testDependency(of: FileManagerClient.self) {
+                $0.fileExists = { _ in true }
+                $0.fileInfo = { [now] _ in .init(size: 1, modificationDate: now) }
+            },
+            fileSliceClient: .testValue,
+            sqliteClient: testDependency(of: SQLiteClient.self) {
+                // The -wal exists at stat time but ZCode quits before the
+                // query, so the plain open fails and the immutable retry
+                // against the checkpointed main file recovers the rows.
+                $0.query = { _, _, isImmutable in
+                    guard isImmutable else {
+                        throw SQLiteClient.SQLiteError.openFailed(code: 14)
+                    }
+                    return [[10, 2, nil, nil, milliseconds(now), milliseconds(now)]]
+                }
+            }
+        )
+        let counts = try #require(scanner.scan(now: now).tools.first { $0.kind == .zcode }?.counts)
+        #expect(counts == AITokenUsage.Counts(input: 10, output: 2))
     }
 
     @Test
