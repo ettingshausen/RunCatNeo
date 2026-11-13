@@ -168,11 +168,11 @@ open /Applications/RunCatNeo.app     # 重新登记
 
 ### Touch Bar 指标栏
 
-设置 →「指标」→「Touch Bar」区块。仅在带 DFR 硬件的机器上出现（检测见下）。
+设置 →「指标」→ 三个页签：**系统指标**（菜单栏）｜**Touch Bar 指标**｜**Touch Bar 股票**。带 DFR 硬件的机器才有页签栏（检测见下）；没有 Touch Bar 的机器整页退化成「系统指标」一页。整页宽度固定 536pt，切页签不会缩放窗口。
 
 | 显示模式 | 行为 | 适用 |
 |---|---|---|
-| 仅锚点图标 | Control Strip 里只有一个小仪表盘图标，点它才展开、点 `−` 收起 | 零配置、不抢任何应用的 Touch Bar（推荐给不想维护列表的人） |
+| 仅锚点图标 | Control Strip 里只有一个小仪表盘图标，点它才展开、点 `×` 收起 | 零配置、不抢任何应用的 Touch Bar（推荐给不想维护列表的人） |
 | 常驻展开 | 全宽指标条一直挂着，无视排除列表 | 想随时一眼看到 |
 | 智能让位 | 前台应用在**排除列表**里时自动收起，切走自动展开 | 既要常驻又要让位 |
 
@@ -185,10 +185,32 @@ open /Applications/RunCatNeo.app     # 重新登记
 1. **私有 API**：`NSTouchBarItem.addSystemTrayItem:`（Control Strip 锚点）、`NSTouchBar.presentSystemModalTouchBar:systemTrayItemIdentifier:` / `minimizeSystemModalTouchBar:` / `dismissSystemModalTouchBar:`。10.13 的 `...FunctionBar` 命名已不存在，仅 10.14+ 的 `TouchBar` 命名可用。封装在 `DataSource/Dependencies/TouchBarClient.swift`，纯薄封装 + `responds(to:)` 守卫。
 2. **硬件检测**：Apple Silicon 上 DFR 屏在 IORegistry 里叫 `lcddfr` / `dispdfr`（**不是 Intel 时代的 `AppleDFR` 类名**），`TouchBarClient` 里的 `TouchBarHardwareProbe` 用 `IOServiceNameMatching` 匹配。
 3. **锚点不显示**：Control Strip 只在系统**见过该 bar 被 present 一次**后才渲染 tray item。仅锚点图标模式启动时从不 present，锚点会整个隐形——所以启动时做一次 `present → 下一 runloop minimize` 的预热（`primeTrayItemIfNeeded`）。
-4. **宽度被压成 70pt → 文字变 `…`**（最坑的一个）：Touch Bar 给自定义 item 的宽度**只在插入那一刻读一次固有尺寸**，之后 SwiftUI 内容变宽不会重查；裸 `NSHostingView` 的固有尺寸也不随内容更新。表现就是启动时内容还没到、宽度锁死在 70pt，之后所有数值都被压成 `…`。解法是 `UserInterface/Views/MetricsBar/TouchBarMetricsContainerView.swift`：把子视图 `fittingSize` 作为自身 `intrinsicContentSize`，并在内容尺寸变化时（`layout()`）主动 `setFrameSize` 同步过去。
-5. **不要给指标条写死宽度**：曾用固定 600pt 绕过宽度问题，结果是铺满整个 Touch Bar，用户要的是紧凑布局。当前布局按内容自适应（典型 476pt），每个文字都 `lineLimit(1)` + `fixedSize()` 防止压缩。
-6. **指标内容**：Touch Bar 有**自己的一套指标开关**（`TouchBarConfiguration.visibleMetrics`，8 个标准指标 + 每个自定义指标源），与菜单栏指标条的 `MetricsBarConfiguration` **互不影响**——两个界面的显示集合可以完全不同。设置页「系统指标」是一张**两列表格**：每行一个指标，「指标栏」「Touch Bar」各一列开关；某个表面关闭时该列自动隐藏，没有 Touch Bar 硬件的机器整页退化成单列（区块标题也降级为「指标栏」）。`MetricsBar.touchBarIndicators` 把可见集合折算成纯值 `TouchBarIndicator`（图标 + 文案），视图只做渲染（符合 LUCA「视图不含逻辑」）。老配置（没有 `visibleMetrics` 字段）解码为“全部显示”，避免升级后指标栏突然变空；Touch Bar 侧开关打开时会**自动补齐该指标的采集**（否则采集关着就永远没数据可显示）。
-7. **菜单栏指标条与 Touch Bar 互不影响**：两个开关各自独立；关掉「在 Touch Bar 上显示指标栏」会移除锚点（不只是收起）。注意「系统指标」那一组是**监控开关**（决定是否采集数据），它仍会级联写菜单栏指标条的显示开关，但**不再影响 Touch Bar 的显示集合**。
+4. **有效宽度只有 621pt（最坑的一个）**：系统模态栏的宿主视图是 `NSTouchBarView`，实测帧宽 **621pt**（整条 1085pt，右侧 ~400pt 属于 Control Strip 和系统按钮），而我们的 item 容器可以比它宽——要 800pt 时容器真的拿到 800pt，但**超过 621pt 的部分直接被裁掉、且不会滚动**。所以 `TouchBarMetricsContainerView.barWidth` 必须**正好 621pt**，所有 `trailing` 约束才落在可见区。item 宽度只在插入那一刻被读一次，条内布局必须在创建时就定好。
+5. **不能用 SwiftUI 画条内容**：`Image(size:)` 画布在 `NSHostingView` 里渲染成全透明；`NSHostingView` 的内容会整体漂到 28pt 条形之外（`ignoresSafeArea` 无效）；safe-area 内边距也会把内容推出去。现在整条是纯 AppKit：`NSStackView` + `NSTextField`（`lineBreakMode = .byClipping`）+ `NSImageView`（SF Symbol 固定 16×13）+ `NSButton` 或 `NSClickGestureRecognizer`。
+6. **Touch Bar 不产生滚动事件**：实机用 `scrollWheel` 重写 + 进程级 `NSEvent.addLocalMonitorForEvents([.scrollWheel])` 双重埋点验证——横扫手势被 DFR 自己吃掉，**不会变成 App 的 `scrollWheel`**（日志里只有应用自己窗口的滚动，没有 Touch Bar 的）。所以不要指望“内容超宽就能滑动”：条内的一切都得放得下。股票用**两行单元格**（缩写 9pt 上、涨跌幅 9pt 下，同网速那对的思路），单只约 32–45pt，5 只最坏 ~257pt < 可用 ~270pt。
+7. **重建一律推迟到下一 runloop**：在 `viewDidMoveToSuperview` / `layout()` 里改视图树会让 `NSTouchBarView _layoutSubtree` 抛 `EXC_BREAKPOINT`。`scheduleRebuildIfNeeded()` 只比对快照并 `DispatchQueue.main.async` 重建。约束也必须在视图进入层级之后再 `activate`，否则 `NSLayoutConstraint _setActive:` 报 "no common ancestor"。
+8. **不要用外层 `NSStackView` 做整条布局**：gravity 分配会在 CPU 和内存之间留出巨大空隙。整条改用显式约束：优先组 `leading + 12`、分隔线 1×20pt、滚动容器从分隔线 `+10` 到 `trailing - 12`；分隔线没有尺寸就完全不渲染，容器没有高度就塌成 0。
+9. **详情态不画分隔线**：点某只股票后整条归详情面板所有——分隔线和滚动容器**从视图树移除**（不只是隐藏，否则旧 frame 的线还留在屏幕上）；面板尾部放一个弹性 `NSView` 占位，内容才会左对齐铺开。
+10. **指标内容**：Touch Bar 有**自己的一套指标开关**（`TouchBarConfiguration.visibleMetrics`，8 个标准指标 + 每个自定义指标源），与菜单栏指标条的 `MetricsBarConfiguration` **互不影响**——两个界面的显示集合可以完全不同。`MetricsBar.touchBarIndicators` 把可见集合折算成纯值 `TouchBarIndicator`（图标 + 文案），视图只做渲染（符合 LUCA「视图不含逻辑」）。老配置（没有 `visibleMetrics` 字段）解码为“全部显示”，避免升级后指标栏突然变空；Touch Bar 侧开关打开时会**自动补齐该指标的采集**（否则采集关着就永远没数据可显示）。
+11. **菜单栏指标条与 Touch Bar 互不影响**：两个开关各自独立；关掉「在 Touch Bar 上显示指标栏」会移除锚点（不只是收起）。注意「系统指标」那一组是**监控开关**（决定是否采集数据），它仍会级联写菜单栏指标条的显示开关，但**不再影响 Touch Bar 的显示集合**。
+12. **显示优先级**：`touchBarConfiguration.prioritizeStocks` 决定哪组贴左边、哪组进右侧容器。两组在 621pt 内一般都能放全（股票 5 只 ~257pt、常规系统指标 ~250–310pt），所以优先级更多是“超长时谁被裁”的顺序。
+
+### 股票（Touch Bar 股票页签）
+
+数据源是**新浪财经** `https://hq.sinajs.cn/list=<codes>`：需要 `Referer: https://finance.sina.com.cn`，响应是 **GBK** 编码（用 `CFStringEncoding(CFStringEncodings.GB_18030_2000.rawValue)` 转成 `String.Encoding`），批量返回多行 `var hq_str_<code>="..."`，未知代码返回空串。三个市场的字段布局不同（见 `StockQuoteParser` 顶部注释）：A 股用昨收自算涨跌幅，港股/美股直接取现成字段。
+
+| 项 | 取值 |
+|---|---|
+| 上限 | 5 只（`StockEditor.maxStocks`，超限直接报错，不发请求） |
+| 代码格式 | `sh600519` / `sz000001` / `rt_hk00700` / `gb_aapl`，也接受裸代码（`300253`→`sz300253`、`0700`→`rt_hk00700`、`AAPL`→`gb_aapl`），另有交易所前缀 `bj430047` |
+| 添加校验 | 先用实时行情拉一次验证，成功才入库；缩写留空则用返回的中文名填充 |
+| 显示 | 缩写 + 涨跌幅，两行；**红涨绿跌**（国内惯例），平盘白色 |
+| 详情 | 点按→ 名称、现价、涨跌额、今开/最高/最低 + 大号涨跌幅；再点返回 |
+| 刷新 | 设置里可选 5 / 10 / 15 / 30 秒（默认 30），一次请求打包全部代码；失败保留上一份行情 |
+| 表面 | **仅 Touch Bar**，菜单栏指标条不显示股票 |
+
+**盘前零价（踩过）：** 集合竞价（约 09:15–09:25）新浪把现价报成 `0.000`，A 股按 `(现价−昨收)/昨收` 会算出 **−100%**，五只全绿。解析器现在把 `≤0` 的价格/开/高/低一律当“缺失”：现价回落到昨收、涨跌幅记 0（白盘），开盘后才恢复正常。港股、美股盘前同理。
+
 
 改成 ad-hoc 签名跑 Debug 时，键盘电量会显示 `--`——不是 bug，是 TCC 授权绑在稳定签名上，见第 2、4 节。
 
@@ -330,6 +352,8 @@ git merge origin/main          # 或走 PR：main → feat/fan-metrics
 | 键盘电量采集 | `DataSource/Services/KeyboardBatteryObserver.swift`、`Sources/HIDShim/`（C shim）、`Model/Services/KeyboardBatteryService.swift` |
 | AI Token 用量采集 | `DataSource/Entities/AITokenUsage/`、`Model/Services/AITokenUsage{Service,Scanner,Parser}.swift`、`DataSource/Dependencies/{FileSlice,SQLite}Client.swift`（15 秒固定刷新） |
 | 指标栏绘制 | `UserInterface/Views/MetricsBar/MetricsBarView.swift` |
+| Touch Bar 指标栏 | `Model/Services/TouchBarMetricsService.swift`、`UserInterface/Views/MetricsBar/TouchBarMetricsContainerView.swift`（纯 AppKit，621pt） |
+| Touch Bar 股票 | `DataSource/Dependencies/StockClient.swift`、`DataSource/Entities/Stocks/`、`Model/Services/{StockQuoteParser,StockService}.swift`、`Model/Stores/StockEditor.swift` |
 | 本地化 | `UserInterface/Resources/Localizable.xcstrings`（新增文案需补全 10 种语言） |
 | CI | `.github/workflows/build-app.yml` |
 
