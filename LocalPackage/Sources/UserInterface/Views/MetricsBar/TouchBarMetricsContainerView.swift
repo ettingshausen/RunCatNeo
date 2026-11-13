@@ -270,8 +270,8 @@ public final class TouchBarMetricsContainerView: NSView {
         rotationTimer = nil
     }
 
-    /// Pixel Shift is opt-in. Set the UserDefaults key
-    /// "TouchBarOLEDProtectionPixelShiftEnabled" to true to enable it.
+    /// Pixel Shift is enabled by default and can be changed in Touch Bar
+    /// settings using the "TouchBarOLEDProtectionPixelShiftEnabled" key.
     /// A one-physical-pixel offset is applied to the complete custom content
     /// container, so stock-cell hit testing moves with the rendered content.
     private func startPixelShiftTimer() {
