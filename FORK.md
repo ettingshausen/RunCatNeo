@@ -166,6 +166,8 @@ open /Applications/RunCatNeo.app     # 重新登记
 
 重连回归是最容易退化的点，改过 `KeyboardBatteryObserver` 后务必测。
 
+**键盘电量是「准静态」指标，不要每 3/5/10 秒去读：** K6 的电量在输入报告 3 里，由键盘**自己**决定何时发送；macOS HID 驱动只缓存最后一次收到的报告。实测（2026-11-13）：缓存值 69%、报告年龄约 9331 秒（即当天 11:58 之后没有再采样），`kIOHIDDeviceGetValueWithUpdate` 仍返回同一份缓存（值/年龄都不变），而 `IOHIDDeviceGetReport(type=Input, id=3)` 直接返回 `kIOReturnUnsupported`（输入报告主机无法主动索取）。结论：**应用无法强制键盘刷新电量**，显示的就是系统已有的最新样本；要拿到新值只能等键盘固件再发报告或断电重连（观察器已处理重连，并保留上次值）。因此采样节奏是 300 秒轮询 + 未读到时 3 秒重试；`scan()` 还加了「同一设备 5 秒内只读一次」的去重（一个物理键盘会暴露多个 HID entry、设备回调也会重复触发，否则一次启动会连续唤醒键盘几十次）。
+
 ### Touch Bar 指标栏
 
 设置 →「指标」→ 三个页签：**系统指标**（菜单栏）｜**Touch Bar 指标**｜**Touch Bar 股票**。带 DFR 硬件的机器才有页签栏（检测见下）；没有 Touch Bar 的机器整页退化成「系统指标」一页。整页宽度固定 536pt，切页签不会缩放窗口。
@@ -193,7 +195,10 @@ open /Applications/RunCatNeo.app     # 重新登记
 9. **详情态不画分隔线**：点某只股票后整条归详情面板所有——分隔线和滚动容器**从视图树移除**（不只是隐藏，否则旧 frame 的线还留在屏幕上）；面板尾部放一个弹性 `NSView` 占位，内容才会左对齐铺开。
 10. **指标内容**：Touch Bar 有**自己的一套指标开关**（`TouchBarConfiguration.visibleMetrics`，8 个标准指标 + 每个自定义指标源），与菜单栏指标条的 `MetricsBarConfiguration` **互不影响**——两个界面的显示集合可以完全不同。`MetricsBar.touchBarIndicators` 把可见集合折算成纯值 `TouchBarIndicator`（图标 + 文案），视图只做渲染（符合 LUCA「视图不含逻辑」）。老配置（没有 `visibleMetrics` 字段）解码为“全部显示”，避免升级后指标栏突然变空；Touch Bar 侧开关打开时会**自动补齐该指标的采集**（否则采集关着就永远没数据可显示）。
 11. **菜单栏指标条与 Touch Bar 互不影响**：两个开关各自独立；关掉「在 Touch Bar 上显示指标栏」会移除锚点（不只是收起）。注意「系统指标」那一组是**监控开关**（决定是否采集数据），它仍会级联写菜单栏指标条的显示开关，但**不再影响 Touch Bar 的显示集合**。
-12. **显示优先级**：`touchBarConfiguration.prioritizeStocks` 决定哪组贴左边、哪组进右侧容器。两组在 621pt 内一般都能放全（股票 5 只 ~257pt、常规系统指标 ~250–310pt），所以优先级更多是“超长时谁被裁”的顺序。
+12. **显示优先级**：`touchBarConfiguration.prioritizeStocks` 决定哪组贴左边、哪组进右侧容器。两组在 621pt 内一般都能放全，所以优先级更多是“超长时谁被裁”的顺序；条目多时靠堆叠压缩宽度（见下）。
+13. **堆叠轮换**：设置里每个指标行 / 股票行右侧有一个「独立 / 堆叠 N / 新建堆叠」菜单，把同组条目放进一个固定槽位（系统指标与自定义指标算同组，股票单独一组，**不混放**）。槽位宽度取成员最大宽度（切换不抖动），**每 3 秒**轮换一个成员，0.3s 上滚动画（`TouchBarStackView`：两个 24pt band 同步上移一行，完成后在 `CATransaction` 关闭隐式动画重置坐标，终点画面完全一致所以不闪）。最多 4 个堆叠；一个条目只能属于一个堆叠；空堆叠自动删除（编号保持连续）。
+14. **堆叠分组是纯函数**：`TouchBarSlotBuilder` 在 `MetricsBar.touchBarMetricSlots / touchBarStockSlots` 里把指示器折算成 slot（`stack:<uuid>` / `member:<key>`）。堆叠占据**首个可见成员原来的位置**，槽内顺序按配置里的成员顺序；成员暂时缺席（风扇 0 转、行情未到）自动跳过，只剩一个成员时按普通单元格静态渲染。容器视图的快照比对的是 slot 而不是裸指示器数组。
+15. **轮换相位与重建**：`TouchBarMetricsContainerView` 用 `rotationPhases: [String: Int]` 按 slot id 记住当前成员，任何重建（数据刷新、配置变更）后从原位继续，不会跳回第一只。一次 3s tick 内同一 slot 只推进一次相位——领先组和滚动组各保存了一份 stack 视图，只有真正挂在 `self` 层级下的那份做动画（`isInHierarchy` 沿 superview 链判断）。展开详情时跳过轮换。计时器用 `.common` mode，与 0.5s 重建轮询一起在 `viewDidMoveToSuperview` 重建/失效。
 
 ### 股票（Touch Bar 股票页签）
 
@@ -201,15 +206,17 @@ open /Applications/RunCatNeo.app     # 重新登记
 
 | 项 | 取值 |
 |---|---|
-| 上限 | 5 只（`StockEditor.maxStocks`，超限直接报错，不发请求） |
+| 上限 | 不限（靠堆叠在一行里轮换；条目多时超出 621pt 的部分会被裁掉，建议用堆叠压缩宽度） |
 | 代码格式 | `sh600519` / `sz000001` / `rt_hk00700` / `gb_aapl`，也接受裸代码（`300253`→`sz300253`、`0700`→`rt_hk00700`、`AAPL`→`gb_aapl`），另有交易所前缀 `bj430047` |
-| 添加校验 | 先用实时行情拉一次验证，成功才入库；缩写留空则用返回的中文名填充 |
-| 显示 | 缩写 + 涨跌幅，两行；**红涨绿跌**（国内惯例），平盘白色 |
+| 添加校验 | 先用实时行情拉一次验证，成功才入库；缩写留空则用返回的中文名填充。**新浪返回空串（未上市/不存在的代码）报「无法识别的股票代码」，只有真正的请求失败才报「获取行情失败」** |
+| 显示 | 缩写 + 涨跌幅，两行；**红涨绿跌**（国内惯例），平盘白色；可多条进同一堆叠轮换 |
 | 详情 | 点按→ 名称、现价、涨跌额、今开/最高/最低 + 大号涨跌幅；再点返回 |
-| 刷新 | 设置里可选 5 / 10 / 15 / 30 秒（默认 30），一次请求打包全部代码；失败保留上一份行情 |
+| 刷新 | 设置里可选 5 / 10 / 15 / 30 秒（默认 30），一次请求打包全部代码；**只在开市时段请求**（见下）；失败保留上一份行情 |
 | 表面 | **仅 Touch Bar**，菜单栏指标条不显示股票 |
 
 **盘前零价（踩过）：** 集合竞价（约 09:15–09:25）新浪把现价报成 `0.000`，A 股按 `(现价−昨收)/昨收` 会算出 **−100%**，五只全绿。解析器现在把 `≤0` 的价格/开/高/低一律当“缺失”：现价回落到昨收、涨跌幅记 0（白盘），开盘后才恢复正常。港股、美股盘前同理。
+
+**只在开市时段请求（周末/午休/节假日不再打接口）：** `StockMarket` 按代码前缀分市场，每个市场用自己的本地时区与常规时段——A 股 09:30–11:30 / 13:00–15:00，港股 09:30–12:00 / 13:00–16:00，美股 09:30–16:00 ET；周末直接跳过，午休、盘前盘后也不请求。每个交易日开市后 2 分钟（美股 5 分钟）先用**指数报价**（`sh000001` / `rt_hkHSI` / `gb_dji`）探一次当天是否开市：指数从不因停牌而缺失，报价自带时间戳（A 股字段 30/31、港股 17/18、美股字段 3，均为北京时间/当地时间的字符串），换算到该市场本地日历日；不是今天就是节假日或休市，当天不再请求该市场（每个节假日最多 1 次探针请求）。`StockQuote.asOf` 就是这个时间戳；`StockPollPlanner` 是纯函数（按 `closedOn`/`probedOn` 状态决定本次可请求的代码与需要探针的市场），`StockService` 负责执行并把探针失败留到下一轮重试。配置里混有多个市场时逐市场判定，只请求开市的那部分代码。
 
 
 改成 ad-hoc 签名跑 Debug 时，键盘电量会显示 `--`——不是 bug，是 TCC 授权绑在稳定签名上，见第 2、4 节。
@@ -352,8 +359,9 @@ git merge origin/main          # 或走 PR：main → feat/fan-metrics
 | 键盘电量采集 | `DataSource/Services/KeyboardBatteryObserver.swift`、`Sources/HIDShim/`（C shim）、`Model/Services/KeyboardBatteryService.swift` |
 | AI Token 用量采集 | `DataSource/Entities/AITokenUsage/`、`Model/Services/AITokenUsage{Service,Scanner,Parser}.swift`、`DataSource/Dependencies/{FileSlice,SQLite}Client.swift`（15 秒固定刷新） |
 | 指标栏绘制 | `UserInterface/Views/MetricsBar/MetricsBarView.swift` |
-| Touch Bar 指标栏 | `Model/Services/TouchBarMetricsService.swift`、`UserInterface/Views/MetricsBar/TouchBarMetricsContainerView.swift`（纯 AppKit，621pt） |
-| Touch Bar 股票 | `DataSource/Dependencies/StockClient.swift`、`DataSource/Entities/Stocks/`、`Model/Services/{StockQuoteParser,StockService}.swift`、`Model/Stores/StockEditor.swift` |
+| Touch Bar 指标栏 | `Model/Services/TouchBarMetricsService.swift`、`UserInterface/Views/MetricsBar/TouchBarMetricsContainerView.swift`（纯 AppKit，621pt）、`TouchBarStackView.swift`（堆叠上滚） |
+| Touch Bar 堆叠 | `DataSource/Entities/Metrics/TouchBar{Stack,Slot}.swift`、`Model/Services/TouchBarSlotBuilder.swift`、`Model/Stores/MetricsSettings.swift`（每行分配菜单） |
+| Touch Bar 股票 | `DataSource/Dependencies/StockClient.swift`、`DataSource/Entities/Stocks/`（含 `StockMarket.swift` 时段）、`Model/Services/{StockQuoteParser,StockService,StockPollPlanner}.swift`、`Model/Stores/StockEditor.swift` |
 | 本地化 | `UserInterface/Resources/Localizable.xcstrings`（新增文案需补全 10 种语言） |
 | CI | `.github/workflows/build-app.yml` |
 
