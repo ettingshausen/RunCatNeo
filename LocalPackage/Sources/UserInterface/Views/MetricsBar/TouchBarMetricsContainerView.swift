@@ -326,10 +326,16 @@ public final class TouchBarMetricsContainerView: NSView {
             return
         }
 
-        populateMetrics(into: leadingStack, slots: metricSlots)
-        populateStocks(into: leadingStocksStack, slots: stockSlots)
-        populateMetrics(into: metricsScrollStack, slots: metricSlots)
-        populateStocks(into: stocksScrollStack, slots: stockSlots)
+        // Build only the active presentation of each group. The previous
+        // implementation built pinned and scrolling copies simultaneously,
+        // doubling the NSView/NSImageView/NSTextField count.
+        if prioritizeStocks && showsStocks {
+            populateStocks(into: leadingStocksStack, slots: stockSlots)
+            populateMetrics(into: metricsScrollStack, slots: metricSlots)
+        } else {
+            populateMetrics(into: leadingStack, slots: metricSlots)
+            populateStocks(into: stocksScrollStack, slots: stockSlots)
+        }
         // Forget phases for stacks that no longer exist, keeping the map
         // bounded and making a re-created stack start from its first member.
         let liveStackIDs = Set(store.touchBarConfiguration.stacks.map(\.slotID))
