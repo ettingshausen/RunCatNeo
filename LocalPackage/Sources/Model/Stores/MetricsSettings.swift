@@ -326,6 +326,13 @@ public final class MetricsSettings: Composable {
             userDefaultsRepository.touchBarConfiguration = configuration
             touchBarMetricsService.emitConfigurationChange()
 
+        case let .touchBarShowsRunnerToggleSwitched(isOn):
+            var configuration = touchBarConfiguration
+            configuration.showsRunner = isOn
+            touchBarConfiguration = configuration
+            userDefaultsRepository.touchBarConfiguration = configuration
+            touchBarMetricsService.emitConfigurationChange()
+
         case let .touchBarMemberStackAssignmentSelected(member, assignment):
             var configuration = touchBarConfiguration
             configuration.assign(member, to: assignment)
@@ -519,6 +526,7 @@ public final class MetricsSettings: Composable {
         case removeStockButtonTapped(UUID)
         case stockRefreshIntervalSelected(Int)
         case touchBarStockPrioritySwitched(Bool)
+        case touchBarShowsRunnerToggleSwitched(Bool)
         case touchBarMemberStackAssignmentSelected(TouchBarMember, TouchBarStackAssignment)
         case touchBarCustomMetricsToggleSwitched(UUID, Bool)
         case touchBarExcludeCurrentAppButtonTapped

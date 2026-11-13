@@ -26,6 +26,25 @@ struct TouchBarConfigurationTests {
     }
 
     @Test
+    func decode_legacy_payload_without_runner_shows_the_runner() throws {
+        let json = """
+        {}
+        """
+        let configuration = try JSONDecoder().decode(TouchBarConfiguration.self, from: Data(json.utf8))
+        #expect(configuration.showsRunner)
+    }
+
+    @Test
+    func encode_decode_roundtrips_runner_visibility() throws {
+        var configuration = TouchBarConfiguration.default
+        configuration.showsRunner = false
+        let data = try JSONEncoder().encode(configuration)
+        let decoded = try JSONDecoder().decode(TouchBarConfiguration.self, from: data)
+        #expect(decoded == configuration)
+        #expect(!decoded.showsRunner)
+    }
+
+    @Test
     func decode_legacy_payload_without_exclusions_yields_empty_list() throws {
         let json = """
         {"mode":"alwaysExpanded"}

@@ -53,6 +53,9 @@ public struct TouchBarConfiguration: Codable, Sendable, Equatable {
     /// When true the stock watchlist is pinned and the system metrics scroll;
     /// when false the system metrics are pinned and the stocks scroll.
     public var prioritizeStocks: Bool
+    /// Shows the running runner (the menu bar cat) at the leading edge of the
+    /// metrics bar.
+    public var showsRunner: Bool
     /// Items grouped into stacks. Each stack occupies one fixed slot and its
     /// members rotate every few seconds.
     public var stacks: [TouchBarStack]
@@ -72,6 +75,7 @@ public struct TouchBarConfiguration: Codable, Sendable, Equatable {
         visibleMetrics: Set<TouchBarMetric> = Set(TouchBarMetric.allCases),
         visibleCustomMetricsSourceIDs: Set<UUID> = [],
         prioritizeStocks: Bool = false,
+        showsRunner: Bool = true,
         stacks: [TouchBarStack] = []
     ) {
         self.mode = mode
@@ -79,6 +83,7 @@ public struct TouchBarConfiguration: Codable, Sendable, Equatable {
         self.visibleMetrics = visibleMetrics
         self.visibleCustomMetricsSourceIDs = visibleCustomMetricsSourceIDs
         self.prioritizeStocks = prioritizeStocks
+        self.showsRunner = showsRunner
         self.stacks = Self.normalizedStacks(stacks)
     }
 
@@ -103,6 +108,9 @@ public struct TouchBarConfiguration: Codable, Sendable, Equatable {
             forKey: .visibleCustomMetricsSourceIDs
         ) ?? []
         prioritizeStocks = try container.decodeIfPresent(Bool.self, forKey: .prioritizeStocks) ?? false
+        // Configurations written before the runner toggle existed showed the
+        // runner by default, so an absent key must decode to true.
+        showsRunner = try container.decodeIfPresent(Bool.self, forKey: .showsRunner) ?? true
         stacks = Self.normalizedStacks(
             try container.decodeIfPresent([TouchBarStack].self, forKey: .stacks) ?? []
         )

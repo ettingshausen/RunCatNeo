@@ -323,6 +323,12 @@ private struct TouchBarBehaviorSectionView: View {
                 Text("touchBarPriority", bundle: .module)
             }
             .pickerStyle(.radioGroup)
+            Toggle(isOn: Binding<Bool>(
+                get: { store.touchBarConfiguration.showsRunner },
+                asyncSet: { await store.send(.touchBarShowsRunnerToggleSwitched($0)) }
+            )) {
+                Text("touchBarShowsRunner", bundle: .module)
+            }
             if store.touchBarConfiguration.mode == .smart {
                 Text("touchBarSmartModeNote", bundle: .module)
                     .font(.caption)

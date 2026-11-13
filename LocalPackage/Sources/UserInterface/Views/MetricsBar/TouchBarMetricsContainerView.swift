@@ -45,6 +45,10 @@ public final class TouchBarMetricsContainerView: NSView {
     private let stocksScrollStack = NSStackView()
     private let scrollView = NSScrollView()
     private let separatorView = NSView()
+    /// The menu-bar runner, shown at the leading edge of the prioritized
+    /// group when the configuration enables it. The view persists across
+    /// rebuilds; rebuilds only move it in or out of the pinned stack.
+    private let runnerView = TouchBarRunnerView()
 
     private var expandedStockID: UUID?
     private var lastMetricSlots: [TouchBarMetricSlot] = []
@@ -52,6 +56,10 @@ public final class TouchBarMetricsContainerView: NSView {
     private var lastExpandedID: UUID?
     private var lastPrioritizeStocks: Bool?
     private var lastShowsStocks = false
+    private var lastShowsRunner: Bool?
+    private var lastHasRunner = false
+    private var lastRunnerVersion = 0
+    private var lastRunnerSpeed: Float = 1
     private var pollTimer: Timer?
     private var rotationTimer: Timer?
     private var rebuildPending = false
@@ -74,7 +82,9 @@ public final class TouchBarMetricsContainerView: NSView {
     private static let rotationInterval: TimeInterval = 3
 
     public init(_ appDependencies: AppDependencies) {
-        store = MetricsBar(appDependencies)
+        store = MetricsBar(appDependencies, touchBarRunnerImageProvider: { resourceName in
+            NSImage(resource: .init(name: resourceName, bundle: .module))
+        })
         super.init(frame: NSRect(x: 0, y: 0, width: Self.barWidth, height: Self.height))
         wantsLayer = true
         layer?.backgroundColor = NSColor(calibratedWhite: 0.1, alpha: 1).cgColor
@@ -137,7 +147,10 @@ public final class TouchBarMetricsContainerView: NSView {
         // mutations must be deferred or AppKit crashes on the exception.
         scheduleRebuildIfNeeded()
         pollTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] _ in
-            MainActor.assumeIsolated { self?.scheduleRebuildIfNeeded() }
+            MainActor.assumeIsolated {
+                self?.scheduleRebuildIfNeeded()
+                self?.updateRunnerIfNeeded()
+            }
         }
         // `.common` keeps the rotation ticking while a gesture is tracking.
         let rotationTimer = Timer(timeInterval: Self.rotationInterval, repeats: true) { [weak self] _ in
@@ -155,11 +168,15 @@ public final class TouchBarMetricsContainerView: NSView {
         let stockSlots = store.touchBarStockSlots
         let prioritizeStocks = store.touchBarConfiguration.prioritizeStocks
         let showsStocks = store.stockConfiguration.stocks.isEmpty == false
+        let showsRunner = store.touchBarConfiguration.showsRunner
+        let hasRunner = store.touchBarRunnerVersion > 0
         guard metricSlots != lastMetricSlots
             || stockSlots != lastStockSlots
             || expandedStockID != lastExpandedID
             || prioritizeStocks != lastPrioritizeStocks
-            || showsStocks != lastShowsStocks else {
+            || showsStocks != lastShowsStocks
+            || showsRunner != lastShowsRunner
+            || hasRunner != lastHasRunner else {
             return
         }
         lastMetricSlots = metricSlots
@@ -167,6 +184,8 @@ public final class TouchBarMetricsContainerView: NSView {
         lastExpandedID = expandedStockID
         lastPrioritizeStocks = prioritizeStocks
         lastShowsStocks = showsStocks
+        lastShowsRunner = showsRunner
+        lastHasRunner = hasRunner
         guard !rebuildPending else { return }
         rebuildPending = true
         DispatchQueue.main.async { [weak self] in
@@ -178,6 +197,21 @@ public final class TouchBarMetricsContainerView: NSView {
                 prioritizeStocks: store.touchBarConfiguration.prioritizeStocks,
                 showsStocks: store.stockConfiguration.stocks.isEmpty == false
             )
+        }
+    }
+
+    /// Feeds the persistent runner view without a layout rebuild: frame and
+    /// speed changes only touch the animation layer.
+    private func updateRunnerIfNeeded() {
+        let version = store.touchBarRunnerVersion
+        if version != lastRunnerVersion {
+            lastRunnerVersion = version
+            runnerView.set(frames: store.touchBarRunnerFrames, isTemplate: store.touchBarRunnerIsTemplate)
+        }
+        let speed = store.touchBarRunnerSpeed
+        if speed != lastRunnerSpeed {
+            lastRunnerSpeed = speed
+            runnerView.setSpeed(speed)
         }
     }
 
@@ -207,6 +241,7 @@ public final class TouchBarMetricsContainerView: NSView {
 
         if let expanded = stockIndicators.first(where: { $0.id == expandedStockID }) {
             // While a stock is expanded the whole bar belongs to its detail.
+            runnerView.removeFromSuperview()
             leadingStack.addArrangedSubview(makeDetailPanel(for: expanded))
             addSubview(leadingStack)
             layoutConstraints = [
@@ -226,6 +261,16 @@ public final class TouchBarMetricsContainerView: NSView {
         // bounded and making a re-created stack start from its first member.
         let liveStackIDs = Set(store.touchBarConfiguration.stacks.map(\.slotID))
         rotationPhases = rotationPhases.filter { liveStackIDs.contains($0.key) }
+
+        // The runner leads the pinned group; it is one persistent view moved
+        // between the two possible pinned stacks.
+        let showsRunner = store.touchBarConfiguration.showsRunner && store.touchBarRunnerVersion > 0
+        let pinnedStack = prioritizeStocks && showsStocks ? leadingStocksStack : leadingStack
+        if showsRunner {
+            pinnedStack.insertArrangedSubview(runnerView, at: 0)
+        } else {
+            runnerView.removeFromSuperview()
+        }
 
         if prioritizeStocks && showsStocks {
             addSubview(leadingStocksStack)

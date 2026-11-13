@@ -18,6 +18,7 @@
  limitations under the License.
  */
 
+import AppKit
 import DataSource
 import Foundation
 import Observation
@@ -40,8 +41,19 @@ public final class MetricsBar: Composable {
     public var keyboardBatteries: [BluetoothKeyboardInfo]
     public var aiTokenUsage: AITokenUsage?
     public var customMetricsBundles: [CustomMetricsBundle]
+    /// The Touch Bar runner's frames, normalized to the menu bar's 18pt
+    /// height. Only populated when an image provider was injected, because
+    /// the preset frame resources live in the UserInterface bundle.
+    public private(set) var touchBarRunnerFrames: [NSImage] = []
+    public private(set) var touchBarRunnerIsTemplate = true
+    public private(set) var touchBarRunnerSpeed: Float = 1
+    /// Bumped whenever the runner frames change; renderers diff on this
+    /// instead of comparing NSImages by value.
+    public private(set) var touchBarRunnerVersion = 0
     public let isPreview: Bool
     public let action: (Action) async -> Void
+
+    @ObservationIgnored private let touchBarRunnerImageProvider: (@MainActor (String) -> NSImage?)?
 
     public init(
         _ appDependencies: AppDependencies,
@@ -52,6 +64,7 @@ public final class MetricsBar: Composable {
         systemInfoBundle: SystemInfoBundle = .init(),
         keyboardBatteries: [BluetoothKeyboardInfo] = [],
         customMetricsBundles: [CustomMetricsBundle] = [],
+        touchBarRunnerImageProvider: (@MainActor (String) -> NSImage?)? = nil,
         isPreview: Bool? = nil,
         action: @escaping (Action) async -> Void = { _ in }
     ) {
@@ -65,6 +78,7 @@ public final class MetricsBar: Composable {
         self.systemInfoBundle = systemInfoBundle
         self.keyboardBatteries = keyboardBatteries
         self.customMetricsBundles = customMetricsBundles
+        self.touchBarRunnerImageProvider = touchBarRunnerImageProvider
         self.isPreview = isPreview ?? ProcessInfo.isPreview
         self.action = action
     }
@@ -75,6 +89,16 @@ public final class MetricsBar: Composable {
             logService.notice(.screenView(name: screenName))
             if let metrics = appStateClient.withLock(\.metrics.latestValue) {
                 updateMetrics(from: metrics)
+            }
+            // The runner bundle is only published when the runner changes, so
+            // a bar appearing mid-session must seed from the latest values.
+            if touchBarRunnerImageProvider != nil {
+                if let bundle = appStateClient.withLock(\.runnerBundles.latestValue) {
+                    updateTouchBarRunner(from: bundle)
+                }
+                if let speed = appStateClient.withLock(\.runnerSpeeds.latestValue) {
+                    touchBarRunnerSpeed = speed
+                }
             }
             task?.cancel()
             task = Task.immediate { [weak self, appStateClient] in
@@ -113,6 +137,20 @@ public final class MetricsBar: Composable {
                         let stream = appStateClient.withLock(\.stocks.stream)
                         for await quotes in stream {
                             self?.stockQuotes = quotes
+                        }
+                    }
+                    if self?.touchBarRunnerImageProvider != nil {
+                        group.addImmediateTask {
+                            let stream = appStateClient.withLock(\.runnerBundles.stream)
+                            for await value in stream {
+                                self?.updateTouchBarRunner(from: value)
+                            }
+                        }
+                        group.addImmediateTask {
+                            let stream = appStateClient.withLock(\.runnerSpeeds.stream)
+                            for await value in stream {
+                                self?.touchBarRunnerSpeed = value
+                            }
                         }
                     }
                 }
@@ -154,6 +192,37 @@ public final class MetricsBar: Composable {
         keyboardBatteries = metrics.keyboardBatteries
         aiTokenUsage = metrics.aiTokenUsage
         customMetricsBundles = metrics.customMetricsBundles
+    }
+
+    /// Converts a runner bundle into Touch Bar frame images, following the
+    /// same pipeline as the menu bar's RunnerBar store: preset resources come
+    /// from the injected provider, custom ones from PNG data, then flip and
+    /// normalize to the 18pt line height.
+    private func updateTouchBarRunner(from bundle: RunnerBundle) {
+        guard let bundleImageProvider = touchBarRunnerImageProvider else { return }
+        guard case let .keyFrameAnimation(frames) = bundle.displayFormat else { return }
+        let isFlippedHorizontally = userDefaultsRepository.isFlippedHorizontally
+        var images = [NSImage]()
+        for frame in frames {
+            let image: NSImage?
+            switch frame {
+            case let .preset(resourceName):
+                image = bundleImageProvider(resourceName)
+            case let .custom(data):
+                image = NSImage(data: data)
+            case .broken:
+                image = nil
+            }
+            guard let image else { continue }
+            image.flip(enabled: isFlippedHorizontally)
+            image.normalize()
+            image.isTemplate = bundle.runner.isTemplate
+            images.append(image)
+        }
+        guard !images.isEmpty else { return }
+        touchBarRunnerFrames = images
+        touchBarRunnerIsTemplate = bundle.runner.isTemplate
+        touchBarRunnerVersion += 1
     }
 
     private func updateMetricsBarConfiguration() {

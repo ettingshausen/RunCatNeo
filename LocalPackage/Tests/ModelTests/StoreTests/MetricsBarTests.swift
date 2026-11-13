@@ -1,4 +1,5 @@
 import AllocatedUnfairLock
+import AppKit
 import Foundation
 import SystemInfoKit
 import Testing
@@ -184,5 +185,46 @@ struct MetricsBarTests {
         #expect(slots.count == 1)
         #expect(slots[0].id == stack.slotID)
         #expect(slots[0].indicators.map(\.member) == [.metric(.memory), .metric(.cpu)])
+    }
+
+    @MainActor @Test
+    func send_viewAppeared_loads_touchBar_runner_frames_and_speed() async {
+        let appState = AllocatedUnfairLock<AppState>(initialState: .init())
+        // Seeded before the view appears: the bundle stream only fires when
+        // the runner changes, so a mid-session bar must read the latest value.
+        appState.withLock {
+            $0.runnerBundles.send(RunnerBundle(
+                runner: .default,
+                frames: [.preset("cat-frame-1"), .preset("cat-frame-2")]
+            ))
+            $0.runnerSpeeds.send(3.5)
+        }
+        let sut = MetricsBar(
+            .testDependencies(appStateClient: .testDependency(appState)),
+            touchBarRunnerImageProvider: { _ in NSImage(size: NSSize(width: 10, height: 18)) }
+        )
+        await sut.send(.viewAppeared("MetricsBarTests"))
+        await waitUntil { sut.touchBarRunnerVersion > 0 }
+        #expect(sut.touchBarRunnerFrames.count == 2)
+        #expect(sut.touchBarRunnerIsTemplate)
+        #expect(sut.touchBarRunnerSpeed == 3.5)
+        appState.withLock { $0.runnerSpeeds.send(6.0) }
+        await waitUntil { sut.touchBarRunnerSpeed == 6.0 }
+        await sut.send(.viewDisappeared)
+    }
+
+    @MainActor @Test
+    func send_viewAppeared_without_image_provider_skips_the_runner_streams() async {
+        let appState = AllocatedUnfairLock<AppState>(initialState: .init())
+        appState.withLock {
+            $0.runnerBundles.send(RunnerBundle(runner: .default, frames: [.preset("cat-frame-1")]))
+        }
+        let sut = MetricsBar(.testDependencies(appStateClient: .testDependency(appState)))
+        await sut.send(.viewAppeared("MetricsBarTests"))
+        await sut.send(.viewDisappeared)
+        // The menu bar instance never loads runner frames: the resources live
+        // in the UserInterface bundle and only the Touch Bar needs them.
+        #expect(sut.touchBarRunnerVersion == 0)
+        #expect(sut.touchBarRunnerFrames.isEmpty)
     }
 }
