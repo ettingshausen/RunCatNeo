@@ -21,6 +21,7 @@
 import AppKit
 import DataSource
 import Model
+import Observation
 
 /// Hosts the Touch Bar metrics bar built with plain AppKit views.
 ///
@@ -36,6 +37,11 @@ import Model
 /// stock swaps the whole bar for its detail panel.
 public final class TouchBarMetricsContainerView: NSView {
     private let store: MetricsBar
+    /// All custom content lives in this clipped container. Moving this view
+    /// keeps AppKit hit-testing aligned with the pixels during Pixel Shift.
+    private let contentContainerView = NSView()
+    private var contentCenterXConstraint: NSLayoutConstraint!
+    private var contentCenterYConstraint: NSLayoutConstraint!
 
     /// The prioritized group's stack. It is also the host of the detail panel,
     /// which always spans the whole bar.
@@ -51,8 +57,8 @@ public final class TouchBarMetricsContainerView: NSView {
     private let runnerView = TouchBarRunnerView()
 
     private var expandedStockID: UUID?
-    private var lastMetricSlots: [TouchBarMetricSlot] = []
-    private var lastStockSlots: [TouchBarStockSlot] = []
+    private var lastMetricStructure: [String] = []
+    private var lastStockStructure: [String] = []
     private var lastExpandedID: UUID?
     private var lastPrioritizeStocks: Bool?
     private var lastShowsStocks = false
@@ -60,12 +66,19 @@ public final class TouchBarMetricsContainerView: NSView {
     private var lastHasRunner = false
     private var lastRunnerVersion = 0
     private var lastRunnerSpeed: Float = 1
-    private var pollTimer: Timer?
+    private var lifecycleTask: Task<Void, Never>?
+    private var lifecycleGeneration = 0
     private var rotationTimer: Timer?
+    private var pixelShiftTimer: Timer?
+    private var pixelShiftIndex = 0
+    private var workspaceObservers: [NSObjectProtocol] = []
+    private var defaultsObserver: NSObjectProtocol?
+    private var isSessionActive = true
+    private var isSystemSleeping = false
+    private var lastMetricIconSymbols: [String: String] = [:]
     private var rebuildPending = false
     private var layoutConstraints: [NSLayoutConstraint] = []
-    /// Rotation phase per stack slot. Both copies of a stack (the pinned one
-    /// and the clipping one) share the phase and advance together.
+    /// Rotation phase per stack slot, preserved across structural rebuilds.
     private var rotationPhases: [String: Int] = [:]
     private var stackViews: [(id: String, view: TouchBarStackView)] = []
 
@@ -80,15 +93,33 @@ public final class TouchBarMetricsContainerView: NSView {
     private static let separatorGap: CGFloat = 10
     /// Stacked indicators advance one member every three seconds.
     private static let rotationInterval: TimeInterval = 3
+    private static let pixelShiftInterval: TimeInterval = 300
 
     public init(_ appDependencies: AppDependencies) {
         store = MetricsBar(appDependencies, touchBarRunnerImageProvider: { resourceName in
             NSImage(resource: .init(name: resourceName, bundle: .module))
         })
         super.init(frame: NSRect(x: 0, y: 0, width: Self.barWidth, height: Self.height))
+        TouchBarOLEDTheme.registerDefaults()
         wantsLayer = true
-        layer?.backgroundColor = NSColor(calibratedWhite: 0.1, alpha: 1).cgColor
+        layer?.backgroundColor = TouchBarOLEDTheme.background.cgColor
         layer?.cornerRadius = 5
+        layer?.masksToBounds = true
+
+        contentContainerView.translatesAutoresizingMaskIntoConstraints = false
+        addSubview(contentContainerView)
+        contentCenterXConstraint = contentContainerView.centerXAnchor.constraint(
+            equalTo: centerXAnchor
+        )
+        contentCenterYConstraint = contentContainerView.centerYAnchor.constraint(
+            equalTo: centerYAnchor
+        )
+        NSLayoutConstraint.activate([
+            contentCenterXConstraint,
+            contentCenterYConstraint,
+            contentContainerView.widthAnchor.constraint(equalTo: widthAnchor),
+            contentContainerView.heightAnchor.constraint(equalTo: heightAnchor),
+        ])
 
         for stack in [leadingStack, leadingStocksStack] {
             stack.orientation = .horizontal
@@ -118,13 +149,67 @@ public final class TouchBarMetricsContainerView: NSView {
         scrollView.translatesAutoresizingMaskIntoConstraints = false
 
         separatorView.wantsLayer = true
-        separatorView.layer?.backgroundColor = NSColor.white.withAlphaComponent(0.25).cgColor
+        separatorView.layer?.backgroundColor = TouchBarOLEDTheme.separator.cgColor
         separatorView.translatesAutoresizingMaskIntoConstraints = false
         // A separator without a size renders as nothing.
         NSLayoutConstraint.activate([
             separatorView.widthAnchor.constraint(equalToConstant: 1),
             separatorView.heightAnchor.constraint(equalToConstant: 20),
         ])
+
+    }
+
+    /// Register workspace notifications only while the Touch Bar view is
+    /// attached. This avoids retaining notification tokens for an inactive
+    /// Touch Bar instance.
+    private func installWorkspaceObservers() {
+        guard workspaceObservers.isEmpty else { return }
+        let center = NSWorkspace.shared.notificationCenter
+        workspaceObservers.append(center.addObserver(
+            forName: NSWorkspace.sessionDidResignActiveNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated { self?.handleSessionInactive() }
+        })
+        workspaceObservers.append(center.addObserver(
+            forName: NSWorkspace.sessionDidBecomeActiveNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated { self?.handleSessionActive() }
+        })
+        workspaceObservers.append(center.addObserver(
+            forName: NSWorkspace.willSleepNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated { self?.handleSystemSleep() }
+        })
+        workspaceObservers.append(center.addObserver(
+            forName: NSWorkspace.didWakeNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated { self?.handleSystemWake() }
+        })
+        defaultsObserver = NotificationCenter.default.addObserver(
+            forName: UserDefaults.didChangeNotification,
+            object: UserDefaults.standard,
+            queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated { self?.handlePixelShiftPreferenceChanged() }
+        }
+    }
+
+    private func removeWorkspaceObservers() {
+        let center = NSWorkspace.shared.notificationCenter
+        workspaceObservers.forEach { center.removeObserver($0) }
+        workspaceObservers.removeAll()
+        if let defaultsObserver {
+            NotificationCenter.default.removeObserver(defaultsObserver)
+            self.defaultsObserver = nil
+        }
     }
 
     required init?(coder: NSCoder) {
@@ -137,27 +222,210 @@ public final class TouchBarMetricsContainerView: NSView {
 
     public override func viewDidMoveToSuperview() {
         super.viewDidMoveToSuperview()
-        pollTimer?.invalidate()
-        rotationTimer?.invalidate()
-        guard superview != nil else { return }
-        Task { @MainActor [weak self] in
-            await self?.store.send(.viewAppeared(String(describing: TouchBarMetricsContainerView.self)))
-        }
-        // This callback runs inside the Touch Bar's layout pass; view
-        // mutations must be deferred or AppKit crashes on the exception.
-        scheduleRebuildIfNeeded()
-        pollTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] _ in
-            MainActor.assumeIsolated {
-                self?.scheduleRebuildIfNeeded()
-                self?.updateRunnerIfNeeded()
+        stopRotationTimer()
+        stopPixelShiftTimer()
+        resetPixelShift()
+        lifecycleTask?.cancel()
+        lifecycleGeneration += 1
+        let generation = lifecycleGeneration
+
+        guard superview != nil else {
+            removeWorkspaceObservers()
+            lifecycleTask = Task { @MainActor [weak self] in
+                guard let self, self.lifecycleGeneration == generation else { return }
+                await self.store.send(.viewDisappeared)
             }
+            return
         }
+
+        installWorkspaceObservers()
+        lifecycleTask = Task { @MainActor [weak self] in
+            guard let self, self.lifecycleGeneration == generation else { return }
+            await self.store.send(.viewAppeared(String(describing: TouchBarMetricsContainerView.self)))
+            guard self.lifecycleGeneration == generation else { return }
+            self.scheduleRebuildIfNeeded()
+            self.updateVisibleValues()
+            self.updateRunnerIfNeeded()
+            self.observeStoreChanges()
+            self.startRotationTimer()
+            self.startPixelShiftTimer()
+        }
+    }
+
+    private func startRotationTimer() {
+        guard superview != nil,
+              isSessionActive,
+              !isSystemSleeping,
+              rotationTimer == nil else { return }
         // `.common` keeps the rotation ticking while a gesture is tracking.
-        let rotationTimer = Timer(timeInterval: Self.rotationInterval, repeats: true) { [weak self] _ in
+        let timer = Timer(timeInterval: Self.rotationInterval, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated { self?.rotateStacks() }
         }
-        RunLoop.main.add(rotationTimer, forMode: .common)
-        self.rotationTimer = rotationTimer
+        RunLoop.main.add(timer, forMode: .common)
+        rotationTimer = timer
+    }
+
+    private func stopRotationTimer() {
+        rotationTimer?.invalidate()
+        rotationTimer = nil
+    }
+
+    /// Pixel Shift is enabled by default and can be changed in Touch Bar
+    /// settings using the "TouchBarOLEDProtectionPixelShiftEnabled" key.
+    /// A one-physical-pixel offset is applied to the complete custom content
+    /// container, so stock-cell hit testing moves with the rendered content.
+    private func startPixelShiftTimer() {
+        guard superview != nil,
+              isSessionActive,
+              !isSystemSleeping,
+              UserDefaults.standard.bool(forKey: TouchBarOLEDTheme.pixelShiftDefaultsKey),
+              pixelShiftTimer == nil else { return }
+        let timer = Timer(timeInterval: Self.pixelShiftInterval, repeats: true) { [weak self] _ in
+            MainActor.assumeIsolated { self?.advancePixelShift() }
+        }
+        RunLoop.main.add(timer, forMode: .common)
+        pixelShiftTimer = timer
+    }
+
+    private func stopPixelShiftTimer() {
+        pixelShiftTimer?.invalidate()
+        pixelShiftTimer = nil
+    }
+
+    private func handlePixelShiftPreferenceChanged() {
+        if UserDefaults.standard.bool(forKey: TouchBarOLEDTheme.pixelShiftDefaultsKey) {
+            startPixelShiftTimer()
+        } else {
+            stopPixelShiftTimer()
+            resetPixelShift()
+        }
+    }
+
+    private func advancePixelShift() {
+        guard let window else { return }
+        let scale = max(window.backingScaleFactor, 1)
+        let pixel = 1 / scale
+        let offsets: [(CGFloat, CGFloat)] = [
+            (pixel, 0),
+            (0, pixel),
+            (-pixel, 0),
+            (0, -pixel),
+        ]
+        let offset = offsets[pixelShiftIndex % offsets.count]
+        pixelShiftIndex += 1
+        contentCenterXConstraint.constant = offset.0
+        contentCenterYConstraint.constant = offset.1
+        needsLayout = true
+        layoutSubtreeIfNeeded()
+    }
+
+    private func resetPixelShift() {
+        pixelShiftIndex = 0
+        contentCenterXConstraint.constant = 0
+        contentCenterYConstraint.constant = 0
+    }
+
+    private func handleSessionInactive() {
+        isSessionActive = false
+        alphaValue = 0.55
+        stopRotationTimer()
+        stopPixelShiftTimer()
+    }
+
+    private func handleSessionActive() {
+        isSessionActive = true
+        if !isSystemSleeping {
+            alphaValue = 1
+            startRotationTimer()
+            startPixelShiftTimer()
+        }
+    }
+
+    private func handleSystemSleep() {
+        isSystemSleeping = true
+        stopRotationTimer()
+        stopPixelShiftTimer()
+    }
+
+    private func handleSystemWake() {
+        isSystemSleeping = false
+        alphaValue = isSessionActive ? 1 : 0.55
+        startRotationTimer()
+        startPixelShiftTimer()
+    }
+
+    /// Observation tracking is one-shot; re-arm after every store change.
+    /// This replaces the old 0.5-second polling loop.
+    private func observeStoreChanges() {
+        guard superview != nil else { return }
+        withObservationTracking {
+            _ = store.touchBarMetricSlots
+            _ = store.touchBarStockSlots
+            _ = store.touchBarConfiguration
+            _ = store.stockConfiguration
+            _ = store.touchBarRunnerVersion
+            _ = store.touchBarRunnerSpeed
+            _ = store.touchBarRunnerFrames
+        } onChange: { [weak self] in
+            Task { @MainActor [weak self] in
+                guard let self, self.superview != nil else { return }
+                self.scheduleRebuildIfNeeded()
+                self.updateVisibleValues()
+                self.updateRunnerIfNeeded()
+                self.observeStoreChanges()
+            }
+        }
+    }
+
+    /// Updates labels in place when values change; only structural changes
+    /// rebuild the AppKit view hierarchy.
+    private func updateVisibleValues() {
+        var values: [String: (String, NSColor)] = [:]
+        var icons: [String: (String, NSColor)] = [:]
+        for indicator in store.touchBarIndicators {
+            let prefix = "metric:\(indicator.member.key):"
+            values[prefix + "primary"] = (indicator.primaryText, TouchBarOLEDTheme.dynamicValue)
+            icons[prefix + "icon"] = (indicator.systemIcon, TouchBarOLEDTheme.staticIcon)
+            if let secondary = indicator.secondaryText {
+                values[prefix + "secondary"] = (secondary, TouchBarOLEDTheme.dynamicValue)
+            }
+        }
+        for indicator in store.stockIndicators {
+            let prefix = "stock:\(indicator.id.uuidString):"
+            let tint = TouchBarOLEDTheme.color(for: indicator.direction)
+            values[prefix + "name"] = (indicator.abbreviation, tint)
+            values[prefix + "change"] = (String(format: "%+.2f%%", indicator.changePercent), tint)
+            values[prefix + "detail-name"] = (indicator.name, tint)
+            values[prefix + "detail-line"] = (detailString(quote: indicator.quote), tint)
+            values[prefix + "detail-change"] = (String(format: "%+.2f%%", indicator.changePercent), tint)
+        }
+
+        func update(_ view: NSView) {
+            if let field = view as? NSTextField,
+               let key = field.identifier?.rawValue,
+               let value = values[key] {
+                if field.stringValue != value.0 { field.stringValue = value.0 }
+                field.textColor = value.1
+            } else if let imageView = view as? NSImageView,
+                      let key = imageView.identifier?.rawValue,
+                      let value = icons[key] {
+                if imageView.image == nil || lastMetricIconSymbols[key] != value.0 {
+                    imageView.image = NSImage(
+                        systemSymbolName: value.0,
+                        accessibilityDescription: value.0
+                    )?.withSymbolConfiguration(.init(pointSize: 12, weight: .regular))
+                    lastMetricIconSymbols[key] = value.0
+                }
+                imageView.contentTintColor = value.1
+            }
+            for child in view.subviews { update(child) }
+        }
+        lastMetricIconSymbols = lastMetricIconSymbols.filter { icons[$0.key] != nil }
+        update(self)
+        if let documentStack = scrollView.documentView as? NSStackView {
+            sizeDocumentView(documentStack)
+        }
+        needsLayout = true
     }
 
     /// Compares the store's slot snapshots and, when they drifted, asks for a
@@ -166,12 +434,18 @@ public final class TouchBarMetricsContainerView: NSView {
     private func scheduleRebuildIfNeeded() {
         let metricSlots = store.touchBarMetricSlots
         let stockSlots = store.touchBarStockSlots
+        let metricStructure = metricSlots.map { slot in
+            "\(slot.id):\(slot.indicators.map { $0.member.key }.joined(separator: ","))"
+        }
+        let stockStructure = stockSlots.map { slot in
+            "\(slot.id):\(slot.indicators.map { $0.id.uuidString }.joined(separator: ","))"
+        }
         let prioritizeStocks = store.touchBarConfiguration.prioritizeStocks
         let showsStocks = store.stockConfiguration.stocks.isEmpty == false
         let showsRunner = store.touchBarConfiguration.showsRunner
         let hasRunner = store.touchBarRunnerVersion > 0
-        guard metricSlots != lastMetricSlots
-            || stockSlots != lastStockSlots
+        guard metricStructure != lastMetricStructure
+            || stockStructure != lastStockStructure
             || expandedStockID != lastExpandedID
             || prioritizeStocks != lastPrioritizeStocks
             || showsStocks != lastShowsStocks
@@ -179,13 +453,14 @@ public final class TouchBarMetricsContainerView: NSView {
             || hasRunner != lastHasRunner else {
             return
         }
-        lastMetricSlots = metricSlots
-        lastStockSlots = stockSlots
+        lastMetricStructure = metricStructure
+        lastStockStructure = stockStructure
         lastExpandedID = expandedStockID
         lastPrioritizeStocks = prioritizeStocks
         lastShowsStocks = showsStocks
         lastShowsRunner = showsRunner
         lastHasRunner = hasRunner
+        updateVisibleValues()
         guard !rebuildPending else { return }
         rebuildPending = true
         DispatchQueue.main.async { [weak self] in
@@ -243,20 +518,26 @@ public final class TouchBarMetricsContainerView: NSView {
             // While a stock is expanded the whole bar belongs to its detail.
             runnerView.removeFromSuperview()
             leadingStack.addArrangedSubview(makeDetailPanel(for: expanded))
-            addSubview(leadingStack)
+            contentContainerView.addSubview(leadingStack)
             layoutConstraints = [
-                leadingStack.leadingAnchor.constraint(equalTo: leadingAnchor, constant: Self.horizontalInset),
-                leadingStack.centerYAnchor.constraint(equalTo: centerYAnchor),
-                leadingStack.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -Self.horizontalInset),
+                leadingStack.leadingAnchor.constraint(equalTo: contentContainerView.leadingAnchor, constant: Self.horizontalInset),
+                leadingStack.centerYAnchor.constraint(equalTo: contentContainerView.centerYAnchor),
+                leadingStack.trailingAnchor.constraint(equalTo: contentContainerView.trailingAnchor, constant: -Self.horizontalInset),
             ]
             NSLayoutConstraint.activate(layoutConstraints)
             return
         }
 
-        populateMetrics(into: leadingStack, slots: metricSlots)
-        populateStocks(into: leadingStocksStack, slots: stockSlots)
-        populateMetrics(into: metricsScrollStack, slots: metricSlots)
-        populateStocks(into: stocksScrollStack, slots: stockSlots)
+        // Build only the active presentation of each group. The previous
+        // implementation built pinned and scrolling copies simultaneously,
+        // doubling the NSView/NSImageView/NSTextField count.
+        if prioritizeStocks && showsStocks {
+            populateStocks(into: leadingStocksStack, slots: stockSlots)
+            populateMetrics(into: metricsScrollStack, slots: metricSlots)
+        } else {
+            populateMetrics(into: leadingStack, slots: metricSlots)
+            populateStocks(into: stocksScrollStack, slots: stockSlots)
+        }
         // Forget phases for stacks that no longer exist, keeping the map
         // bounded and making a re-created stack start from its first member.
         let liveStackIDs = Set(store.touchBarConfiguration.stacks.map(\.slotID))
@@ -273,30 +554,30 @@ public final class TouchBarMetricsContainerView: NSView {
         }
 
         if prioritizeStocks && showsStocks {
-            addSubview(leadingStocksStack)
+            contentContainerView.addSubview(leadingStocksStack)
             layoutConstraints = [
-                leadingStocksStack.leadingAnchor.constraint(equalTo: leadingAnchor, constant: Self.horizontalInset),
-                leadingStocksStack.centerYAnchor.constraint(equalTo: centerYAnchor),
+                leadingStocksStack.leadingAnchor.constraint(equalTo: contentContainerView.leadingAnchor, constant: Self.horizontalInset),
+                leadingStocksStack.centerYAnchor.constraint(equalTo: contentContainerView.centerYAnchor),
             ]
             if !metricSlots.isEmpty {
-                addSubview(separatorView)
-                addSubview(scrollView)
+                contentContainerView.addSubview(separatorView)
+                contentContainerView.addSubview(scrollView)
                 scrollView.documentView = metricsScrollStack
                 sizeDocumentView(metricsScrollStack)
                 layoutConstraints.append(contentsOf: [
                     separatorView.leadingAnchor.constraint(equalTo: leadingStocksStack.trailingAnchor, constant: Self.separatorGap),
-                    separatorView.centerYAnchor.constraint(equalTo: centerYAnchor),
+                    separatorView.centerYAnchor.constraint(equalTo: contentContainerView.centerYAnchor),
                     scrollView.leadingAnchor.constraint(equalTo: separatorView.trailingAnchor, constant: Self.separatorGap),
-                    scrollView.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -Self.horizontalInset),
-                    scrollView.centerYAnchor.constraint(equalTo: centerYAnchor),
+                    scrollView.trailingAnchor.constraint(equalTo: contentContainerView.trailingAnchor, constant: -Self.horizontalInset),
+                    scrollView.centerYAnchor.constraint(equalTo: contentContainerView.centerYAnchor),
                     scrollView.heightAnchor.constraint(equalToConstant: Self.documentHeight),
                 ])
             }
         } else {
             addSubview(leadingStack)
             layoutConstraints = [
-                leadingStack.leadingAnchor.constraint(equalTo: leadingAnchor, constant: Self.horizontalInset),
-                leadingStack.centerYAnchor.constraint(equalTo: centerYAnchor),
+                leadingStack.leadingAnchor.constraint(equalTo: contentContainerView.leadingAnchor, constant: Self.horizontalInset),
+                leadingStack.centerYAnchor.constraint(equalTo: contentContainerView.centerYAnchor),
             ]
             if showsStocks {
                 addSubview(separatorView)
@@ -305,10 +586,10 @@ public final class TouchBarMetricsContainerView: NSView {
                 sizeDocumentView(stocksScrollStack)
                 layoutConstraints.append(contentsOf: [
                     separatorView.leadingAnchor.constraint(equalTo: leadingStack.trailingAnchor, constant: Self.separatorGap),
-                    separatorView.centerYAnchor.constraint(equalTo: centerYAnchor),
+                    separatorView.centerYAnchor.constraint(equalTo: contentContainerView.centerYAnchor),
                     scrollView.leadingAnchor.constraint(equalTo: separatorView.trailingAnchor, constant: Self.separatorGap),
-                    scrollView.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -Self.horizontalInset),
-                    scrollView.centerYAnchor.constraint(equalTo: centerYAnchor),
+                    scrollView.trailingAnchor.constraint(equalTo: contentContainerView.trailingAnchor, constant: -Self.horizontalInset),
+                    scrollView.centerYAnchor.constraint(equalTo: contentContainerView.centerYAnchor),
                     scrollView.heightAnchor.constraint(equalToConstant: Self.documentHeight),
                 ])
             }
@@ -332,7 +613,7 @@ public final class TouchBarMetricsContainerView: NSView {
     private func populateMetrics(into stack: NSStackView, slots: [TouchBarMetricSlot]) {
         stack.arrangedSubviews.forEach { $0.removeFromSuperview() }
         if slots.isEmpty {
-            stack.addArrangedSubview(makeIconCell("moon.zzz", tint: .white))
+            stack.addArrangedSubview(makeIconCell("moon.zzz", tint: TouchBarOLEDTheme.staticIcon))
             return
         }
         for slot in slots {
@@ -375,7 +656,9 @@ public final class TouchBarMetricsContainerView: NSView {
         cell.orientation = .horizontal
         cell.alignment = .centerY
         cell.spacing = 3
-        cell.addArrangedSubview(makeIconCell(indicator.systemIcon, tint: .white))
+        let iconView = makeIconCell(indicator.systemIcon, tint: TouchBarOLEDTheme.staticIcon)
+        iconView.identifier = NSUserInterfaceItemIdentifier("metric:\(indicator.member.key):icon")
+        cell.addArrangedSubview(iconView)
         if let secondaryText = indicator.secondaryText {
             // Upload and download stack vertically, keeping the footprint
             // of the pair small.
@@ -386,19 +669,22 @@ public final class TouchBarMetricsContainerView: NSView {
             column.addArrangedSubview(makeTextCell(
                 indicator.primaryText,
                 font: .monospacedDigitSystemFont(ofSize: 8, weight: .regular),
-                tint: .white
+                tint: TouchBarOLEDTheme.dynamicValue,
+                identifier: "metric:\(indicator.member.key):primary"
             ))
             column.addArrangedSubview(makeTextCell(
                 secondaryText,
                 font: .monospacedDigitSystemFont(ofSize: 8, weight: .regular),
-                tint: .white
+                tint: TouchBarOLEDTheme.dynamicValue,
+                identifier: "metric:\(indicator.member.key):secondary"
             ))
             cell.addArrangedSubview(column)
         } else {
             cell.addArrangedSubview(makeTextCell(
                 indicator.primaryText,
                 font: .monospacedDigitSystemFont(ofSize: 12, weight: .regular),
-                tint: .white
+                tint: TouchBarOLEDTheme.dynamicValue,
+                identifier: "metric:\(indicator.member.key):primary"
             ))
         }
         return cell
@@ -416,12 +702,14 @@ public final class TouchBarMetricsContainerView: NSView {
         cell.addArrangedSubview(makeTextCell(
             indicator.abbreviation,
             font: .systemFont(ofSize: 9, weight: .medium),
-            tint: tint
+            tint: tint,
+            identifier: "stock:\(indicator.id.uuidString):name"
         ))
         cell.addArrangedSubview(makeTextCell(
             String(format: "%+.2f%%", indicator.changePercent),
             font: .monospacedDigitSystemFont(ofSize: 9, weight: .regular),
-            tint: tint
+            tint: tint,
+            identifier: "stock:\(indicator.id.uuidString):change"
         ))
         let tap = NSClickGestureRecognizer(target: self, action: #selector(stockCellTapped(_:)))
         cell.addGestureRecognizer(tap)
@@ -443,18 +731,21 @@ public final class TouchBarMetricsContainerView: NSView {
         textStack.addArrangedSubview(makeTextCell(
             indicator.name,
             font: .systemFont(ofSize: 12, weight: .semibold),
-            tint: color(for: indicator.direction)
+            tint: TouchBarOLEDTheme.color(for: indicator.direction),
+            identifier: "stock:\(indicator.id.uuidString):detail-name"
         ))
         textStack.addArrangedSubview(makeTextCell(
             detailString(quote: quote),
             font: .monospacedDigitSystemFont(ofSize: 10, weight: .regular),
-            tint: color(for: indicator.direction)
+            tint: TouchBarOLEDTheme.color(for: indicator.direction),
+            identifier: "stock:\(indicator.id.uuidString):detail-line"
         ))
         panel.addArrangedSubview(textStack)
         panel.addArrangedSubview(makeTextCell(
             String(format: "%+.2f%%", indicator.changePercent),
             font: .monospacedDigitSystemFont(ofSize: 14, weight: .semibold),
-            tint: color(for: indicator.direction)
+            tint: TouchBarOLEDTheme.color(for: indicator.direction),
+            identifier: "stock:\(indicator.id.uuidString):detail-change"
         ))
         // The panel spans the bar, so an elastic spacer keeps the content
         // hugging the leading edge instead of letting AppKit spread the slack.
@@ -479,10 +770,18 @@ public final class TouchBarMetricsContainerView: NSView {
         return imageView
     }
 
-    private func makeTextCell(_ text: String, font: NSFont, tint: NSColor) -> NSTextField {
+    private func makeTextCell(
+        _ text: String,
+        font: NSFont,
+        tint: NSColor,
+        identifier: String? = nil
+    ) -> NSTextField {
         let field = NSTextField(labelWithString: text)
         field.font = font
         field.textColor = tint
+        if let identifier {
+            field.identifier = NSUserInterfaceItemIdentifier(identifier)
+        }
         field.lineBreakMode = .byClipping
         field.setContentCompressionResistancePriority(.defaultHigh, for: .horizontal)
         field.setContentHuggingPriority(.required, for: .horizontal)
@@ -502,18 +801,13 @@ public final class TouchBarMetricsContainerView: NSView {
     }
 
     private func color(for direction: StockDirection) -> NSColor {
-        switch direction {
-        case .up: NSColor.red
-        case .down: NSColor.green
-        case .flat: NSColor.white
-        }
+        TouchBarOLEDTheme.color(for: direction)
     }
 
     // MARK: - Rotation
 
-    /// Advances every visible stack one member. A slot exists twice in the
-    /// bookkeeping (once pinned, once in the clipping view), so the phase moves
-    /// once per slot and only the attached copy animates.
+    /// Advances each active stack one member. Inactive presentation copies
+    /// are no longer built, so every entry here is a live candidate.
     private func rotateStacks() {
         guard expandedStockID == nil else { return }
         var advanced = Set<String>()
@@ -530,8 +824,7 @@ public final class TouchBarMetricsContainerView: NSView {
         }
     }
 
-    /// The same slot is built for both the pinned and the clipping collection;
-    /// only the copy that actually hangs under this view should animate.
+    /// Returns whether a stack belongs to the currently attached hierarchy.
     private func isInHierarchy(_ view: NSView) -> Bool {
         var ancestor = view.superview
         while let current = ancestor {
