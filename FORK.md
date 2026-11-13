@@ -203,7 +203,7 @@ open /Applications/RunCatNeo.app     # 重新登记
 
 ### 股票（Touch Bar 股票页签）
 
-数据源是**新浪财经** `https://hq.sinajs.cn/list=<codes>`：需要 `Referer: https://finance.sina.com.cn`，响应是 **GBK** 编码（用 `CFStringEncoding(CFStringEncodings.GB_18030_2000.rawValue)` 转成 `String.Encoding`），批量返回多行 `var hq_str_<code>="..."`，未知代码返回空串。三个市场的字段布局不同（见 `StockQuoteParser` 顶部注释）：A 股用昨收自算涨跌幅，港股/美股直接取现成字段。
+数据源是**新浪财经** `https://hq.sinajs.cn/list=<codes>`：需要 `Referer: https://finance.sina.com.cn`（实测不带就 403），并带浏览器 `User-Agent`（防未来加 UA 校验；实测 2026-11-14 两头都过），响应是 **GBK** 编码（用 `CFStringEncoding(CFStringEncodings.GB_18030_2000.rawValue)` 转成 `String.Encoding`），批量返回多行 `var hq_str_<code>="..."`，未知代码返回空串。三个市场的字段布局不同（见 `StockQuoteParser` 顶部注释）：A 股用昨收自算涨跌幅，港股/美股直接取现成字段。
 
 | 项 | 取值 |
 |---|---|
