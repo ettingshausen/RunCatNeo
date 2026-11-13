@@ -53,6 +53,10 @@ nonisolated final class KeyboardBatteryObserver: @unchecked Sendable {
         var status: BluetoothKeyboardInfo.Status = .noReport
         var valueCapturedAt: Date?
         var freshReadInFlight = false
+        /// The last scan-driven read. `scan()` runs once per HID entry and is
+        /// also invoked for every device-matching callback, so without a guard
+        /// a single launch would wake the keyboard dozens of times.
+        var lastRefreshAt: Date?
 
         var info: BluetoothKeyboardInfo {
             BluetoothKeyboardInfo(
@@ -282,7 +286,17 @@ nonisolated final class KeyboardBatteryObserver: @unchecked Sendable {
             }
 
             reopenIfNeeded(device: device, element: element, key: key, name: product)
-            if let handle = lock.withLock({ $0.devices[key]?.handle }) {
+            let shouldRefresh = lock.withLock { state -> Bool in
+                guard state.devices[key] != nil else { return false }
+                let now = Date()
+                if let last = state.devices[key]?.lastRefreshAt,
+                   now.timeIntervalSince(last) < 5 {
+                    return false
+                }
+                state.devices[key]?.lastRefreshAt = now
+                return true
+            }
+            if shouldRefresh, let handle = lock.withLock({ $0.devices[key]?.handle }) {
                 refresh(handle: handle, key: key)
             }
             if let info = lock.withLock({ $0.devices[key]?.info }) {

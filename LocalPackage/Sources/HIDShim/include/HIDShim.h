@@ -35,4 +35,10 @@ IOReturn KBHIDReadCachedValueEx(IOHIDDeviceRef device, IOHIDElementRef element,
 IOReturn KBHIDReadFreshValueEx(IOHIDDeviceRef device, IOHIDElementRef element,
                                int *outValue, unsigned long long *outAgeSeconds);
 
+/// Raw GET_REPORT for diagnostics: reports what the keyboard answers right
+/// now, so the driver's cached element value can be compared against a live
+/// report. outLength is 0 when the request failed.
+IOReturn KBHIDGetReportRaw(IOHIDDeviceRef device, int reportType, int reportID,
+                           unsigned char *buffer, int capacity, int *outLength);
+
 #endif

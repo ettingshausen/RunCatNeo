@@ -20,6 +20,7 @@
 
 #include "HIDShim.h"
 #include <mach/mach_time.h>
+#include <string.h>
 
 // IOHIDDeviceGetValue returns an *unowned* (not retained) IOHIDValueRef.
 // Swift imports it with a non-optional Unmanaged out-parameter, which makes it
@@ -76,4 +77,16 @@ IOReturn KBHIDReadFreshValueEx(IOHIDDeviceRef device, IOHIDElementRef element,
         return rc == kIOReturnSuccess ? kIOReturnNoDevice : rc;
     }
     return kb_extract(value, outValue, outAgeSeconds);
+}
+
+// Raw report fetch for diagnostics: reports what the keyboard answers right now,
+// so a cached element value can be compared against a live GET_REPORT.
+IOReturn KBHIDGetReportRaw(IOHIDDeviceRef device, int reportType, int reportID,
+                           unsigned char *buffer, int capacity, int *outLength) {
+    CFIndex length = capacity;
+    memset(buffer, 0, (size_t)capacity);
+    IOReturn rc = IOHIDDeviceGetReport(device, (IOHIDReportType)reportType, reportID,
+                                       buffer, &length);
+    *outLength = (rc == kIOReturnSuccess) ? (int)length : 0;
+    return rc;
 }
