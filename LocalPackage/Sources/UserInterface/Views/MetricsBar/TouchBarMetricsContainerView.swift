@@ -197,9 +197,11 @@ public final class TouchBarMetricsContainerView: NSView {
     /// rebuild the AppKit view hierarchy.
     private func updateVisibleValues() {
         var values: [String: (String, NSColor)] = [:]
+        var icons: [String: (String, NSColor)] = [:]
         for indicator in store.touchBarIndicators {
             let prefix = "metric:\(indicator.member.key):"
             values[prefix + "primary"] = (indicator.primaryText, TouchBarOLEDTheme.dynamicValue)
+            icons[prefix + "icon"] = (indicator.systemIcon, TouchBarOLEDTheme.staticIcon)
             if let secondary = indicator.secondaryText {
                 values[prefix + "secondary"] = (secondary, TouchBarOLEDTheme.dynamicValue)
             }
@@ -220,10 +222,24 @@ public final class TouchBarMetricsContainerView: NSView {
                let value = values[key] {
                 if field.stringValue != value.0 { field.stringValue = value.0 }
                 if field.textColor != value.1 { field.textColor = value.1 }
+            } else if let imageView = view as? NSImageView,
+                      let key = imageView.identifier?.rawValue,
+                      let value = icons[key] {
+                if imageView.image?.accessibilityDescription != value.0 {
+                    imageView.image = NSImage(
+                        systemSymbolName: value.0,
+                        accessibilityDescription: value.0
+                    )?.withSymbolConfiguration(.init(pointSize: 12, weight: .regular))
+                }
+                imageView.contentTintColor = value.1
             }
             for child in view.subviews { update(child) }
         }
         update(self)
+        if let documentStack = scrollView.documentView as? NSStackView {
+            sizeDocumentView(documentStack)
+        }
+        needsLayout = true
     }
 
     /// Compares the store's slot snapshots and, when they drifted, asks for a
@@ -454,7 +470,9 @@ public final class TouchBarMetricsContainerView: NSView {
         cell.orientation = .horizontal
         cell.alignment = .centerY
         cell.spacing = 3
-        cell.addArrangedSubview(makeIconCell(indicator.systemIcon, tint: TouchBarOLEDTheme.staticIcon))
+        let iconView = makeIconCell(indicator.systemIcon, tint: TouchBarOLEDTheme.staticIcon)
+        iconView.identifier = NSUserInterfaceItemIdentifier("metric:\(indicator.member.key):icon")
+        cell.addArrangedSubview(iconView)
         if let secondaryText = indicator.secondaryText {
             // Upload and download stack vertically, keeping the footprint
             // of the pair small.
