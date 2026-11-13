@@ -120,7 +120,7 @@ public final class TouchBarMetricsContainerView: NSView {
         scrollView.translatesAutoresizingMaskIntoConstraints = false
 
         separatorView.wantsLayer = true
-        separatorView.layer?.backgroundColor = NSColor.white.withAlphaComponent(0.25).cgColor
+        separatorView.layer?.backgroundColor = TouchBarOLEDTheme.staticIcon.withAlphaComponent(0.25).cgColor
         separatorView.translatesAutoresizingMaskIntoConstraints = false
         // A separator without a size renders as nothing.
         NSLayoutConstraint.activate([
@@ -225,12 +225,10 @@ public final class TouchBarMetricsContainerView: NSView {
             } else if let imageView = view as? NSImageView,
                       let key = imageView.identifier?.rawValue,
                       let value = icons[key] {
-                if imageView.image?.accessibilityDescription != value.0 {
-                    imageView.image = NSImage(
-                        systemSymbolName: value.0,
-                        accessibilityDescription: value.0
-                    )?.withSymbolConfiguration(.init(pointSize: 12, weight: .regular))
-                }
+                imageView.image = NSImage(
+                    systemSymbolName: value.0,
+                    accessibilityDescription: value.0
+                )?.withSymbolConfiguration(.init(pointSize: 12, weight: .regular))
                 imageView.contentTintColor = value.1
             }
             for child in view.subviews { update(child) }
@@ -427,7 +425,7 @@ public final class TouchBarMetricsContainerView: NSView {
     private func populateMetrics(into stack: NSStackView, slots: [TouchBarMetricSlot]) {
         stack.arrangedSubviews.forEach { $0.removeFromSuperview() }
         if slots.isEmpty {
-            stack.addArrangedSubview(makeIconCell("moon.zzz", tint: .white))
+            stack.addArrangedSubview(makeIconCell("moon.zzz", tint: TouchBarOLEDTheme.staticIcon))
             return
         }
         for slot in slots {
