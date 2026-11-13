@@ -178,8 +178,21 @@ private struct SystemMetricsTabView: View {
 /// the bar behaviour (display mode, priority, exclusions).
 private struct TouchBarTabView: View {
     @StateObject var store: MetricsSettings
+    @AppStorage(TouchBarOLEDTheme.pixelShiftDefaultsKey) private var pixelShiftEnabled = true
 
     var body: some View {
+        Section {
+            Toggle(isOn: $pixelShiftEnabled) {
+                Text("Pixel Shift (OLED protection)")
+            }
+            Text("Moves custom Touch Bar content by one physical pixel every five minutes.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        } header: {
+            Text("OLED Protection")
+        }
+
         Section {
             Toggle(isOn: Binding<Bool>(
                 get: { store.showsMetricsBarOnTouchBar },
@@ -188,26 +201,31 @@ private struct TouchBarTabView: View {
                 Text("showMetricsBarOnTouchBar", bundle: .module)
             }
             if store.showsMetricsBarOnTouchBar {
-                TouchBarMetricToggleRow(store: store, metric: .cpu, title: "showCPUUsage")
-                TouchBarMetricToggleRow(store: store, metric: .memory, title: "showMemoryUsage")
-                TouchBarMetricToggleRow(store: store, metric: .storage, title: "showStorageCapacity")
-                TouchBarMetricToggleRow(store: store, metric: .battery, title: "showBatteryStatus")
-                TouchBarMetricToggleRow(store: store, metric: .network, title: "showNetworkConnectivity")
-                TouchBarMetricToggleRow(store: store, metric: .fan, title: "showFanSpeed")
-                TouchBarMetricToggleRow(store: store, metric: .keyboardBattery, title: "showKeyboardBattery")
-                TouchBarMetricToggleRow(store: store, metric: .aiTokenUsage, title: "showAITokenUsage")
-                ForEach(store.customMetricsSources) { source in
-                    HStack(spacing: 8) {
-                        Toggle(isOn: Binding<Bool>(
-                            get: { store.touchBarConfiguration.showsCustomMetrics(of: source.id) },
-                            asyncSet: { await store.send(.touchBarCustomMetricsToggleSwitched(source.id, $0)) }
-                        )) {
-                            Text("show\(source.displayName)Metrics", bundle: .module)
+                ScrollView(.vertical) {
+                    LazyVStack(spacing: 6) {
+                        TouchBarMetricToggleRow(store: store, metric: .cpu, title: "showCPUUsage")
+                        TouchBarMetricToggleRow(store: store, metric: .memory, title: "showMemoryUsage")
+                        TouchBarMetricToggleRow(store: store, metric: .storage, title: "showStorageCapacity")
+                        TouchBarMetricToggleRow(store: store, metric: .battery, title: "showBatteryStatus")
+                        TouchBarMetricToggleRow(store: store, metric: .network, title: "showNetworkConnectivity")
+                        TouchBarMetricToggleRow(store: store, metric: .fan, title: "showFanSpeed")
+                        TouchBarMetricToggleRow(store: store, metric: .keyboardBattery, title: "showKeyboardBattery")
+                        TouchBarMetricToggleRow(store: store, metric: .aiTokenUsage, title: "showAITokenUsage")
+                        ForEach(store.customMetricsSources) { source in
+                            HStack(spacing: 8) {
+                                Toggle(isOn: Binding<Bool>(
+                                    get: { store.touchBarConfiguration.showsCustomMetrics(of: source.id) },
+                                    asyncSet: { await store.send(.touchBarCustomMetricsToggleSwitched(source.id, $0)) }
+                                )) {
+                                    Text("show\\(source.displayName)Metrics", bundle: .module)
+                                }
+                                StackAssignmentMenu(store: store, member: .customMetric(source.id))
+                                    .disabled(!store.touchBarConfiguration.showsCustomMetrics(of: source.id))
+                            }
                         }
-                        StackAssignmentMenu(store: store, member: .customMetric(source.id))
-                            .disabled(!store.touchBarConfiguration.showsCustomMetrics(of: source.id))
                     }
                 }
+                .frame(maxHeight: 210)
             }
         } footer: {
             VStack(alignment: .leading, spacing: 4) {
@@ -299,7 +317,6 @@ private struct StackAssignmentMenu: View {
 /// Touch Bar behaviour: display mode, display priority and the exclusion list.
 private struct TouchBarBehaviorSectionView: View {
     @StateObject var store: MetricsSettings
-    @AppStorage(TouchBarOLEDTheme.pixelShiftDefaultsKey) private var pixelShiftEnabled = true
 
     var body: some View {
         Group {
@@ -406,17 +423,6 @@ private struct TouchBarBehaviorSectionView: View {
                 Text("touchBarBehavior", bundle: .module)
             }
 
-            Section {
-                Toggle(isOn: $pixelShiftEnabled) {
-                    Text("Pixel Shift (OLED protection)")
-                }
-                Text("Moves custom Touch Bar content by one physical pixel every five minutes to help reduce static pixel wear.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            } header: {
-                Text("OLED Protection")
-            }
         }
     }
 }
@@ -446,28 +452,36 @@ private struct StockSectionView: View {
                 Text("stockRefreshInterval", bundle: .module)
             }
             .pickerStyle(.menu)
-            ForEach(store.stocks) { stock in
-                HStack(spacing: 6) {
-                    VStack(alignment: .leading, spacing: 1) {
-                        Text(verbatim: stock.abbreviation)
-                            .font(.system(size: 12, weight: .medium))
-                            .lineLimit(1)
-                        Text(verbatim: stock.symbol)
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
-                            .lineLimit(1)
-                            .truncationMode(.middle)
+            if !store.stocks.isEmpty {
+                ScrollView(.vertical) {
+                    LazyVStack(spacing: 6) {
+                        ForEach(store.stocks) { stock in
+                            HStack(spacing: 6) {
+                                VStack(alignment: .leading, spacing: 1) {
+                                    Text(verbatim: stock.abbreviation)
+                                        .font(.system(size: 12, weight: .medium))
+                                        .lineLimit(1)
+                                    Text(verbatim: stock.symbol)
+                                        .font(.caption2)
+                                        .foregroundStyle(.secondary)
+                                        .lineLimit(1)
+                                        .truncationMode(.middle)
+                                }
+                                Spacer(minLength: 8)
+                                StackAssignmentMenu(store: store, member: .stock(stock.id))
+                                Button {
+                                    Task { await store.send(.removeStockButtonTapped(stock.id)) }
+                                } label: {
+                                    Image(systemName: "minus.circle")
+                                }
+                                .buttonStyle(.borderless)
+                                .labelStyle(.iconOnly)
+                            }
+                            .padding(.vertical, 2)
+                        }
                     }
-                    Spacer()
-                    StackAssignmentMenu(store: store, member: .stock(stock.id))
-                    Button {
-                        Task { await store.send(.removeStockButtonTapped(stock.id)) }
-                    } label: {
-                        Image(systemName: "minus.circle")
-                    }
-                    .buttonStyle(.borderless)
-                    .labelStyle(.iconOnly)
                 }
+                .frame(maxHeight: 220)
             }
             Button {
                 Task { await store.send(.addStockButtonTapped) }
