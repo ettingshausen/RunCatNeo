@@ -202,7 +202,7 @@ private struct TouchBarTabView: View {
             }
             if store.showsMetricsBarOnTouchBar {
                 ScrollView(.vertical) {
-                    LazyVStack(spacing: 6) {
+                    LazyVStack(alignment: .leading, spacing: 6) {
                         TouchBarMetricToggleRow(store: store, metric: .cpu, title: "showCPUUsage")
                         TouchBarMetricToggleRow(store: store, metric: .memory, title: "showMemoryUsage")
                         TouchBarMetricToggleRow(store: store, metric: .storage, title: "showStorageCapacity")
@@ -249,16 +249,25 @@ private struct TouchBarMetricToggleRow: View {
     let title: LocalizedStringKey
 
     var body: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: 12) {
             Toggle(isOn: Binding<Bool>(
                 get: { store.touchBarConfiguration.shows(metric) },
                 asyncSet: { await store.send(.touchBarMetricToggleSwitched(metric, $0)) }
             )) {
                 Text(title, bundle: .module)
+                    .lineLimit(1)
+                    .frame(maxWidth: .infinity, alignment: .leading)
             }
+            .toggleStyle(.checkbox)
+
+            Spacer(minLength: 8)
+
             StackAssignmentMenu(store: store, member: .metric(metric))
+                .frame(width: 124, alignment: .trailing)
                 .disabled(!store.touchBarConfiguration.shows(metric))
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
+
     }
 }
 
