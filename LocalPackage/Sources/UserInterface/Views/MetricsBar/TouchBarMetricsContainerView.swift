@@ -64,6 +64,10 @@ public final class TouchBarMetricsContainerView: NSView {
     private var lifecycleTask: Task<Void, Never>?
     private var lifecycleGeneration = 0
     private var rotationTimer: Timer?
+    private var workspaceObservers: [NSObjectProtocol] = []
+    private var isSessionActive = true
+    private var isSystemSleeping = false
+    private var lastMetricIconSymbols: [String: String] = [:]
     private var rebuildPending = false
     private var layoutConstraints: [NSLayoutConstraint] = []
     /// Rotation phase per stack slot, preserved across structural rebuilds.
@@ -119,13 +123,47 @@ public final class TouchBarMetricsContainerView: NSView {
         scrollView.translatesAutoresizingMaskIntoConstraints = false
 
         separatorView.wantsLayer = true
-        separatorView.layer?.backgroundColor = TouchBarOLEDTheme.staticIcon.withAlphaComponent(0.25).cgColor
+        separatorView.layer?.backgroundColor = TouchBarOLEDTheme.separator.cgColor
         separatorView.translatesAutoresizingMaskIntoConstraints = false
         // A separator without a size renders as nothing.
         NSLayoutConstraint.activate([
             separatorView.widthAnchor.constraint(equalToConstant: 1),
             separatorView.heightAnchor.constraint(equalToConstant: 20),
         ])
+
+        // Touch Bar content is dimmed while the macOS login session is
+        // inactive (for example, the screen is locked) and rotation pauses
+        // during sleep. These are system lifecycle signals, not input
+        // monitoring; no accessibility or event-monitoring permission needed.
+        let workspaceCenter = NSWorkspace.shared.notificationCenter
+        workspaceObservers.append(workspaceCenter.addObserver(
+            forName: NSWorkspace.sessionDidResignActiveNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated { self?.handleSessionInactive() }
+        })
+        workspaceObservers.append(workspaceCenter.addObserver(
+            forName: NSWorkspace.sessionDidBecomeActiveNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated { self?.handleSessionActive() }
+        })
+        workspaceObservers.append(workspaceCenter.addObserver(
+            forName: NSWorkspace.willSleepNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated { self?.handleSystemSleep() }
+        })
+        workspaceObservers.append(workspaceCenter.addObserver(
+            forName: NSWorkspace.didWakeNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated { self?.handleSystemWake() }
+        })
     }
 
     required init?(coder: NSCoder) {
@@ -138,8 +176,7 @@ public final class TouchBarMetricsContainerView: NSView {
 
     public override func viewDidMoveToSuperview() {
         super.viewDidMoveToSuperview()
-        rotationTimer?.invalidate()
-        rotationTimer = nil
+        stopRotationTimer()
         lifecycleTask?.cancel()
         lifecycleGeneration += 1
         let generation = lifecycleGeneration
@@ -160,13 +197,51 @@ public final class TouchBarMetricsContainerView: NSView {
             self.updateVisibleValues()
             self.updateRunnerIfNeeded()
             self.observeStoreChanges()
+            self.startRotationTimer()
         }
+    }
+
+    private func startRotationTimer() {
+        guard superview != nil,
+              isSessionActive,
+              !isSystemSleeping,
+              rotationTimer == nil else { return }
         // `.common` keeps the rotation ticking while a gesture is tracking.
-        let rotationTimer = Timer(timeInterval: Self.rotationInterval, repeats: true) { [weak self] _ in
+        let timer = Timer(timeInterval: Self.rotationInterval, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated { self?.rotateStacks() }
         }
-        RunLoop.main.add(rotationTimer, forMode: .common)
-        self.rotationTimer = rotationTimer
+        RunLoop.main.add(timer, forMode: .common)
+        rotationTimer = timer
+    }
+
+    private func stopRotationTimer() {
+        rotationTimer?.invalidate()
+        rotationTimer = nil
+    }
+
+    private func handleSessionInactive() {
+        isSessionActive = false
+        alphaValue = 0.55
+        stopRotationTimer()
+    }
+
+    private func handleSessionActive() {
+        isSessionActive = true
+        if !isSystemSleeping {
+            alphaValue = 1
+            startRotationTimer()
+        }
+    }
+
+    private func handleSystemSleep() {
+        isSystemSleeping = true
+        stopRotationTimer()
+    }
+
+    private func handleSystemWake() {
+        isSystemSleeping = false
+        alphaValue = isSessionActive ? 1 : 0.55
+        startRotationTimer()
     }
 
     /// Observation tracking is one-shot; re-arm after every store change.
@@ -224,14 +299,18 @@ public final class TouchBarMetricsContainerView: NSView {
             } else if let imageView = view as? NSImageView,
                       let key = imageView.identifier?.rawValue,
                       let value = icons[key] {
-                imageView.image = NSImage(
-                    systemSymbolName: value.0,
-                    accessibilityDescription: value.0
-                )?.withSymbolConfiguration(.init(pointSize: 12, weight: .regular))
+                if lastMetricIconSymbols[key] != value.0 {
+                    imageView.image = NSImage(
+                        systemSymbolName: value.0,
+                        accessibilityDescription: value.0
+                    )?.withSymbolConfiguration(.init(pointSize: 12, weight: .regular))
+                    lastMetricIconSymbols[key] = value.0
+                }
                 imageView.contentTintColor = value.1
             }
             for child in view.subviews { update(child) }
         }
+        lastMetricIconSymbols = lastMetricIconSymbols.filter { icons[$0.key] != nil }
         update(self)
         if let documentStack = scrollView.documentView as? NSStackView {
             sizeDocumentView(documentStack)
