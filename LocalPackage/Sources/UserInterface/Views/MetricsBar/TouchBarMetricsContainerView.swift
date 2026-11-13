@@ -31,8 +31,9 @@ import Model
 /// group is laid out in a fixed-width scroll view. That scroll view only clips
 /// overflow: the Touch Bar never delivers swipe events to the app, so nothing
 /// can actually scroll there — the cell sizes are chosen so all watchlist
-/// entries and metrics fit instead. Tapping a stock swaps the whole bar for
-/// its detail panel.
+/// entries and metrics fit instead. Items grouped into a stack share one fixed
+/// slot and rotate every three seconds with a bottom-to-top roll. Tapping a
+/// stock swaps the whole bar for its detail panel.
 public final class TouchBarMetricsContainerView: NSView {
     private let store: MetricsBar
 
@@ -46,14 +47,19 @@ public final class TouchBarMetricsContainerView: NSView {
     private let separatorView = NSView()
 
     private var expandedStockID: UUID?
-    private var lastSystemIndicators: [TouchBarIndicator] = []
-    private var lastStockIndicators: [StockIndicator] = []
+    private var lastMetricSlots: [TouchBarMetricSlot] = []
+    private var lastStockSlots: [TouchBarStockSlot] = []
     private var lastExpandedID: UUID?
     private var lastPrioritizeStocks: Bool?
     private var lastShowsStocks = false
     private var pollTimer: Timer?
+    private var rotationTimer: Timer?
     private var rebuildPending = false
     private var layoutConstraints: [NSLayoutConstraint] = []
+    /// Rotation phase per stack slot. Both copies of a stack (the pinned one
+    /// and the clipping one) share the phase and advance together.
+    private var rotationPhases: [String: Int] = [:]
+    private var stackViews: [(id: String, view: TouchBarStackView)] = []
 
     /// The system-modal bar's viewport is narrower than the DFR display: on a
     /// 1085pt Touch Bar the host gives the bar 621pt and clips anything wider
@@ -64,6 +70,8 @@ public final class TouchBarMetricsContainerView: NSView {
     private static let documentHeight: CGFloat = height - 4
     private static let horizontalInset: CGFloat = 12
     private static let separatorGap: CGFloat = 10
+    /// Stacked indicators advance one member every three seconds.
+    private static let rotationInterval: TimeInterval = 3
 
     public init(_ appDependencies: AppDependencies) {
         store = MetricsBar(appDependencies)
@@ -120,6 +128,7 @@ public final class TouchBarMetricsContainerView: NSView {
     public override func viewDidMoveToSuperview() {
         super.viewDidMoveToSuperview()
         pollTimer?.invalidate()
+        rotationTimer?.invalidate()
         guard superview != nil else { return }
         Task { @MainActor [weak self] in
             await self?.store.send(.viewAppeared(String(describing: TouchBarMetricsContainerView.self)))
@@ -130,25 +139,31 @@ public final class TouchBarMetricsContainerView: NSView {
         pollTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated { self?.scheduleRebuildIfNeeded() }
         }
+        // `.common` keeps the rotation ticking while a gesture is tracking.
+        let rotationTimer = Timer(timeInterval: Self.rotationInterval, repeats: true) { [weak self] _ in
+            MainActor.assumeIsolated { self?.rotateStacks() }
+        }
+        RunLoop.main.add(rotationTimer, forMode: .common)
+        self.rotationTimer = rotationTimer
     }
 
-    /// Compares the store's indicator snapshots and, when they drifted, asks
-    /// for a deferred rebuild. The rebuild never runs inside a layout pass,
-    /// where mutating the hierarchy crashes AppKit.
+    /// Compares the store's slot snapshots and, when they drifted, asks for a
+    /// deferred rebuild. The rebuild never runs inside a layout pass, where
+    /// mutating the hierarchy crashes AppKit.
     private func scheduleRebuildIfNeeded() {
-        let systemIndicators = store.touchBarIndicators
-        let stockIndicators = store.stockIndicators
+        let metricSlots = store.touchBarMetricSlots
+        let stockSlots = store.touchBarStockSlots
         let prioritizeStocks = store.touchBarConfiguration.prioritizeStocks
         let showsStocks = store.stockConfiguration.stocks.isEmpty == false
-        guard systemIndicators != lastSystemIndicators
-            || stockIndicators != lastStockIndicators
+        guard metricSlots != lastMetricSlots
+            || stockSlots != lastStockSlots
             || expandedStockID != lastExpandedID
             || prioritizeStocks != lastPrioritizeStocks
             || showsStocks != lastShowsStocks else {
             return
         }
-        lastSystemIndicators = systemIndicators
-        lastStockIndicators = stockIndicators
+        lastMetricSlots = metricSlots
+        lastStockSlots = stockSlots
         lastExpandedID = expandedStockID
         lastPrioritizeStocks = prioritizeStocks
         lastShowsStocks = showsStocks
@@ -158,8 +173,8 @@ public final class TouchBarMetricsContainerView: NSView {
             guard let self else { return }
             rebuildPending = false
             rebuild(
-                systemIndicators: store.touchBarIndicators,
-                stockIndicators: store.stockIndicators,
+                metricSlots: store.touchBarMetricSlots,
+                stockSlots: store.touchBarStockSlots,
                 prioritizeStocks: store.touchBarConfiguration.prioritizeStocks,
                 showsStocks: store.stockConfiguration.stocks.isEmpty == false
             )
@@ -171,11 +186,13 @@ public final class TouchBarMetricsContainerView: NSView {
     /// width. Only the views a state needs are in the hierarchy: an unused
     /// separator would otherwise keep drawing its old frame.
     private func rebuild(
-        systemIndicators: [TouchBarIndicator],
-        stockIndicators: [StockIndicator],
+        metricSlots: [TouchBarMetricSlot],
+        stockSlots: [TouchBarStockSlot],
         prioritizeStocks: Bool,
         showsStocks: Bool
     ) {
+        stackViews.removeAll()
+        let stockIndicators = stockSlots.flatMap(\.indicators)
         NSLayoutConstraint.deactivate(layoutConstraints)
         layoutConstraints.removeAll()
         for stack in [leadingStack, leadingStocksStack, metricsScrollStack, stocksScrollStack] {
@@ -201,10 +218,14 @@ public final class TouchBarMetricsContainerView: NSView {
             return
         }
 
-        populateMetrics(into: leadingStack, indicators: systemIndicators)
-        populateStocks(into: leadingStocksStack, indicators: stockIndicators)
-        populateMetrics(into: metricsScrollStack, indicators: systemIndicators)
-        populateStocks(into: stocksScrollStack, indicators: stockIndicators)
+        populateMetrics(into: leadingStack, slots: metricSlots)
+        populateStocks(into: leadingStocksStack, slots: stockSlots)
+        populateMetrics(into: metricsScrollStack, slots: metricSlots)
+        populateStocks(into: stocksScrollStack, slots: stockSlots)
+        // Forget phases for stacks that no longer exist, keeping the map
+        // bounded and making a re-created stack start from its first member.
+        let liveStackIDs = Set(store.touchBarConfiguration.stacks.map(\.slotID))
+        rotationPhases = rotationPhases.filter { liveStackIDs.contains($0.key) }
 
         if prioritizeStocks && showsStocks {
             addSubview(leadingStocksStack)
@@ -212,7 +233,7 @@ public final class TouchBarMetricsContainerView: NSView {
                 leadingStocksStack.leadingAnchor.constraint(equalTo: leadingAnchor, constant: Self.horizontalInset),
                 leadingStocksStack.centerYAnchor.constraint(equalTo: centerYAnchor),
             ]
-            if !systemIndicators.isEmpty {
+            if !metricSlots.isEmpty {
                 addSubview(separatorView)
                 addSubview(scrollView)
                 scrollView.documentView = metricsScrollStack
@@ -263,52 +284,79 @@ public final class TouchBarMetricsContainerView: NSView {
         )
     }
 
-    private func populateMetrics(into stack: NSStackView, indicators: [TouchBarIndicator]) {
+    private func populateMetrics(into stack: NSStackView, slots: [TouchBarMetricSlot]) {
         stack.arrangedSubviews.forEach { $0.removeFromSuperview() }
-        if indicators.isEmpty {
+        if slots.isEmpty {
             stack.addArrangedSubview(makeIconCell("moon.zzz", tint: .white))
             return
         }
-        for indicator in indicators {
-            let cell = NSStackView()
-            cell.orientation = .horizontal
-            cell.alignment = .centerY
-            cell.spacing = 3
-            cell.addArrangedSubview(makeIconCell(indicator.systemIcon, tint: .white))
-            if let secondaryText = indicator.secondaryText {
-                // Upload and download stack vertically, keeping the footprint
-                // of the pair small.
-                let column = NSStackView()
-                column.orientation = .vertical
-                column.alignment = .leading
-                column.spacing = 1
-                column.addArrangedSubview(makeTextCell(
-                    indicator.primaryText,
-                    font: .monospacedDigitSystemFont(ofSize: 8, weight: .regular),
-                    tint: .white
-                ))
-                column.addArrangedSubview(makeTextCell(
-                    secondaryText,
-                    font: .monospacedDigitSystemFont(ofSize: 8, weight: .regular),
-                    tint: .white
-                ))
-                cell.addArrangedSubview(column)
-            } else {
-                cell.addArrangedSubview(makeTextCell(
-                    indicator.primaryText,
-                    font: .monospacedDigitSystemFont(ofSize: 12, weight: .regular),
-                    tint: .white
-                ))
+        for slot in slots {
+            if slot.isStack {
+                addStackView(id: slot.id, cells: slot.indicators.map(makeMetricCell(for:)), into: stack)
+            } else if let indicator = slot.indicators.first {
+                stack.addArrangedSubview(makeMetricCell(for: indicator))
             }
-            stack.addArrangedSubview(cell)
         }
     }
 
-    private func populateStocks(into stack: NSStackView, indicators: [StockIndicator]) {
+    private func populateStocks(into stack: NSStackView, slots: [TouchBarStockSlot]) {
         stack.arrangedSubviews.forEach { $0.removeFromSuperview() }
-        for indicator in indicators {
-            stack.addArrangedSubview(makeStockCell(for: indicator))
+        for slot in slots {
+            if slot.isStack {
+                addStackView(id: slot.id, cells: slot.indicators.map { makeStockCell(for: $0) }, into: stack)
+            } else if let indicator = slot.indicators.first {
+                stack.addArrangedSubview(makeStockCell(for: indicator))
+            }
         }
+    }
+
+    /// A stack slot is as wide as its widest member, so rotating never shifts
+    /// the neighbouring cells. The view resumes from the last recorded phase.
+    private func addStackView(id: String, cells: [NSView], into stack: NSStackView) {
+        let width = cells.map { fittingWidth(of: $0) }.max() ?? 1
+        let view = TouchBarStackView(members: cells, width: width, height: Self.documentHeight)
+        view.setActive(index: rotationPhases[id] ?? 0)
+        stack.addArrangedSubview(view)
+        stackViews.append((id, view))
+    }
+
+    private func fittingWidth(of view: NSView) -> CGFloat {
+        view.layoutSubtreeIfNeeded()
+        return ceil(view.fittingSize.width)
+    }
+
+    private func makeMetricCell(for indicator: TouchBarIndicator) -> NSView {
+        let cell = NSStackView()
+        cell.orientation = .horizontal
+        cell.alignment = .centerY
+        cell.spacing = 3
+        cell.addArrangedSubview(makeIconCell(indicator.systemIcon, tint: .white))
+        if let secondaryText = indicator.secondaryText {
+            // Upload and download stack vertically, keeping the footprint
+            // of the pair small.
+            let column = NSStackView()
+            column.orientation = .vertical
+            column.alignment = .leading
+            column.spacing = 1
+            column.addArrangedSubview(makeTextCell(
+                indicator.primaryText,
+                font: .monospacedDigitSystemFont(ofSize: 8, weight: .regular),
+                tint: .white
+            ))
+            column.addArrangedSubview(makeTextCell(
+                secondaryText,
+                font: .monospacedDigitSystemFont(ofSize: 8, weight: .regular),
+                tint: .white
+            ))
+            cell.addArrangedSubview(column)
+        } else {
+            cell.addArrangedSubview(makeTextCell(
+                indicator.primaryText,
+                font: .monospacedDigitSystemFont(ofSize: 12, weight: .regular),
+                tint: .white
+            ))
+        }
+        return cell
     }
 
     /// Abbreviation over change percent: two narrow lines make five stocks fit
@@ -414,6 +462,38 @@ public final class TouchBarMetricsContainerView: NSView {
         case .down: NSColor.green
         case .flat: NSColor.white
         }
+    }
+
+    // MARK: - Rotation
+
+    /// Advances every visible stack one member. A slot exists twice in the
+    /// bookkeeping (once pinned, once in the clipping view), so the phase moves
+    /// once per slot and only the attached copy animates.
+    private func rotateStacks() {
+        guard expandedStockID == nil else { return }
+        var advanced = Set<String>()
+        for entry in stackViews where isInHierarchy(entry.view) {
+            guard entry.view.memberCount > 1 else { continue }
+            if advanced.contains(entry.id) {
+                entry.view.setActive(index: rotationPhases[entry.id] ?? 0)
+                continue
+            }
+            advanced.insert(entry.id)
+            let next = ((rotationPhases[entry.id] ?? 0) + 1) % entry.view.memberCount
+            rotationPhases[entry.id] = next
+            entry.view.advance()
+        }
+    }
+
+    /// The same slot is built for both the pinned and the clipping collection;
+    /// only the copy that actually hangs under this view should animate.
+    private func isInHierarchy(_ view: NSView) -> Bool {
+        var ancestor = view.superview
+        while let current = ancestor {
+            if current === self { return true }
+            ancestor = current.superview
+        }
+        return false
     }
 
     // MARK: - Actions

@@ -175,18 +175,21 @@ public final class MetricsBar: Composable {
         var indicators = [TouchBarIndicator]()
         if touchBarConfiguration.shows(.cpu), let cpuInfo = systemInfoBundle.cpuInfo {
             indicators.append(TouchBarIndicator(
+                member: .metric(.cpu),
                 systemIcon: cpuInfo.icon,
                 primaryText: cpuInfo.percentage.menuBarDescription
             ))
         }
         if touchBarConfiguration.shows(.memory), let memoryInfo = systemInfoBundle.memoryInfo {
             indicators.append(TouchBarIndicator(
+                member: .metric(.memory),
                 systemIcon: memoryInfo.icon,
                 primaryText: memoryInfo.percentage.menuBarDescription
             ))
         }
         if touchBarConfiguration.shows(.storage), let storageInfo = systemInfoBundle.storageInfo {
             indicators.append(TouchBarIndicator(
+                member: .metric(.storage),
                 systemIcon: storageInfo.icon,
                 primaryText: storageInfo.percentage.menuBarDescription
             ))
@@ -195,12 +198,14 @@ public final class MetricsBar: Composable {
            let batteryInfo = systemInfoBundle.batteryInfo,
            batteryInfo.isInstalled {
             indicators.append(TouchBarIndicator(
+                member: .metric(.battery),
                 systemIcon: batteryInfo.icon,
                 primaryText: batteryInfo.percentage.menuBarDescription
             ))
         }
         if touchBarConfiguration.shows(.network), let networkInfo = systemInfoBundle.networkInfo {
             indicators.append(TouchBarIndicator(
+                member: .metric(.network),
                 systemIcon: networkInfo.icon,
                 primaryText: "\u{2B06}\(networkInfo.upload.menuBarDescription(type: .network))",
                 secondaryText: "\u{2B07}\(networkInfo.download.menuBarDescription(type: .network))"
@@ -210,6 +215,7 @@ public final class MetricsBar: Composable {
            let fanInfo = fanInfo, !fanInfo.fans.isEmpty,
            fanInfo.fans[0].rpm > 0 {
             indicators.append(TouchBarIndicator(
+                member: .metric(.fan),
                 systemIcon: "fanblades",
                 primaryText: "\(Int(fanInfo.fans[0].rpm.rounded()))"
             ))
@@ -217,6 +223,7 @@ public final class MetricsBar: Composable {
         if touchBarConfiguration.shows(.keyboardBattery),
            let keyboardBattery = keyboardBatteries.first {
             indicators.append(TouchBarIndicator(
+                member: .metric(.keyboardBattery),
                 systemIcon: "keyboard",
                 primaryText: keyboardBattery.percent.map { "\($0)%" } ?? "--"
             ))
@@ -224,17 +231,36 @@ public final class MetricsBar: Composable {
         if touchBarConfiguration.shows(.aiTokenUsage),
            let aiTokenUsage = aiTokenUsage {
             indicators.append(TouchBarIndicator(
+                member: .metric(.aiTokenUsage),
                 systemIcon: "chart.bar.xaxis",
                 primaryText: aiTokenUsage.barLabel
             ))
         }
         for bundle in customMetricsBundles where touchBarConfiguration.showsCustomMetrics(of: bundle.id) {
             indicators.append(TouchBarIndicator(
+                member: .customMetric(bundle.id),
                 systemIcon: bundle.snapshot.displaySymbol,
                 primaryText: bundle.metricsBarLabel
             ))
         }
         return indicators
+    }
+
+    /// The visible metrics grouped into the slots the Touch Bar renders: each
+    /// configured stack occupies one fixed slot and rotates through its
+    /// members, everything else stays a plain single-item slot.
+    public var touchBarMetricSlots: [TouchBarMetricSlot] {
+        TouchBarSlotBuilder.metricSlots(
+            indicators: touchBarIndicators,
+            stacks: touchBarConfiguration.stacks
+        )
+    }
+
+    public var touchBarStockSlots: [TouchBarStockSlot] {
+        TouchBarSlotBuilder.stockSlots(
+            indicators: stockIndicators,
+            stacks: touchBarConfiguration.stacks
+        )
     }
 
     public enum Action: Sendable {

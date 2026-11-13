@@ -142,7 +142,7 @@ struct MetricsBarTests {
         sut.systemInfoBundle = Metrics.dummy(cpuRawValue: 0.42).systemInfoBundle
         sut.fanInfo = FanInfo(fans: [FanInfo.Fan(rpm: 1200, maximumRPM: 3000)])
         let indicators = sut.touchBarIndicators
-        #expect(indicators == [TouchBarIndicator(systemIcon: "fanblades", primaryText: "1200")])
+        #expect(indicators == [TouchBarIndicator(member: .metric(.fan), systemIcon: "fanblades", primaryText: "1200")])
         #expect(sut.metricsBarConfiguration.showsCPU)
         #expect(!sut.metricsBarConfiguration.showsFan)
         #expect(!sut.touchBarConfiguration.shows(.cpu))
@@ -159,6 +159,30 @@ struct MetricsBarTests {
         sut.fanInfo = FanInfo(fans: [FanInfo.Fan(rpm: 0, maximumRPM: 3000)])
         #expect(sut.touchBarIndicators.isEmpty)
         sut.fanInfo = FanInfo(fans: [FanInfo.Fan(rpm: 1200.4, maximumRPM: 3000)])
-        #expect(sut.touchBarIndicators == [TouchBarIndicator(systemIcon: "fanblades", primaryText: "1200")])
+        #expect(sut.touchBarIndicators == [TouchBarIndicator(member: .metric(.fan), systemIcon: "fanblades", primaryText: "1200")])
+    }
+
+    @MainActor @Test
+    func touchBarMetricSlots_group_the_configured_stack() {
+        let stack = TouchBarStack(members: [.metric(.memory), .metric(.cpu)])
+        let storage = UserDefaultsClient.storage(initialTouchBarConfiguration: TouchBarConfiguration(
+            mode: .smart,
+            excludedBundleIdentifiers: [],
+            visibleMetrics: [.cpu, .memory],
+            stacks: [stack]
+        ))
+        let sut = MetricsBar(.testDependencies(userDefaultsClient: storage.client))
+        sut.systemInfoBundle = Metrics.dummy(cpuRawValue: 0.42).systemInfoBundle
+        sut.systemInfoBundle.memoryInfo = MemoryInfo(
+            percentage: Percentage(rawValue: 0.62),
+            pressure: .zero,
+            app: .zero,
+            wired: .zero,
+            compressed: .zero
+        )
+        let slots = sut.touchBarMetricSlots
+        #expect(slots.count == 1)
+        #expect(slots[0].id == stack.slotID)
+        #expect(slots[0].indicators.map(\.member) == [.metric(.memory), .metric(.cpu)])
     }
 }

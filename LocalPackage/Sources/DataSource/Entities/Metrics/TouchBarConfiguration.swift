@@ -53,13 +53,17 @@ public struct TouchBarConfiguration: Codable, Sendable, Equatable {
     /// When true the stock watchlist is pinned and the system metrics scroll;
     /// when false the system metrics are pinned and the stocks scroll.
     public var prioritizeStocks: Bool
+    /// Items grouped into stacks. Each stack occupies one fixed slot and its
+    /// members rotate every few seconds.
+    public var stacks: [TouchBarStack]
 
     public static let `default` = Self(
         mode: .smart,
         excludedBundleIdentifiers: [],
         visibleMetrics: Set(TouchBarMetric.allCases),
         visibleCustomMetricsSourceIDs: [],
-        prioritizeStocks: false
+        prioritizeStocks: false,
+        stacks: []
     )
 
     public init(
@@ -67,13 +71,15 @@ public struct TouchBarConfiguration: Codable, Sendable, Equatable {
         excludedBundleIdentifiers: [String],
         visibleMetrics: Set<TouchBarMetric> = Set(TouchBarMetric.allCases),
         visibleCustomMetricsSourceIDs: Set<UUID> = [],
-        prioritizeStocks: Bool = false
+        prioritizeStocks: Bool = false,
+        stacks: [TouchBarStack] = []
     ) {
         self.mode = mode
         self.excludedBundleIdentifiers = excludedBundleIdentifiers
         self.visibleMetrics = visibleMetrics
         self.visibleCustomMetricsSourceIDs = visibleCustomMetricsSourceIDs
         self.prioritizeStocks = prioritizeStocks
+        self.stacks = Self.normalizedStacks(stacks)
     }
 
     public func shows(_ metric: TouchBarMetric) -> Bool {
@@ -97,5 +103,8 @@ public struct TouchBarConfiguration: Codable, Sendable, Equatable {
             forKey: .visibleCustomMetricsSourceIDs
         ) ?? []
         prioritizeStocks = try container.decodeIfPresent(Bool.self, forKey: .prioritizeStocks) ?? false
+        stacks = Self.normalizedStacks(
+            try container.decodeIfPresent([TouchBarStack].self, forKey: .stacks) ?? []
+        )
     }
 }

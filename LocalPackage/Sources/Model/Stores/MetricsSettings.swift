@@ -277,6 +277,17 @@ public final class MetricsSettings: Composable {
             userDefaultsRepository.stockConfiguration = configuration
             stockService.emitConfigurationChange()
 
+            // A removed stock must not linger in a stack. Detaching it may
+            // empty the stack, which then disappears and renumbers the rest.
+            let member = TouchBarMember.stock(id)
+            if touchBarConfiguration.stack(containing: member) != nil {
+                var touchBar = touchBarConfiguration
+                touchBar.detach(member)
+                touchBarConfiguration = touchBar
+                userDefaultsRepository.touchBarConfiguration = touchBar
+                touchBarMetricsService.emitConfigurationChange()
+            }
+
         case let .stockRefreshIntervalSelected(seconds):
             var configuration = stockConfiguration
             configuration.refreshInterval = StockConfiguration.normalizedRefreshInterval(seconds)
@@ -311,6 +322,13 @@ public final class MetricsSettings: Composable {
         case let .touchBarStockPrioritySwitched(prioritizeStocks):
             var configuration = touchBarConfiguration
             configuration.prioritizeStocks = prioritizeStocks
+            touchBarConfiguration = configuration
+            userDefaultsRepository.touchBarConfiguration = configuration
+            touchBarMetricsService.emitConfigurationChange()
+
+        case let .touchBarMemberStackAssignmentSelected(member, assignment):
+            var configuration = touchBarConfiguration
+            configuration.assign(member, to: assignment)
             touchBarConfiguration = configuration
             userDefaultsRepository.touchBarConfiguration = configuration
             touchBarMetricsService.emitConfigurationChange()
@@ -380,6 +398,21 @@ public final class MetricsSettings: Composable {
 
     public var stocks: [Stock] {
         stockConfiguration.stocks
+    }
+
+    /// The stacks the settings menu may offer for this item. A stack holds
+    /// either metrics or stocks, so only same-group stacks are returned.
+    public func compatibleStacks(for member: TouchBarMember) -> [TouchBarStack] {
+        touchBarConfiguration.stacks(compatibleWith: member)
+    }
+
+    /// 1-based stack number shared by both tabs, matching the stored order.
+    public func stackNumber(of stack: TouchBarStack) -> Int? {
+        touchBarConfiguration.stacks.firstIndex(where: { $0.id == stack.id }).map { $0 + 1 }
+    }
+
+    public var canCreateStack: Bool {
+        touchBarConfiguration.stacks.count < TouchBarConfiguration.maxStacks
     }
 
     /// The custom metric sources, offered as per-source toggles in the Touch
@@ -486,6 +519,7 @@ public final class MetricsSettings: Composable {
         case removeStockButtonTapped(UUID)
         case stockRefreshIntervalSelected(Int)
         case touchBarStockPrioritySwitched(Bool)
+        case touchBarMemberStackAssignmentSelected(TouchBarMember, TouchBarStackAssignment)
         case touchBarCustomMetricsToggleSwitched(UUID, Bool)
         case touchBarExcludeCurrentAppButtonTapped
         case touchBarExcludedAppRemoved(String)

@@ -26,7 +26,8 @@ extension UserDefaultsClient {
     static func storage(
         initialSources: [CustomMetricsSource] = [],
         initialMetricsBarConfiguration: MetricsBarConfiguration? = nil,
-        initialTouchBarConfiguration: TouchBarConfiguration? = nil
+        initialTouchBarConfiguration: TouchBarConfiguration? = nil,
+        initialStockConfiguration: StockConfiguration? = nil
     ) -> Storage {
         var initial = [String: Data]()
         if !initialSources.isEmpty,
@@ -40,6 +41,10 @@ extension UserDefaultsClient {
         if let initialTouchBarConfiguration,
            let encoded = try? JSONEncoder().encode(initialTouchBarConfiguration) {
             initial[.touchBarConfiguration] = encoded
+        }
+        if let initialStockConfiguration,
+           let encoded = try? JSONEncoder().encode(initialStockConfiguration) {
+            initial[.stockConfiguration] = encoded
         }
         let lock = AllocatedUnfairLock<[String: Data]>(initialState: initial)
         let client = testDependency(of: UserDefaultsClient.self) {

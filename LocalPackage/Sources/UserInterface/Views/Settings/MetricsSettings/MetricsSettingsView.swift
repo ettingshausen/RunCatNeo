@@ -188,70 +188,111 @@ private struct TouchBarTabView: View {
                 Text("showMetricsBarOnTouchBar", bundle: .module)
             }
             if store.showsMetricsBarOnTouchBar {
-                Toggle(isOn: Binding<Bool>(
-                    get: { store.touchBarConfiguration.shows(.cpu) },
-                    asyncSet: { await store.send(.touchBarMetricToggleSwitched(.cpu, $0)) }
-                )) {
-                    Text("showCPUUsage", bundle: .module)
-                }
-                Toggle(isOn: Binding<Bool>(
-                    get: { store.touchBarConfiguration.shows(.memory) },
-                    asyncSet: { await store.send(.touchBarMetricToggleSwitched(.memory, $0)) }
-                )) {
-                    Text("showMemoryUsage", bundle: .module)
-                }
-                Toggle(isOn: Binding<Bool>(
-                    get: { store.touchBarConfiguration.shows(.storage) },
-                    asyncSet: { await store.send(.touchBarMetricToggleSwitched(.storage, $0)) }
-                )) {
-                    Text("showStorageCapacity", bundle: .module)
-                }
-                Toggle(isOn: Binding<Bool>(
-                    get: { store.touchBarConfiguration.shows(.battery) },
-                    asyncSet: { await store.send(.touchBarMetricToggleSwitched(.battery, $0)) }
-                )) {
-                    Text("showBatteryStatus", bundle: .module)
-                }
-                Toggle(isOn: Binding<Bool>(
-                    get: { store.touchBarConfiguration.shows(.network) },
-                    asyncSet: { await store.send(.touchBarMetricToggleSwitched(.network, $0)) }
-                )) {
-                    Text("showNetworkConnectivity", bundle: .module)
-                }
-                Toggle(isOn: Binding<Bool>(
-                    get: { store.touchBarConfiguration.shows(.fan) },
-                    asyncSet: { await store.send(.touchBarMetricToggleSwitched(.fan, $0)) }
-                )) {
-                    Text("showFanSpeed", bundle: .module)
-                }
-                Toggle(isOn: Binding<Bool>(
-                    get: { store.touchBarConfiguration.shows(.keyboardBattery) },
-                    asyncSet: { await store.send(.touchBarMetricToggleSwitched(.keyboardBattery, $0)) }
-                )) {
-                    Text("showKeyboardBattery", bundle: .module)
-                }
-                Toggle(isOn: Binding<Bool>(
-                    get: { store.touchBarConfiguration.shows(.aiTokenUsage) },
-                    asyncSet: { await store.send(.touchBarMetricToggleSwitched(.aiTokenUsage, $0)) }
-                )) {
-                    Text("showAITokenUsage", bundle: .module)
-                }
+                TouchBarMetricToggleRow(store: store, metric: .cpu, title: "showCPUUsage")
+                TouchBarMetricToggleRow(store: store, metric: .memory, title: "showMemoryUsage")
+                TouchBarMetricToggleRow(store: store, metric: .storage, title: "showStorageCapacity")
+                TouchBarMetricToggleRow(store: store, metric: .battery, title: "showBatteryStatus")
+                TouchBarMetricToggleRow(store: store, metric: .network, title: "showNetworkConnectivity")
+                TouchBarMetricToggleRow(store: store, metric: .fan, title: "showFanSpeed")
+                TouchBarMetricToggleRow(store: store, metric: .keyboardBattery, title: "showKeyboardBattery")
+                TouchBarMetricToggleRow(store: store, metric: .aiTokenUsage, title: "showAITokenUsage")
                 ForEach(store.customMetricsSources) { source in
-                    Toggle(isOn: Binding<Bool>(
-                        get: { store.touchBarConfiguration.showsCustomMetrics(of: source.id) },
-                        asyncSet: { await store.send(.touchBarCustomMetricsToggleSwitched(source.id, $0)) }
-                    )) {
-                        Text("show\(source.displayName)Metrics", bundle: .module)
+                    HStack(spacing: 8) {
+                        Toggle(isOn: Binding<Bool>(
+                            get: { store.touchBarConfiguration.showsCustomMetrics(of: source.id) },
+                            asyncSet: { await store.send(.touchBarCustomMetricsToggleSwitched(source.id, $0)) }
+                        )) {
+                            Text("show\(source.displayName)Metrics", bundle: .module)
+                        }
+                        StackAssignmentMenu(store: store, member: .customMetric(source.id))
+                            .disabled(!store.touchBarConfiguration.showsCustomMetrics(of: source.id))
                     }
                 }
             }
         } footer: {
-            Text("touchBarVisibilityNote", bundle: .module)
+            VStack(alignment: .leading, spacing: 4) {
+                Text("touchBarVisibilityNote", bundle: .module)
+                Text("touchBarStackNote", bundle: .module)
+            }
+            .fixedSize(horizontal: false, vertical: true)
         }
 
         if store.showsMetricsBarOnTouchBar {
             TouchBarBehaviorSectionView(store: store)
         }
+    }
+}
+
+/// One Touch Bar metric toggle with its stack menu. The menu is disabled while
+/// the metric is hidden: an invisible item has nothing to stack.
+private struct TouchBarMetricToggleRow: View {
+    @StateObject var store: MetricsSettings
+    let metric: TouchBarMetric
+    let title: LocalizedStringKey
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Toggle(isOn: Binding<Bool>(
+                get: { store.touchBarConfiguration.shows(metric) },
+                asyncSet: { await store.send(.touchBarMetricToggleSwitched(metric, $0)) }
+            )) {
+                Text(title, bundle: .module)
+            }
+            StackAssignmentMenu(store: store, member: .metric(metric))
+                .disabled(!store.touchBarConfiguration.shows(metric))
+        }
+    }
+}
+
+/// Assigns an item to a stack. Only stacks of the item's own group are
+/// offered (metrics and stocks never mix), plus a "new stack" entry until the
+/// cap is reached.
+private struct StackAssignmentMenu: View {
+    @StateObject var store: MetricsSettings
+    let member: TouchBarMember
+
+    private enum Choice: Hashable {
+        case independent
+        case stack(UUID)
+        case new
+    }
+
+    private static func stackLabel(_ number: Int) -> String {
+        String(format: String(localized: "stackNumber", bundle: .module), number)
+    }
+
+    var body: some View {
+        Picker(selection: Binding<Choice>(
+            get: {
+                store.touchBarConfiguration.stack(containing: member).map { .stack($0.id) } ?? .independent
+            },
+            asyncSet: { choice in
+                switch choice {
+                case .independent:
+                    await store.send(.touchBarMemberStackAssignmentSelected(member, .independent))
+                case let .stack(id):
+                    await store.send(.touchBarMemberStackAssignmentSelected(member, .stack(id)))
+                case .new:
+                    await store.send(.touchBarMemberStackAssignmentSelected(member, .newStack))
+                }
+            }
+        )) {
+            Text("stackIndependent", bundle: .module).tag(Choice.independent)
+            ForEach(store.compatibleStacks(for: member)) { stack in
+                Text(verbatim: Self.stackLabel(store.stackNumber(of: stack) ?? 0))
+                    .tag(Choice.stack(stack.id))
+            }
+            if store.canCreateStack {
+                Text("stackNew", bundle: .module).tag(Choice.new)
+            }
+        } label: {
+            Text("touchBarStack", bundle: .module)
+        }
+        .labelsHidden()
+        .pickerStyle(.menu)
+        // Wide enough for the longest localized option ("Eigenständig") plus
+        // the chevron, so the menu title never truncates.
+        .frame(width: 128)
     }
 }
 
@@ -397,6 +438,7 @@ private struct StockSectionView: View {
                             .truncationMode(.middle)
                     }
                     Spacer()
+                    StackAssignmentMenu(store: store, member: .stock(stock.id))
                     Button {
                         Task { await store.send(.removeStockButtonTapped(stock.id)) }
                     } label: {
@@ -415,8 +457,11 @@ private struct StockSectionView: View {
                     Image(systemName: "plus.circle")
                 }
             }
-            .disabled(store.stocks.count >= StockEditor.maxStocks)
             Text("stockSymbolHint", bundle: .module)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+            Text("touchBarStackNote", bundle: .module)
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)

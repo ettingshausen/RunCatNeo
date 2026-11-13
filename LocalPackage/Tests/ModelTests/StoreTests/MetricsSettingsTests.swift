@@ -416,4 +416,63 @@ struct MetricsSettingsTests {
         await sut.send(.stockRefreshIntervalSelected(7))
         #expect(sut.stockConfiguration.refreshInterval == 30)
     }
+
+    @MainActor @Test
+    func send_touchBarMemberStackAssignmentSelected_persists_and_emits_change() async throws {
+        let appState = AllocatedUnfairLock<AppState>(initialState: .init())
+        let storage = UserDefaultsClient.storage()
+        let sut = MetricsSettings(.testDependencies(
+            appStateClient: .testDependency(appState),
+            userDefaultsClient: storage.client
+        ))
+        await sut.send(.touchBarMemberStackAssignmentSelected(.metric(.storage), .newStack))
+        #expect(sut.touchBarConfiguration.stacks.count == 1)
+        #expect(sut.touchBarConfiguration.stacks[0].members == [.metric(.storage)])
+        let saved = storage.lock.withLock { $0[.touchBarConfiguration] }
+            .flatMap { try? JSONDecoder().decode(TouchBarConfiguration.self, from: $0) }
+        #expect(saved?.stacks.first?.members == [.metric(.storage)])
+        #expect(appState.withLock(\.touchBarConfigurationChanges.latestValue) != nil)
+    }
+
+    @MainActor @Test
+    func send_touchBarMemberStackAssignmentSelected_moves_a_member_between_stacks() async {
+        let storage = UserDefaultsClient.storage()
+        let sut = MetricsSettings(.testDependencies(userDefaultsClient: storage.client))
+        await sut.send(.touchBarMemberStackAssignmentSelected(.metric(.cpu), .newStack))
+        let first = sut.touchBarConfiguration.stacks[0].id
+        await sut.send(.touchBarMemberStackAssignmentSelected(.metric(.memory), .newStack))
+        let second = sut.touchBarConfiguration.stacks[1].id
+        await sut.send(.touchBarMemberStackAssignmentSelected(.metric(.cpu), .stack(second)))
+        // Moving the only member out deletes the emptied first stack.
+        #expect(sut.touchBarConfiguration.stacks.map(\.id) == [second])
+        #expect(sut.touchBarConfiguration.stacks[0].members == [.metric(.memory), .metric(.cpu)])
+        #expect(first != second)
+    }
+
+    @MainActor @Test
+    func send_removeStockButtonTapped_detaches_the_stock_from_its_stack() async throws {
+        let appState = AllocatedUnfairLock<AppState>(initialState: .init())
+        let stockID = UUID()
+        let storage = UserDefaultsClient.storage(
+            initialTouchBarConfiguration: TouchBarConfiguration(
+                mode: .smart,
+                excludedBundleIdentifiers: [],
+                stacks: [TouchBarStack(members: [.stock(stockID)])]
+            ),
+            initialStockConfiguration: StockConfiguration(
+                stocks: [Stock(id: stockID, symbol: "sh600519", abbreviation: "茅台")]
+            )
+        )
+        let sut = MetricsSettings(.testDependencies(
+            appStateClient: .testDependency(appState),
+            userDefaultsClient: storage.client
+        ))
+        await sut.send(.removeStockButtonTapped(stockID))
+        #expect(sut.stocks.isEmpty)
+        #expect(sut.touchBarConfiguration.stacks.isEmpty)
+        let saved = storage.lock.withLock { $0[.touchBarConfiguration] }
+            .flatMap { try? JSONDecoder().decode(TouchBarConfiguration.self, from: $0) }
+        #expect(saved?.stacks.isEmpty ?? false)
+        #expect(appState.withLock(\.touchBarConfigurationChanges.latestValue) != nil)
+    }
 }

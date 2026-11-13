@@ -6271,6 +6271,204 @@
         }
       }
     },
+    "stackIndependent" : {
+      "comment" : "The stack menu choice that keeps an item out of any stack.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Eigenständig"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Standalone"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Independiente"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Indépendant"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "単独"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "단독"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Отдельно"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Riêng biệt"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "独立"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "獨立"
+          }
+        }
+      }
+    },
+    "stackNumber" : {
+      "comment" : "A stack menu option. The argument is the stack number.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Stapel %lld"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Stack %lld"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pila %lld"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pile %lld"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "スタック %lld"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "스택 %lld"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Стопка %lld"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chồng %lld"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "堆叠 %lld"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "堆疊 %lld"
+          }
+        }
+      }
+    },
+    "stackNew" : {
+      "comment" : "The stack menu choice that starts a new stack.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Neuer Stapel"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "New Stack"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nueva pila"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nouvelle pile"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "新しいスタック"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "새 스택"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Новая стопка"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chồng mới"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "新建堆叠"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "新增堆疊"
+          }
+        }
+      }
+    },
     "stockAbbreviation" : {
       "comment" : "A label of the text field for the abbreviation shown on the Touch Bar.",
       "extractionState" : "manual",
@@ -6997,72 +7195,6 @@
         }
       }
     },
-    "stockLimitExceeded" : {
-      "comment" : "An error shown when more than five stocks are added.",
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Es können höchstens 5 Aktien hinzugefügt werden."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "You can add up to 5 stocks."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Puedes añadir hasta 5 acciones."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Vous pouvez ajouter jusqu'à 5 actions."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "追加できるのは最大5銘柄です。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "최대 5개의 주식을 추가할 수 있습니다."
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Можно добавить не более 5 акций."
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Bạn có thể thêm tối đa 5 cổ phiếu."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "最多只能添加 5 只股票。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "最多只能新增 5 隻股票。"
-          }
-        }
-      }
-    },
     "stockTab" : {
       "comment" : "A tab title of the Touch Bar stock watchlist.",
       "extractionState" : "manual",
@@ -7202,61 +7334,61 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Gib Codes wie 300253, 0700, AAPL ein, oder vollständige Sina-Codes: sh600519 / rt_hk00700 / gb_aapl. Maximal 5."
+            "value" : "Gib Codes wie 300253, 0700, AAPL ein, oder vollständige Sina-Codes: sh600519 / rt_hk00700 / gb_aapl."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Type codes like 300253, 0700, AAPL, or full Sina codes: sh600519 / rt_hk00700 / gb_aapl. Up to 5."
+            "value" : "Type codes like 300253, 0700, AAPL, or full Sina codes: sh600519 / rt_hk00700 / gb_aapl."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Escribe códigos como 300253, 0700, AAPL, o códigos Sina completos: sh600519 / rt_hk00700 / gb_aapl. Máximo 5."
+            "value" : "Escribe códigos como 300253, 0700, AAPL, o códigos Sina completos: sh600519 / rt_hk00700 / gb_aapl."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Codes comme 300253, 0700, AAPL, ou codes Sina complets : sh600519 / rt_hk00700 / gb_aapl. 5 max."
+            "value" : "Codes comme 300253, 0700, AAPL, ou codes Sina complets : sh600519 / rt_hk00700 / gb_aapl."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "300253、0700、AAPL などのコード、または完全な Sina コード（sh600519 / rt_hk00700 / gb_aapl）。最大5件。"
+            "value" : "300253、0700、AAPL などのコード、または完全な Sina コード（sh600519 / rt_hk00700 / gb_aapl）。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "300253, 0700, AAPL 같은 코드 또는 전체 Sina 코드(sh600519 / rt_hk00700 / gb_aapl). 최대 5개."
+            "value" : "300253, 0700, AAPL 같은 코드 또는 전체 Sina 코드(sh600519 / rt_hk00700 / gb_aapl)."
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Коды вроде 300253, 0700, AAPL или полные коды Sina: sh600519 / rt_hk00700 / gb_aapl. До 5."
+            "value" : "Коды вроде 300253, 0700, AAPL или полные коды Sina: sh600519 / rt_hk00700 / gb_aapl."
           }
         },
         "vi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Nhập mã như 300253, 0700, AAPL hoặc mã Sina đầy đủ: sh600519 / rt_hk00700 / gb_aapl. Tối đa 5."
+            "value" : "Nhập mã như 300253, 0700, AAPL hoặc mã Sina đầy đủ: sh600519 / rt_hk00700 / gb_aapl."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "可直接输入 300253、0700、AAPL 等代码，自动补全为新浪代码；也可输入完整代码 sh600519 / rt_hk00700 / gb_aapl。最多 5 只。"
+            "value" : "可直接输入 300253、0700、AAPL 等代码，自动补全为新浪代码；也可输入完整代码 sh600519 / rt_hk00700 / gb_aapl。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "可直接輸入 300253、0700、AAPL 等代碼，自動補全為新浪代碼；也可輸入完整代碼 sh600519 / rt_hk00700 / gb_aapl。最多 5 隻。"
+            "value" : "可直接輸入 300253、0700、AAPL 等代碼，自動補全為新浪代碼；也可輸入完整代碼 sh600519 / rt_hk00700 / gb_aapl。"
           }
         }
       }
@@ -8511,6 +8643,138 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "展開的指標條會覆蓋前台應用自己的 Touch Bar 內容。將這類應用加入排除清單後，指標條會自動收起。"
+          }
+        }
+      }
+    },
+    "touchBarStack" : {
+      "comment" : "A label of the stack assignment menu on the Touch Bar settings.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Stapel"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Stack"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pila"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pile"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "スタック"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "스택"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Стопка"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chồng"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "堆叠"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "堆疊"
+          }
+        }
+      }
+    },
+    "touchBarStackNote" : {
+      "comment" : "A caption noting that items in the same stack rotate every three seconds.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Elemente im selben Stapel wechseln auf der Touch Bar alle 3 Sekunden."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Items in the same stack rotate on the Touch Bar every 3 seconds."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Los elementos de una misma pila rotan en la Touch Bar cada 3 segundos."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Les éléments d'une même pile défilent dans la Touch Bar toutes les 3 secondes."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "同じスタック内の項目は 3 秒ごとに Touch Bar 上で切り替わります。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "같은 스택의 항목은 Touch Bar에서 3초마다 전환됩니다."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Элементы одной стопки сменяются на Touch Bar каждые 3 секунды."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Các mục trong cùng một chồng luân phiên trên Touch Bar mỗi 3 giây."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "同一个堆叠内的项目每 3 秒在 Touch Bar 上轮换显示。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "同一個堆疊內的項目每 3 秒在 Touch Bar 上輪換顯示。"
           }
         }
       }

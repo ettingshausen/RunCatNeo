@@ -24,11 +24,20 @@ import Foundation
 /// `primaryText`/`secondaryText` are pre-formatted labels; the network
 /// indicator carries both its upload and download lines.
 public struct TouchBarIndicator: Sendable, Equatable {
+    /// Which configured item this indicator came from. Stacks reference items
+    /// by this identity rather than by position in the rendered array.
+    public let member: TouchBarMember
     public let systemIcon: String
     public let primaryText: String
     public let secondaryText: String?
 
-    public init(systemIcon: String, primaryText: String, secondaryText: String? = nil) {
+    public init(
+        member: TouchBarMember,
+        systemIcon: String,
+        primaryText: String,
+        secondaryText: String? = nil
+    ) {
+        self.member = member
         self.systemIcon = systemIcon
         self.primaryText = primaryText
         self.secondaryText = secondaryText
