@@ -111,7 +111,7 @@ public final class TouchBarMetricsContainerView: NSView {
             equalTo: centerXAnchor
         )
         contentCenterYConstraint = contentContainerView.centerYAnchor.constraint(
-            equalTo: contentContainerView.centerYAnchor
+            equalTo: centerYAnchor
         )
         NSLayoutConstraint.activate([
             contentCenterXConstraint,
@@ -500,7 +500,7 @@ public final class TouchBarMetricsContainerView: NSView {
             contentContainerView.addSubview(leadingStack)
             layoutConstraints = [
                 leadingStack.leadingAnchor.constraint(equalTo: contentContainerView.leadingAnchor, constant: Self.horizontalInset),
-                leadingStack.centerYAnchor.constraint(equalTo: centerYAnchor),
+                leadingStack.centerYAnchor.constraint(equalTo: contentContainerView.centerYAnchor),
                 leadingStack.trailingAnchor.constraint(equalTo: contentContainerView.trailingAnchor, constant: -Self.horizontalInset),
             ]
             NSLayoutConstraint.activate(layoutConstraints)
@@ -535,8 +535,8 @@ public final class TouchBarMetricsContainerView: NSView {
         if prioritizeStocks && showsStocks {
             contentContainerView.addSubview(leadingStocksStack)
             layoutConstraints = [
-                leadingStocksStack.leadingAnchor.constraint(equalTo: leadingAnchor, constant: Self.horizontalInset),
-                leadingStocksStack.centerYAnchor.constraint(equalTo: centerYAnchor),
+                leadingStocksStack.leadingAnchor.constraint(equalTo: contentContainerView.leadingAnchor, constant: Self.horizontalInset),
+                leadingStocksStack.centerYAnchor.constraint(equalTo: contentContainerView.centerYAnchor),
             ]
             if !metricSlots.isEmpty {
                 contentContainerView.addSubview(separatorView)
@@ -545,18 +545,18 @@ public final class TouchBarMetricsContainerView: NSView {
                 sizeDocumentView(metricsScrollStack)
                 layoutConstraints.append(contentsOf: [
                     separatorView.leadingAnchor.constraint(equalTo: leadingStocksStack.trailingAnchor, constant: Self.separatorGap),
-                    separatorView.centerYAnchor.constraint(equalTo: centerYAnchor),
+                    separatorView.centerYAnchor.constraint(equalTo: contentContainerView.centerYAnchor),
                     scrollView.leadingAnchor.constraint(equalTo: separatorView.trailingAnchor, constant: Self.separatorGap),
-                    scrollView.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -Self.horizontalInset),
-                    scrollView.centerYAnchor.constraint(equalTo: centerYAnchor),
+                    scrollView.trailingAnchor.constraint(equalTo: contentContainerView.trailingAnchor, constant: -Self.horizontalInset),
+                    scrollView.centerYAnchor.constraint(equalTo: contentContainerView.centerYAnchor),
                     scrollView.heightAnchor.constraint(equalToConstant: Self.documentHeight),
                 ])
             }
         } else {
             addSubview(leadingStack)
             layoutConstraints = [
-                leadingStack.leadingAnchor.constraint(equalTo: leadingAnchor, constant: Self.horizontalInset),
-                leadingStack.centerYAnchor.constraint(equalTo: centerYAnchor),
+                leadingStack.leadingAnchor.constraint(equalTo: contentContainerView.leadingAnchor, constant: Self.horizontalInset),
+                leadingStack.centerYAnchor.constraint(equalTo: contentContainerView.centerYAnchor),
             ]
             if showsStocks {
                 addSubview(separatorView)
@@ -565,10 +565,10 @@ public final class TouchBarMetricsContainerView: NSView {
                 sizeDocumentView(stocksScrollStack)
                 layoutConstraints.append(contentsOf: [
                     separatorView.leadingAnchor.constraint(equalTo: leadingStack.trailingAnchor, constant: Self.separatorGap),
-                    separatorView.centerYAnchor.constraint(equalTo: centerYAnchor),
+                    separatorView.centerYAnchor.constraint(equalTo: contentContainerView.centerYAnchor),
                     scrollView.leadingAnchor.constraint(equalTo: separatorView.trailingAnchor, constant: Self.separatorGap),
-                    scrollView.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -Self.horizontalInset),
-                    scrollView.centerYAnchor.constraint(equalTo: centerYAnchor),
+                    scrollView.trailingAnchor.constraint(equalTo: contentContainerView.trailingAnchor, constant: -Self.horizontalInset),
+                    scrollView.centerYAnchor.constraint(equalTo: contentContainerView.centerYAnchor),
                     scrollView.heightAnchor.constraint(equalToConstant: Self.documentHeight),
                 ])
             }
