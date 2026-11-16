@@ -440,6 +440,7 @@ private struct TouchBarBehaviorSectionView: View {
 /// shared for adding. Stocks appear on the Touch Bar only.
 private struct StockSectionView: View {
     @StateObject var store: MetricsSettings
+    @AppStorage(TouchBarOLEDTheme.stockBrightnessDefaultsKey) private var stockBrightness = 1.0
 
     /// "5 s" / "5 秒" comes from the system formatter, so the four options need
     /// no locale-specific strings.
@@ -450,6 +451,27 @@ private struct StockSectionView: View {
 
     var body: some View {
         Section {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    Text("Touch Bar 股票亮度")
+                    Spacer()
+                    Text("\(Int(stockBrightness * 100))%")
+                        .monospacedDigit()
+                        .foregroundStyle(.secondary)
+                }
+                Slider(value: $stockBrightness, in: 0.7...1.5, step: 0.05)
+                HStack {
+                    Text("较暗")
+                    Spacer()
+                    Text("较亮")
+                }
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+                Text("仅调整 Touch Bar 股票名称、涨跌幅和详情文字的亮度，不改变系统 Touch Bar 硬件亮度。")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
             Picker(selection: Binding<Int>(
                 get: { store.stockConfiguration.refreshInterval },
                 asyncSet: { await store.send(.stockRefreshIntervalSelected($0)) }
