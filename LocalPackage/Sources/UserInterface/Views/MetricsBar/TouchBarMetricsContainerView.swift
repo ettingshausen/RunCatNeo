@@ -803,7 +803,7 @@ public final class TouchBarMetricsContainerView: NSView {
     }
 
     private func color(for direction: StockDirection) -> NSColor {
-        TouchBarOLEDTheme.color(for: direction)
+        TouchBarOLEDTheme.stockColor(for: direction)
     }
 
     // MARK: - Rotation
