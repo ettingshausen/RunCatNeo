@@ -198,7 +198,7 @@ public final class TouchBarMetricsContainerView: NSView {
             object: UserDefaults.standard,
             queue: .main
         ) { [weak self] _ in
-            MainActor.assumeIsolated { self?.handlePixelShiftPreferenceChanged() }
+            MainActor.assumeIsolated { self?.handleDisplayPreferencesChanged() }
         }
     }
 
@@ -292,13 +292,15 @@ public final class TouchBarMetricsContainerView: NSView {
         pixelShiftTimer = nil
     }
 
-    private func handlePixelShiftPreferenceChanged() {
+    private func handleDisplayPreferencesChanged() {
         if UserDefaults.standard.bool(forKey: TouchBarOLEDTheme.pixelShiftDefaultsKey) {
             startPixelShiftTimer()
         } else {
             stopPixelShiftTimer()
             resetPixelShift()
         }
+        // Stock brightness changes only affect tint; update existing labels in place.
+        updateVisibleValues()
     }
 
     private func advancePixelShift() {
@@ -392,7 +394,7 @@ public final class TouchBarMetricsContainerView: NSView {
         }
         for indicator in store.stockIndicators {
             let prefix = "stock:\(indicator.id.uuidString):"
-            let tint = TouchBarOLEDTheme.color(for: indicator.direction)
+            let tint = TouchBarOLEDTheme.stockColor(for: indicator.direction)
             values[prefix + "name"] = (indicator.abbreviation, tint)
             values[prefix + "change"] = (String(format: "%+.2f%%", indicator.changePercent), tint)
             values[prefix + "detail-name"] = (indicator.name, tint)
@@ -693,7 +695,7 @@ public final class TouchBarMetricsContainerView: NSView {
     /// Abbreviation over change percent: two narrow lines make five stocks fit
     /// the width the system-modal bar allows without any scrolling.
     private func makeStockCell(for indicator: StockIndicator) -> NSView {
-        let tint = color(for: indicator.direction)
+        let tint = TouchBarOLEDTheme.stockColor(for: indicator.direction)
         let cell = NSStackView()
         cell.orientation = .vertical
         cell.alignment = .leading
@@ -723,7 +725,7 @@ public final class TouchBarMetricsContainerView: NSView {
         panel.alignment = .centerY
         panel.spacing = 10
 
-        panel.addArrangedSubview(makeIconCell("chart.line.uptrend.xyaxis", tint: color(for: indicator.direction)))
+        panel.addArrangedSubview(makeIconCell("chart.line.uptrend.xyaxis", tint: TouchBarOLEDTheme.stockColor(for: indicator.direction)))
         let textStack = NSStackView()
         textStack.orientation = .vertical
         textStack.alignment = .leading
@@ -731,20 +733,20 @@ public final class TouchBarMetricsContainerView: NSView {
         textStack.addArrangedSubview(makeTextCell(
             indicator.name,
             font: .systemFont(ofSize: 12, weight: .semibold),
-            tint: TouchBarOLEDTheme.color(for: indicator.direction),
+            tint: TouchBarOLEDTheme.stockColor(for: indicator.direction),
             identifier: "stock:\(indicator.id.uuidString):detail-name"
         ))
         textStack.addArrangedSubview(makeTextCell(
             detailString(quote: quote),
             font: .monospacedDigitSystemFont(ofSize: 10, weight: .regular),
-            tint: TouchBarOLEDTheme.color(for: indicator.direction),
+            tint: TouchBarOLEDTheme.stockColor(for: indicator.direction),
             identifier: "stock:\(indicator.id.uuidString):detail-line"
         ))
         panel.addArrangedSubview(textStack)
         panel.addArrangedSubview(makeTextCell(
             String(format: "%+.2f%%", indicator.changePercent),
             font: .monospacedDigitSystemFont(ofSize: 14, weight: .semibold),
-            tint: TouchBarOLEDTheme.color(for: indicator.direction),
+            tint: TouchBarOLEDTheme.stockColor(for: indicator.direction),
             identifier: "stock:\(indicator.id.uuidString):detail-change"
         ))
         // The panel spans the bar, so an elastic spacer keeps the content
@@ -801,7 +803,7 @@ public final class TouchBarMetricsContainerView: NSView {
     }
 
     private func color(for direction: StockDirection) -> NSColor {
-        TouchBarOLEDTheme.color(for: direction)
+        TouchBarOLEDTheme.stockColor(for: direction)
     }
 
     // MARK: - Rotation
