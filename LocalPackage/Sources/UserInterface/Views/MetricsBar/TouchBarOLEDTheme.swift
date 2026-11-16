@@ -31,14 +31,8 @@ enum TouchBarOLEDTheme {
         let base = color(for: direction)
         let brightness = stockBrightness
         let components = base.usingColorSpace(.deviceRGB) ?? base
-        let factor = brightness < 1
-            ? brightness
-            : 1 + (brightness - 1) / 0.5
         func adjusted(_ component: CGFloat) -> CGFloat {
-            if factor <= 1 {
-                return component * factor
-            }
-            return component + (1 - component) * min(factor - 1, 1)
+            min(component * brightness, 1)
         }
         return NSColor(
             srgbRed: adjusted(components.redComponent),
