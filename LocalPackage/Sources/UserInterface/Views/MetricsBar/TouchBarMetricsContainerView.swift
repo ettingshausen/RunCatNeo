@@ -682,12 +682,22 @@ public final class TouchBarMetricsContainerView: NSView {
             ))
             cell.addArrangedSubview(column)
         } else {
-            cell.addArrangedSubview(makeTextCell(
+            let valueField = makeTextCell(
                 indicator.primaryText,
-                font: .monospacedDigitSystemFont(ofSize: 12, weight: .regular),
+                font: .monospacedDigitSystemFont(
+                    ofSize: indicator.member.key == "aiTokenUsage" ? 11 : 12,
+                    weight: .regular
+                ),
                 tint: TouchBarOLEDTheme.dynamicValue,
                 identifier: "metric:\(indicator.member.key):primary"
-            ))
+            )
+            // Token values can grow from K to M/B after the cell is created.
+            // Reserve enough trailing width for the unit suffix so it is not
+            // clipped by the fixed-width Touch Bar stack slot.
+            if indicator.member.key == "aiTokenUsage" {
+                valueField.widthAnchor.constraint(greaterThanOrEqualToConstant: 44).isActive = true
+            }
+            cell.addArrangedSubview(valueField)
         }
         return cell
     }
