@@ -13,9 +13,39 @@ import DataSource
 /// legible. They cannot prevent or measure OLED wear.
 enum TouchBarOLEDTheme {
     static let pixelShiftDefaultsKey = "TouchBarOLEDProtectionPixelShiftEnabled"
+    static let stockBrightnessDefaultsKey = "TouchBarStockIndicatorBrightness"
 
     static func registerDefaults() {
-        UserDefaults.standard.register(defaults: [pixelShiftDefaultsKey: true])
+        UserDefaults.standard.register(defaults: [
+            pixelShiftDefaultsKey: true,
+            stockBrightnessDefaultsKey: 1.0,
+        ])
+    }
+
+    static var stockBrightness: Double {
+        min(max(UserDefaults.standard.double(forKey: stockBrightnessDefaultsKey), 0.7), 1.5)
+    }
+
+    /// Brightens or dims stock colors without changing their up/down hue.
+    static func stockColor(for direction: StockDirection) -> NSColor {
+        let base = color(for: direction)
+        let brightness = stockBrightness
+        let components = base.usingColorSpace(.deviceRGB) ?? base
+        let factor = brightness < 1
+            ? brightness
+            : 1 + (brightness - 1) / 0.5
+        func adjusted(_ component: CGFloat) -> CGFloat {
+            if factor <= 1 {
+                return component * factor
+            }
+            return component + (1 - component) * min(factor - 1, 1)
+        }
+        return NSColor(
+            srgbRed: adjusted(components.redComponent),
+            green: adjusted(components.greenComponent),
+            blue: adjusted(components.blueComponent),
+            alpha: components.alphaComponent
+        )
     }
 
     static let background = NSColor.black
