@@ -1103,7 +1103,7 @@ public final class TouchBarMetricsContainerView: NSView {
         // Every control page starts at the bar's leading edge, like the rest
         // of the app's content.
         panelStack.addArrangedSubview(card)
-        panelStack.addArrangedSubview(Self.fixedSpace(width: 24))
+        panelStack.addArrangedSubview(Self.fixedSpace(width: 8))
         panelStack.addArrangedSubview(makeCloseCell(identifier: "panel:done"))
         panelStack.addArrangedSubview(Self.spacer())
     }
@@ -1385,6 +1385,29 @@ public final class TouchBarMetricsContainerView: NSView {
         }
     }
 
+    /// The system's own close-button rendering, captured once. The private
+    /// NSButton cannot be instantiated, but the system draws it in our process
+    /// on every presentation — so the first capture wins and our dismiss
+    /// controls show the genuine image instead of a hand-drawn replica.
+    static var closeImage: NSImage?
+    private static var closeImageFailed = false
+
+    private static func captureSystemCloseImage(from button: NSButton) {
+        guard closeImage == nil, !closeImageFailed else { return }
+        let size = button.bounds.size
+        guard size.width >= 20, size.height >= 20,
+              let rep = button.bitmapImageRepForCachingDisplay(in: button.bounds) else {
+            closeImageFailed = true
+            return
+        }
+        button.cacheDisplay(in: button.bounds, to: rep)
+        guard let cg = rep.cgImage else {
+            closeImageFailed = true
+            return
+        }
+        closeImage = NSImage(cgImage: cg, size: size)
+    }
+
     // MARK: - Rotation
 
     /// Advances each active stack one member. Inactive presentation copies
@@ -1638,9 +1661,10 @@ final class TouchBarBrightnessTrack: NSView {
     }
 }
 
-/// The brightness page's close box: a large gray disc with the cross cut out,
-/// matching the system control's measured geometry (2px/pt screenshot):
-/// a 22pt disc whose ✕ glyph spans 19pt with ~1.8pt strokes.
+/// The brightness page's and the menu's dismiss control: the system close
+/// button's own rendering captured when the bar is presented (see
+/// `captureSystemCloseImage`), with a hand-drawn 22pt gray disc + 19pt
+/// cut-out cross as the fallback for the first presentation.
 final class CloseCircleView: NSView {
     static let side: CGFloat = 22
     private static let diameter: CGFloat = 22
@@ -1648,6 +1672,24 @@ final class CloseCircleView: NSView {
     private static let crossLineWidth: CGFloat = 1.8
 
     override func draw(_ dirtyRect: NSRect) {
+        if let image = TouchBarMetricsContainerView.closeImage {
+            // The capture is 64x30pt including transparent padding around the
+            // disc; draw it aspect-fit and centered so the disc lands where
+            // the fallback would.
+            let size = image.size
+            let scale = min(bounds.width / size.width, bounds.height / size.height)
+            let drawSize = NSSize(width: size.width * scale, height: size.height * scale)
+            image.draw(
+                in: NSRect(
+                    x: (bounds.width - drawSize.width) / 2,
+                    y: (bounds.height - drawSize.height) / 2,
+                    width: drawSize.width,
+                    height: drawSize.height
+                )
+            )
+            return
+        }
+
         let diameter = Self.diameter
         let disc = NSRect(
             x: (bounds.width - diameter) / 2,
