@@ -28,8 +28,9 @@ final class TouchBarStackView: NSView {
     private static let animationDuration: TimeInterval = 0.3
 
     private let bands: [NSView]
-    private let slotWidth: CGFloat
+    private var slotWidth: CGFloat
     private let bandHeight: CGFloat
+    private var slotWidthConstraint: NSLayoutConstraint!
     private var isAnimating = false
     private(set) var activeIndex = 0
 
