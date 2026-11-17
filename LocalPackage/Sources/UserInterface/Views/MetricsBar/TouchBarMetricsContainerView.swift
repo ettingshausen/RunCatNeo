@@ -853,16 +853,16 @@ public final class TouchBarMetricsContainerView: NSView {
         return imageView
     }
 
-    /// The brightness page's trailing sun, matching the system control's
-    /// larger glyph at the bright end of the track.
-    private func makeLargeIconCell(_ systemName: String, tint: NSColor) -> NSImageView {
+    /// The brightness page's suns, matching the system control's differing
+    /// glyph sizes at the two ends of the track.
+    private func makeSunCell(_ systemName: String, pointSize: CGFloat, side: CGFloat) -> NSImageView {
         let imageView = NSImageView()
         imageView.image = NSImage(systemSymbolName: systemName, accessibilityDescription: nil)?
-            .withSymbolConfiguration(.init(pointSize: 15, weight: .regular))
-        imageView.contentTintColor = tint
+            .withSymbolConfiguration(.init(pointSize: pointSize, weight: .regular))
+        imageView.contentTintColor = TouchBarOLEDTheme.controlFill
         imageView.translatesAutoresizingMaskIntoConstraints = false
-        imageView.widthAnchor.constraint(equalToConstant: 20).isActive = true
-        imageView.heightAnchor.constraint(equalToConstant: 20).isActive = true
+        imageView.widthAnchor.constraint(equalToConstant: side).isActive = true
+        imageView.heightAnchor.constraint(equalToConstant: side).isActive = true
         return imageView
     }
 
@@ -904,9 +904,11 @@ public final class TouchBarMetricsContainerView: NSView {
 
     private static let runnerPickerPageSize = 10
     private static let runnerCellWidth: CGFloat = 46
-    /// The brightness card stays compact like the system control; the close
-    /// box sits outside it instead of stretching the card across the bar.
-    private static let brightnessCardWidth: CGFloat = 380
+    /// The brightness card follows the system control's proportions: a tall
+    /// rounded panel that leaves the close box outside it.
+    private static let brightnessCardWidth: CGFloat = 420
+    private static let brightnessCardHeight: CGFloat = 24
+    private static let brightnessCardCornerRadius: CGFloat = 9
 
     private func buildPanel() {
         switch panel {
@@ -992,14 +994,14 @@ public final class TouchBarMetricsContainerView: NSView {
         let card = NSView()
         card.wantsLayer = true
         card.layer?.backgroundColor = TouchBarOLEDTheme.panelCard.cgColor
-        card.layer?.cornerRadius = 8
+        card.layer?.cornerRadius = Self.brightnessCardCornerRadius
         card.translatesAutoresizingMaskIntoConstraints = false
         card.widthAnchor.constraint(equalToConstant: Self.brightnessCardWidth).isActive = true
-        card.heightAnchor.constraint(equalToConstant: 22).isActive = true
+        card.heightAnchor.constraint(equalToConstant: Self.brightnessCardHeight).isActive = true
 
-        let smallSun = makeIconCell("sun.min", tint: TouchBarOLEDTheme.controlFill)
-        let bigSun = makeLargeIconCell("sun.max", tint: TouchBarOLEDTheme.controlFill)
-        let slider = NSSlider(
+        let smallSun = makeSunCell("sun.min", pointSize: 13, side: 18)
+        let bigSun = makeSunCell("sun.max", pointSize: 16, side: 22)
+        let slider = TouchBarBrightnessSlider(
             value: TouchBarOLEDTheme.stockBrightness,
             minValue: TouchBarStockBrightness.minimum,
             maxValue: TouchBarStockBrightness.maximum,
@@ -1007,18 +1009,18 @@ public final class TouchBarMetricsContainerView: NSView {
             action: #selector(brightnessSliderChanged(_:))
         )
         slider.isContinuous = true
-        slider.controlSize = .small
         slider.translatesAutoresizingMaskIntoConstraints = false
         card.addSubview(smallSun)
         card.addSubview(slider)
         card.addSubview(bigSun)
         NSLayoutConstraint.activate([
-            smallSun.leadingAnchor.constraint(equalTo: card.leadingAnchor, constant: 12),
+            smallSun.leadingAnchor.constraint(equalTo: card.leadingAnchor, constant: 14),
             smallSun.centerYAnchor.constraint(equalTo: card.centerYAnchor),
-            slider.leadingAnchor.constraint(equalTo: smallSun.trailingAnchor, constant: 10),
+            slider.leadingAnchor.constraint(equalTo: smallSun.trailingAnchor, constant: 12),
             slider.centerYAnchor.constraint(equalTo: card.centerYAnchor),
-            bigSun.leadingAnchor.constraint(equalTo: slider.trailingAnchor, constant: 10),
-            bigSun.trailingAnchor.constraint(equalTo: card.trailingAnchor, constant: -12),
+            slider.heightAnchor.constraint(equalToConstant: Self.brightnessCardHeight),
+            bigSun.leadingAnchor.constraint(equalTo: slider.trailingAnchor, constant: 12),
+            bigSun.trailingAnchor.constraint(equalTo: card.trailingAnchor, constant: -14),
             bigSun.centerYAnchor.constraint(equalTo: card.centerYAnchor),
         ])
         panelStack.addArrangedSubview(card)
@@ -1266,5 +1268,50 @@ public final class TouchBarMetricsContainerView: NSView {
     @objc private func detailPanelTapped(_ sender: NSClickGestureRecognizer) {
         expandedStockID = nil
         scheduleRebuildIfNeeded()
+    }
+}
+
+/// Draws the system brightness control's look -- hairline track, blue fill and
+/// a large white rounded-square knob -- while inheriting `NSSlider`'s own
+/// tracking, which is what makes dragging follow the finger on the Touch Bar.
+final class TouchBarBrightnessSlider: NSSlider {
+    private static let knobWidth: CGFloat = 20
+    private static let knobHeight: CGFloat = 22
+    private static let knobRadius: CGFloat = 5
+    private static let trackHeight: CGFloat = 3
+
+    override func draw(_ dirtyRect: NSRect) {
+        let inset = Self.knobWidth / 2
+        let span = maxValue - minValue
+        let progress = span > 0 ? CGFloat((doubleValue - minValue) / span) : 1
+        let centerY = bounds.midY
+
+        let trackRect = NSRect(
+            x: inset,
+            y: centerY - Self.trackHeight / 2,
+            width: max(bounds.width - inset * 2, 1),
+            height: Self.trackHeight
+        )
+        TouchBarOLEDTheme.sliderTrack.setFill()
+        NSBezierPath(roundedRect: trackRect, xRadius: 1.5, yRadius: 1.5).fill()
+
+        let knobCenterX = trackRect.minX + progress * trackRect.width
+        let filledRect = NSRect(
+            x: trackRect.minX,
+            y: trackRect.minY,
+            width: max(knobCenterX - trackRect.minX, 0),
+            height: Self.trackHeight
+        )
+        TouchBarOLEDTheme.sliderFill.setFill()
+        NSBezierPath(roundedRect: filledRect, xRadius: 1.5, yRadius: 1.5).fill()
+
+        let knobRect = NSRect(
+            x: knobCenterX - Self.knobWidth / 2,
+            y: centerY - Self.knobHeight / 2,
+            width: Self.knobWidth,
+            height: Self.knobHeight
+        )
+        TouchBarOLEDTheme.sliderKnob.setFill()
+        NSBezierPath(roundedRect: knobRect, xRadius: Self.knobRadius, yRadius: Self.knobRadius).fill()
     }
 }

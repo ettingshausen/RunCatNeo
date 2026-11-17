@@ -60,8 +60,14 @@ enum TouchBarOLEDTheme {
     static let dynamicValue = NSColor(srgbRed: 0.76, green: 0.76, blue: 0.76, alpha: 1)
 
     /// The brightness page's own controls must stay readable at any setting.
-    static let controlTrack = NSColor(srgbRed: 0.30, green: 0.30, blue: 0.30, alpha: 1)
+    static let controlTrack = NSColor(srgbRed: 0.30, green: 0.30, blue: 0.32, alpha: 1)
     static let controlFill = NSColor(srgbRed: 0.85, green: 0.85, blue: 0.85, alpha: 1)
+    /// The slider drawn by `TouchBarBrightnessSlider`, matching the system
+    /// brightness control: a hairline track, a system-blue fill and a large
+    /// white rounded-square knob.
+    static let sliderTrack = NSColor(srgbRed: 0.34, green: 0.34, blue: 0.36, alpha: 1)
+    static let sliderFill = NSColor(srgbRed: 0.04, green: 0.52, blue: 1.0, alpha: 1)
+    static let sliderKnob = NSColor.white
     /// The rounded card the brightness page sits on, like the system's
     /// brightness panel (lighter than the black bar behind it).
     static let panelCard = NSColor(srgbRed: 0.17, green: 0.17, blue: 0.18, alpha: 1)
