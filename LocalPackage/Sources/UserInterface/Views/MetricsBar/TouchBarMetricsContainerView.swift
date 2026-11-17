@@ -924,7 +924,11 @@ public final class TouchBarMetricsContainerView: NSView {
     /// vertical strings looked like separators between the cells.
     private static let runnerPickerPageSize = 9
     private static let runnerCellWidth: CGFloat = 48
-    private static let runnerPreviewSize = NSSize(width: 46, height: 22)
+    // Match the menu bar runner's 18pt frame height. The previous 46×22pt
+    // picker preview enlarged the source artwork noticeably and made pixel
+    // edges look soft on the Touch Bar. Keep a little horizontal breathing
+    // room inside each 48pt cell as well.
+    private static let runnerPreviewSize = NSSize(width: 38, height: 18)
     /// Measured from the system brightness control (2px/pt screenshot): the
     /// card is 360×28pt on a 30pt row, its track 202pt long and 4pt thick,
     /// the knob 30pt square, the close box a 22pt circle.
