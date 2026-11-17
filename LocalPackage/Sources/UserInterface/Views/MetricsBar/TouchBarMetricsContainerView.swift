@@ -806,7 +806,10 @@ public final class TouchBarMetricsContainerView: NSView {
         panel.alignment = .centerY
         panel.spacing = 10
 
-        panel.addArrangedSubview(makeIconCell("chart.line.uptrend.xyaxis", tint: TouchBarOLEDTheme.stockColor(for: indicator.direction)))
+        panel.addArrangedSubview(makeDetailIconCell(
+            "chart.line.uptrend.xyaxis",
+            tint: TouchBarOLEDTheme.stockColor(for: indicator.direction)
+        ))
         let textStack = NSStackView()
         textStack.orientation = .vertical
         textStack.alignment = .leading
@@ -840,6 +843,19 @@ public final class TouchBarMetricsContainerView: NSView {
         let tap = NSClickGestureRecognizer(target: self, action: #selector(detailPanelTapped(_:)))
         panel.addGestureRecognizer(tap)
         return panel
+    }
+
+    /// Stock detail gets a little more visual emphasis than compact metric
+    /// cells. Keep its icon optically balanced with the two-line quote label.
+    private func makeDetailIconCell(_ systemName: String, tint: NSColor) -> NSImageView {
+        let imageView = NSImageView()
+        imageView.image = NSImage(systemSymbolName: systemName, accessibilityDescription: nil)?
+            .withSymbolConfiguration(.init(pointSize: 22, weight: .regular))
+        imageView.contentTintColor = tint
+        imageView.translatesAutoresizingMaskIntoConstraints = false
+        imageView.widthAnchor.constraint(equalToConstant: 26).isActive = true
+        imageView.heightAnchor.constraint(equalToConstant: 26).isActive = true
+        return imageView
     }
 
     /// Every symbol in the bar (metrics, stocks, placeholders, chevrons) uses
