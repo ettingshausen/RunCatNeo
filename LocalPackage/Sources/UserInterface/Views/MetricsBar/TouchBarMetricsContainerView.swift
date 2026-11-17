@@ -927,7 +927,10 @@ public final class TouchBarMetricsContainerView: NSView {
     // MARK: - Control panel
 
     private static let runnerPickerPageSize = 10
-    private static let runnerCellWidth: CGFloat = 46
+    /// Icon-only preview cells: a 22pt frame inside a 40×30pt hit target, so a
+    /// full page plus both paging arrows still fits the 597pt usable width.
+    private static let runnerCellWidth: CGFloat = 40
+    private static let runnerPreviewSize: CGFloat = 22
     /// Measured from the system brightness control (2px/pt screenshot): the
     /// card is 360×28pt on a 30pt row, its track 202pt long and 4pt thick,
     /// the knob 30pt square, the close box a 22pt circle.
@@ -994,6 +997,9 @@ public final class TouchBarMetricsContainerView: NSView {
         runnerPickerPage = page
 
         panelStack.addArrangedSubview(makeChevronCell(symbol: "chevron.left", identifier: "panel:back"))
+        // The back control stays at the leading edge; everything else is
+        // centered, since a page of previews rarely fills the bar.
+        panelStack.addArrangedSubview(Self.spacer())
         if page > 0 {
             panelStack.addArrangedSubview(makeChevronCell(symbol: "chevron.left", identifier: "panel:page:prev"))
         }
@@ -1127,30 +1133,32 @@ public final class TouchBarMetricsContainerView: NSView {
         return cell
     }
 
-    /// One runner in the picker: its first frame above its 8pt name.
+    /// One runner in the picker: its preview image only. The names are
+    /// omitted — the previews are what tell the runners apart — and the
+    /// current runner is marked by a soft rounded background.
     private func makeRunnerCell(bundle: RunnerBundle, isCurrent: Bool) -> NSView {
-        let cell = NSStackView()
-        cell.orientation = .vertical
-        cell.alignment = .centerX
-        cell.spacing = 0
+        let cell = NSView()
         cell.identifier = NSUserInterfaceItemIdentifier("panel:runner:\(bundle.runner.id)")
         cell.translatesAutoresizingMaskIntoConstraints = false
         cell.widthAnchor.constraint(equalToConstant: Self.runnerCellWidth).isActive = true
+        cell.heightAnchor.constraint(equalToConstant: Self.menuCellHeight).isActive = true
+        if isCurrent {
+            cell.wantsLayer = true
+            cell.layer?.backgroundColor = TouchBarOLEDTheme.panelCard.cgColor
+            cell.layer?.cornerRadius = 7
+        }
 
         let imageView = NSImageView()
-        imageView.image = Self.thumbnail(of: bundle, height: 14)
+        imageView.image = Self.thumbnail(of: bundle, height: Self.runnerPreviewSize)
+            ?? NSImage(systemSymbolName: "questionmark.square.dashed", accessibilityDescription: nil)?
+                .withSymbolConfiguration(.init(pointSize: Self.runnerPreviewSize, weight: .regular))
         imageView.contentTintColor = isCurrent ? TouchBarOLEDTheme.controlFill : TouchBarOLEDTheme.dynamicValue
-        imageView.heightAnchor.constraint(equalToConstant: 15).isActive = true
-        cell.addArrangedSubview(imageView)
-
-        let label = makeTextCell(
-            bundle.runner.formatted,
-            font: .systemFont(ofSize: 8, weight: isCurrent ? .semibold : .regular),
-            tint: isCurrent ? TouchBarOLEDTheme.controlFill : TouchBarOLEDTheme.staticIcon
-        )
-        label.lineBreakMode = .byTruncatingTail
-        label.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
-        cell.addArrangedSubview(label)
+        imageView.translatesAutoresizingMaskIntoConstraints = false
+        cell.addSubview(imageView)
+        NSLayoutConstraint.activate([
+            imageView.centerXAnchor.constraint(equalTo: cell.centerXAnchor),
+            imageView.centerYAnchor.constraint(equalTo: cell.centerYAnchor),
+        ])
 
         let tap = NSClickGestureRecognizer(target: self, action: #selector(panelCellTapped(_:)))
         cell.addGestureRecognizer(tap)
