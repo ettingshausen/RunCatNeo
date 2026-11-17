@@ -866,19 +866,15 @@ public final class TouchBarMetricsContainerView: NSView {
         return imageView
     }
 
-    /// The separate close box beside the brightness card, sized like the
-    /// system control's (a 22pt circle).
+    /// The separate close box beside the brightness card: the system draws a
+    /// large gray disc with a white cross, so this draws the same instead of
+    /// scaling a symbol (which looked small).
     private func makeCloseCell(identifier: String) -> NSView {
-        let cell = NSStackView()
+        let cell = CloseCircleView()
         cell.identifier = NSUserInterfaceItemIdentifier(identifier)
-        let imageView = NSImageView()
-        imageView.image = NSImage(systemSymbolName: "xmark.circle.fill", accessibilityDescription: nil)?
-            .withSymbolConfiguration(.init(pointSize: 15, weight: .regular))
-        imageView.contentTintColor = TouchBarOLEDTheme.closeBox
-        imageView.translatesAutoresizingMaskIntoConstraints = false
-        imageView.widthAnchor.constraint(equalToConstant: 22).isActive = true
-        imageView.heightAnchor.constraint(equalToConstant: 22).isActive = true
-        cell.addArrangedSubview(imageView)
+        cell.translatesAutoresizingMaskIntoConstraints = false
+        cell.widthAnchor.constraint(equalToConstant: CloseCircleView.side).isActive = true
+        cell.heightAnchor.constraint(equalToConstant: CloseCircleView.side).isActive = true
         let tap = NSClickGestureRecognizer(target: self, action: #selector(panelCellTapped(_:)))
         cell.addGestureRecognizer(tap)
         return cell
@@ -1048,9 +1044,13 @@ public final class TouchBarMetricsContainerView: NSView {
             bigSun.trailingAnchor.constraint(equalTo: card.trailingAnchor, constant: -28),
             bigSun.centerYAnchor.constraint(equalTo: card.centerYAnchor),
         ])
-        panelStack.addArrangedSubview(card)
+        // The card and its close box travel as one centered group, like the
+        // system control, instead of hugging the bar's edges.
         panelStack.addArrangedSubview(Self.spacer())
+        panelStack.addArrangedSubview(card)
+        panelStack.addArrangedSubview(Self.fixedSpace(width: 22))
         panelStack.addArrangedSubview(makeCloseCell(identifier: "panel:done"))
+        panelStack.addArrangedSubview(Self.spacer())
     }
 
     @objc private func brightnessSliderChanged(_ sender: NSSlider) {
@@ -1164,6 +1164,17 @@ public final class TouchBarMetricsContainerView: NSView {
         spacer.setContentHuggingPriority(.defaultLow, for: .horizontal)
         spacer.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
         return spacer
+    }
+
+    /// A fixed gap inside a stack, used between the brightness card and its
+    /// close box while both outer spacers center the pair.
+    private static func fixedSpace(width: CGFloat) -> NSView {
+        let space = NSView()
+        space.translatesAutoresizingMaskIntoConstraints = false
+        space.widthAnchor.constraint(equalToConstant: width).isActive = true
+        space.setContentHuggingPriority(.required, for: .horizontal)
+        space.setContentCompressionResistancePriority(.required, for: .horizontal)
+        return space
     }
 
     // MARK: - System close box
@@ -1297,19 +1308,34 @@ public final class TouchBarMetricsContainerView: NSView {
 }
 
 /// Draws the system brightness control's look -- hairline track, blue fill and
-/// a large white rounded-square knob -- while inheriting `NSSlider`'s own
-/// tracking, which is what makes dragging follow the finger on the Touch Bar.
+/// a white rounded-square knob -- while inheriting `NSSlider`'s own tracking,
+/// which is what makes dragging follow the finger on the Touch Bar.
+///
+/// The knob grows while the finger is down, exactly like the system control:
+/// idle it is a moderate bar-height thumb, pressed it nearly fills the row.
+/// The growth is tweened by a timer in common modes, so it also advances while
+/// the cell's tracking loop owns the run loop.
 final class TouchBarBrightnessSlider: NSSlider {
     private static let knobWidth: CGFloat = 30
-    private static let knobHeight: CGFloat = 26
+    private static let knobIdleHeight: CGFloat = 20
+    private static let knobPressedHeight: CGFloat = 26
     private static let knobRadius: CGFloat = 7
     private static let trackHeight: CGFloat = 4
+    private static let pressAnimationDuration: TimeInterval = 0.16
+
+    private var expansion: CGFloat = 0
+    private var animationTimer: Timer?
+    private var animationStart = Date()
+    private var animationTarget: CGFloat = 0
+    private var animationFrom: CGFloat = 0
 
     override func draw(_ dirtyRect: NSRect) {
         let inset = Self.knobWidth / 2
         let span = maxValue - minValue
         let progress = span > 0 ? CGFloat((doubleValue - minValue) / span) : 1
         let centerY = bounds.midY
+        let knobHeight = Self.knobIdleHeight
+            + (Self.knobPressedHeight - Self.knobIdleHeight) * expansion
 
         let trackRect = NSRect(
             x: inset,
@@ -1332,11 +1358,81 @@ final class TouchBarBrightnessSlider: NSSlider {
 
         let knobRect = NSRect(
             x: knobCenterX - Self.knobWidth / 2,
-            y: centerY - Self.knobHeight / 2,
+            y: centerY - knobHeight / 2,
             width: Self.knobWidth,
-            height: Self.knobHeight
+            height: knobHeight
         )
         TouchBarOLEDTheme.sliderKnob.setFill()
-        NSBezierPath(roundedRect: knobRect, xRadius: Self.knobRadius, yRadius: Self.knobRadius).fill()
+        NSBezierPath(
+            roundedRect: knobRect,
+            xRadius: Self.knobRadius,
+            yRadius: Self.knobRadius
+        ).fill()
+    }
+
+    override func mouseDown(with event: NSEvent) {
+        animateExpansion(to: 1)
+        // The cell runs its own tracking loop here and returns on mouse-up.
+        super.mouseDown(with: event)
+        animateExpansion(to: 0)
+    }
+
+    private func animateExpansion(to target: CGFloat) {
+        animationTimer?.invalidate()
+        animationFrom = expansion
+        animationTarget = target
+        animationStart = Date()
+        let timer = Timer(timeInterval: 1.0 / 60.0, repeats: true) { [weak self] _ in
+            MainActor.assumeIsolated { self?.stepAnimation() }
+        }
+        // `.common` keeps the tween running during the cell's tracking loop.
+        RunLoop.main.add(timer, forMode: .common)
+        animationTimer = timer
+    }
+
+    private func stepAnimation() {
+        let elapsed = Date().timeIntervalSince(animationStart)
+        let progress = min(max(elapsed / Self.pressAnimationDuration, 0), 1)
+        // Ease-out so the knob settles like the system control's.
+        let eased = CGFloat(1 - pow(1 - progress, 3))
+        expansion = animationFrom + (animationTarget - animationFrom) * eased
+        needsDisplay = true
+        if progress >= 1 {
+            animationTimer?.invalidate()
+            animationTimer = nil
+        }
+    }
+}
+
+/// The brightness page's close box: a large gray disc with a white cross,
+/// drawn rather than scaled from a symbol so it matches the system control.
+final class CloseCircleView: NSView {
+    static let side: CGFloat = 26
+    private static let diameter: CGFloat = 24
+    private static let crossArm: CGFloat = 4.2
+    private static let crossLineWidth: CGFloat = 1.8
+
+    override func draw(_ dirtyRect: NSRect) {
+        let diameter = Self.diameter
+        let disc = NSRect(
+            x: (bounds.width - diameter) / 2,
+            y: (bounds.height - diameter) / 2,
+            width: diameter,
+            height: diameter
+        )
+        TouchBarOLEDTheme.closeBox.setFill()
+        NSBezierPath(ovalIn: disc).fill()
+
+        let center = NSPoint(x: disc.midX, y: disc.midY)
+        let arm = Self.crossArm
+        TouchBarOLEDTheme.sliderKnob.setStroke()
+        for sign in [CGFloat(1), -1] {
+            let path = NSBezierPath()
+            path.lineWidth = Self.crossLineWidth
+            path.lineCapStyle = .round
+            path.move(to: NSPoint(x: center.x - arm, y: center.y + sign * arm))
+            path.line(to: NSPoint(x: center.x + arm, y: center.y - sign * arm))
+            path.stroke()
+        }
     }
 }
