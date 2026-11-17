@@ -842,14 +842,20 @@ public final class TouchBarMetricsContainerView: NSView {
         return panel
     }
 
+    /// Every symbol in the bar (metrics, stocks, placeholders, chevrons) uses
+    /// this size, which matches the runner previews in the picker — the user
+    /// found the original 12pt glyphs too small next to them.
+    private static let iconPointSize: CGFloat = 18
+    private static let iconBox: CGFloat = 22
+
     private func makeIconCell(_ systemName: String, tint: NSColor) -> NSImageView {
         let imageView = NSImageView()
         imageView.image = NSImage(systemSymbolName: systemName, accessibilityDescription: nil)?
-            .withSymbolConfiguration(.init(pointSize: 12, weight: .regular))
+            .withSymbolConfiguration(.init(pointSize: Self.iconPointSize, weight: .regular))
         imageView.contentTintColor = tint
         imageView.translatesAutoresizingMaskIntoConstraints = false
-        imageView.widthAnchor.constraint(equalToConstant: 16).isActive = true
-        imageView.heightAnchor.constraint(equalToConstant: 13).isActive = true
+        imageView.widthAnchor.constraint(equalToConstant: Self.iconBox).isActive = true
+        imageView.heightAnchor.constraint(equalToConstant: Self.iconBox).isActive = true
         return imageView
     }
 
@@ -926,11 +932,13 @@ public final class TouchBarMetricsContainerView: NSView {
 
     // MARK: - Control panel
 
-    private static let runnerPickerPageSize = 10
-    /// Icon-only preview cells: a 22pt frame inside a 40×30pt hit target, so a
-    /// full page plus both paging arrows still fits the 597pt usable width.
-    private static let runnerCellWidth: CGFloat = 40
-    private static let runnerPreviewSize: CGFloat = 22
+    /// Nine previews per page: 48pt cells plus both paging arrows fit the
+    /// 597pt usable width. Previews are fitted inside the 46×22pt box so a
+    /// wide runner (Newton's cradle) cannot overlap its neighbours — its
+    /// vertical strings looked like separators between the cells.
+    private static let runnerPickerPageSize = 9
+    private static let runnerCellWidth: CGFloat = 48
+    private static let runnerPreviewSize = NSSize(width: 46, height: 22)
     /// Measured from the system brightness control (2px/pt screenshot): the
     /// card is 360×28pt on a 30pt row, its track 202pt long and 4pt thick,
     /// the knob 30pt square, the close box a 22pt circle.
@@ -971,7 +979,7 @@ public final class TouchBarMetricsContainerView: NSView {
                 store.touchBarRunnerFrames.first.map {
                     Self.previewImage(
                         $0,
-                        height: Self.menuIconSize,
+                        box: NSSize(width: Self.menuCellWidth - 4, height: Self.menuIconSize),
                         isTemplate: store.touchBarRunnerIsTemplate,
                         tint: TouchBarOLEDTheme.dynamicValue
                     )
@@ -980,7 +988,8 @@ public final class TouchBarMetricsContainerView: NSView {
             ("panel:menu:brightness", "sun.max", nil),
             ("panel:menu:hide", "xmark.circle", nil),
         ]
-        panelStack.addArrangedSubview(Self.spacer())
+        let leading = Self.spacer()
+        panelStack.addArrangedSubview(leading)
         for (index, item) in items.enumerated() {
             if index > 0 {
                 panelStack.addArrangedSubview(Self.fixedSpace(width: Self.menuCellGap))
@@ -991,7 +1000,9 @@ public final class TouchBarMetricsContainerView: NSView {
                 image: item.image
             ))
         }
-        panelStack.addArrangedSubview(Self.spacer())
+        let trailing = Self.spacer()
+        panelStack.addArrangedSubview(trailing)
+        leading.widthAnchor.constraint(equalTo: trailing.widthAnchor).isActive = true
     }
 
     private func buildRunnerPickerPanel() {
@@ -1004,7 +1015,8 @@ public final class TouchBarMetricsContainerView: NSView {
         panelStack.addArrangedSubview(makeChevronCell(symbol: "chevron.left", identifier: "panel:back"))
         // The back control stays at the leading edge; everything else is
         // centered, since a page of previews rarely fills the bar.
-        panelStack.addArrangedSubview(Self.spacer())
+        let leading = Self.spacer()
+        panelStack.addArrangedSubview(leading)
         if page > 0 {
             panelStack.addArrangedSubview(makeChevronCell(symbol: "chevron.left", identifier: "panel:page:prev"))
         }
@@ -1026,7 +1038,9 @@ public final class TouchBarMetricsContainerView: NSView {
         if page < pageCount - 1 {
             panelStack.addArrangedSubview(makeChevronCell(symbol: "chevron.right", identifier: "panel:page:next"))
         }
-        panelStack.addArrangedSubview(Self.spacer())
+        let trailing = Self.spacer()
+        panelStack.addArrangedSubview(trailing)
+        leading.widthAnchor.constraint(equalTo: trailing.widthAnchor).isActive = true
     }
 
     /// Mirrors the system brightness control: a compact rounded card holding a
@@ -1074,11 +1088,14 @@ public final class TouchBarMetricsContainerView: NSView {
         ])
         // The card and its close box travel as one centered group, like the
         // system control, instead of hugging the bar's edges.
-        panelStack.addArrangedSubview(Self.spacer())
+        let leading = Self.spacer()
+        panelStack.addArrangedSubview(leading)
         panelStack.addArrangedSubview(card)
         panelStack.addArrangedSubview(Self.fixedSpace(width: 22))
         panelStack.addArrangedSubview(makeCloseCell(identifier: "panel:done"))
-        panelStack.addArrangedSubview(Self.spacer())
+        let trailing = Self.spacer()
+        panelStack.addArrangedSubview(trailing)
+        leading.widthAnchor.constraint(equalTo: trailing.widthAnchor).isActive = true
     }
 
     /// The same key the settings slider writes, so both stay in sync and the
@@ -1112,6 +1129,8 @@ public final class TouchBarMetricsContainerView: NSView {
         cell.translatesAutoresizingMaskIntoConstraints = false
         cell.widthAnchor.constraint(equalToConstant: Self.menuCellWidth).isActive = true
         cell.heightAnchor.constraint(equalToConstant: Self.menuCellHeight).isActive = true
+        cell.setContentHuggingPriority(.required, for: .horizontal)
+        cell.setContentCompressionResistancePriority(.required, for: .horizontal)
 
         let imageView = NSImageView()
         imageView.image = image ?? NSImage(systemSymbolName: symbol, accessibilityDescription: nil)?
@@ -1133,6 +1152,8 @@ public final class TouchBarMetricsContainerView: NSView {
         let cell = NSStackView()
         cell.identifier = NSUserInterfaceItemIdentifier(identifier)
         cell.addArrangedSubview(makeIconCell(symbol, tint: TouchBarOLEDTheme.dynamicValue))
+        cell.setContentHuggingPriority(.required, for: .horizontal)
+        cell.setContentCompressionResistancePriority(.required, for: .horizontal)
         let tap = NSClickGestureRecognizer(target: self, action: #selector(panelCellTapped(_:)))
         cell.addGestureRecognizer(tap)
         return cell
@@ -1147,6 +1168,8 @@ public final class TouchBarMetricsContainerView: NSView {
         cell.translatesAutoresizingMaskIntoConstraints = false
         cell.widthAnchor.constraint(equalToConstant: Self.runnerCellWidth).isActive = true
         cell.heightAnchor.constraint(equalToConstant: Self.menuCellHeight).isActive = true
+        cell.setContentHuggingPriority(.required, for: .horizontal)
+        cell.setContentCompressionResistancePriority(.required, for: .horizontal)
         if isCurrent {
             cell.wantsLayer = true
             cell.layer?.backgroundColor = TouchBarOLEDTheme.panelCard.cgColor
@@ -1155,9 +1178,11 @@ public final class TouchBarMetricsContainerView: NSView {
 
         let tint = isCurrent ? TouchBarOLEDTheme.controlFill : TouchBarOLEDTheme.dynamicValue
         let imageView = NSImageView()
-        imageView.image = Self.thumbnail(of: bundle, height: Self.runnerPreviewSize, tint: tint)
-            ?? NSImage(systemSymbolName: "questionmark.square.dashed", accessibilityDescription: nil)?
-                .withSymbolConfiguration(.init(pointSize: Self.runnerPreviewSize, weight: .regular))
+        imageView.image = Self.thumbnail(of: bundle, box: Self.runnerPreviewSize, tint: tint)
+            ?? NSImage(
+                systemSymbolName: "questionmark.square.dashed",
+                accessibilityDescription: nil
+            )?.withSymbolConfiguration(.init(pointSize: 18, weight: .regular))
         imageView.contentTintColor = tint
         imageView.translatesAutoresizingMaskIntoConstraints = false
         cell.addSubview(imageView)
@@ -1173,7 +1198,7 @@ public final class TouchBarMetricsContainerView: NSView {
 
     private static func thumbnail(
         of bundle: RunnerBundle,
-        height: CGFloat,
+        box: NSSize,
         tint: NSColor
     ) -> NSImage? {
         let frame: Frame
@@ -1196,36 +1221,39 @@ public final class TouchBarMetricsContainerView: NSView {
         guard let image else { return nil }
         return previewImage(
             image,
-            height: height,
+            box: box,
             isTemplate: bundle.runner.isTemplate,
             tint: tint
         )
     }
 
-    /// Scales a runner frame for a preview. Preset frames are monochrome
-    /// masks (the menu bar tints them through a mask layer), so drawing them
-    /// as-is leaves an invisible black silhouette on the bar; template
-    /// runners are therefore filled with the tint while custom runners keep
-    /// their own colours.
+    /// Fits a runner frame into `box` (preserving its aspect, never enlarging
+    /// past it). Preset frames are monochrome masks — the menu bar tints them
+    /// through a mask layer — so drawing them as-is leaves an invisible black
+    /// silhouette on the bar; template runners are therefore filled with the
+    /// tint while custom runners keep their own colours.
     private static func previewImage(
         _ image: NSImage,
-        height: CGFloat,
+        box: NSSize,
         isTemplate: Bool,
         tint: NSColor
     ) -> NSImage {
-        let scaled = scaledRunnerImage(image, height: height, isTemplate: isTemplate)
+        let scaled = scaledRunnerImage(image, box: box, isTemplate: isTemplate)
         guard isTemplate else { return scaled }
         return tinted(scaled, color: tint)
     }
 
     private static func scaledRunnerImage(
         _ image: NSImage,
-        height: CGFloat,
+        box: NSSize,
         isTemplate: Bool
     ) -> NSImage {
         let copy = image.copy() as! NSImage
-        let aspect = image.size.height > 0 ? image.size.width / image.size.height : 1
-        copy.size = NSSize(width: height * aspect, height: height)
+        let size = image.size
+        let scale = size.width > 0 && size.height > 0
+            ? min(box.width / size.width, box.height / size.height)
+            : 1
+        copy.size = NSSize(width: size.width * scale, height: size.height * scale)
         copy.isTemplate = isTemplate
         return copy
     }
@@ -1243,10 +1271,14 @@ public final class TouchBarMetricsContainerView: NSView {
         return tintedImage
     }
 
+    /// An elastic gap that absorbs every leftover point, so a centered group
+    /// stays centered. Its hugging priority is deliberately below the default
+    /// (250): otherwise AppKit hands the slack to the icon cells as well and
+    /// the group drifts off-center depending on how many cells a page holds.
     private static func spacer() -> NSView {
         let spacer = NSView()
-        spacer.setContentHuggingPriority(.defaultLow, for: .horizontal)
-        spacer.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+        spacer.setContentHuggingPriority(NSLayoutConstraint.Priority(1), for: .horizontal)
+        spacer.setContentCompressionResistancePriority(NSLayoutConstraint.Priority(1), for: .horizontal)
         return spacer
     }
 

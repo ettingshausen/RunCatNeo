@@ -22,9 +22,10 @@ import AppKit
 
 /// Hosts the runner animation inside the Touch Bar metrics bar. The frames
 /// come from the same CAKeyframeAnimation machinery as the menu bar
-/// (`RunnerLayer`), scaled down from the menu bar's 18pt line height.
+/// (`RunnerLayer`), scaled from the menu bar's 18pt line height up to the
+/// same 22pt the runner picker previews use.
 final class TouchBarRunnerView: NSView {
-    static let runnerHeight: CGFloat = 16
+    static let runnerHeight: CGFloat = 22
     /// `RunnerLayer` pins its content 2pt above the bottom, so the host is
     /// 4pt taller to keep the runner vertically centered in the bar.
     static let hostHeight: CGFloat = runnerHeight + 4
