@@ -438,9 +438,6 @@ public final class TouchBarMetricsContainerView: NSView {
             values[prefix + "detail-line"] = (detailString(quote: indicator.quote), tint)
             values[prefix + "detail-change"] = (String(format: "%+.2f%%", indicator.changePercent), tint)
         }
-        if panel == .brightness {
-            values["panel:brightness:value"] = (Self.brightnessLabel(), TouchBarOLEDTheme.controlFill)
-        }
 
         func update(_ view: NSView) {
             if let field = view as? NSTextField,
@@ -598,6 +595,8 @@ public final class TouchBarMetricsContainerView: NSView {
         if panel != nil {
             // A control page owns the bar exactly like the stock detail does.
             runnerView.removeFromSuperview()
+            panelCardView?.removeFromSuperview()
+            panelCardView = nil
             panelStack.arrangedSubviews.forEach { $0.removeFromSuperview() }
             buildPanel()
             contentContainerView.addSubview(panelStack)
@@ -607,10 +606,23 @@ public final class TouchBarMetricsContainerView: NSView {
                 panelStack.trailingAnchor.constraint(equalTo: contentContainerView.trailingAnchor, constant: -Self.horizontalInset),
             ]
             NSLayoutConstraint.activate(layoutConstraints)
+            if let panelCardView {
+                // The card was sized before it joined the hierarchy, so its
+                // constraints could not be activated inside buildPanel.
+                NSLayoutConstraint.activate([
+                    panelCardView.leadingAnchor.constraint(equalTo: contentContainerView.leadingAnchor, constant: 6),
+                    panelCardView.trailingAnchor.constraint(equalTo: contentContainerView.trailingAnchor, constant: -6),
+                    panelCardView.topAnchor.constraint(equalTo: contentContainerView.topAnchor, constant: 3),
+                    panelCardView.bottomAnchor.constraint(equalTo: contentContainerView.bottomAnchor, constant: -3),
+                ])
+                contentContainerView.addSubview(panelCardView, positioned: .below, relativeTo: panelStack)
+            }
             scheduleSystemCloseBoxHide()
             return
         }
         panelStack.removeFromSuperview()
+        panelCardView?.removeFromSuperview()
+        panelCardView = nil
 
         // Build only the active presentation of each group. The previous
         // implementation built pinned and scrolling copies simultaneously,
@@ -856,6 +868,19 @@ public final class TouchBarMetricsContainerView: NSView {
         return imageView
     }
 
+    /// The brightness page's trailing sun, matching the system control's
+    /// larger glyph at the bright end of the track.
+    private func makeLargeIconCell(_ systemName: String, tint: NSColor) -> NSImageView {
+        let imageView = NSImageView()
+        imageView.image = NSImage(systemSymbolName: systemName, accessibilityDescription: nil)?
+            .withSymbolConfiguration(.init(pointSize: 15, weight: .regular))
+        imageView.contentTintColor = tint
+        imageView.translatesAutoresizingMaskIntoConstraints = false
+        imageView.widthAnchor.constraint(equalToConstant: 20).isActive = true
+        imageView.heightAnchor.constraint(equalToConstant: 20).isActive = true
+        return imageView
+    }
+
     private func makeTextCell(
         _ text: String,
         font: NSFont,
@@ -894,14 +919,12 @@ public final class TouchBarMetricsContainerView: NSView {
 
     private static let runnerPickerPageSize = 10
     private static let runnerCellWidth: CGFloat = 46
-    private static let brightnessTrackWidth: CGFloat = 360
+    private static let brightnessTrackWidth: CGFloat = 420
 
-    private weak var brightnessTrack: BrightnessTrackView?
-
-    private static func brightnessLabel() -> String {
-        let percent = Int((TouchBarOLEDTheme.indicatorBrightness * 100).rounded())
-        return "\(percent)%"
-    }
+    private weak var brightnessSlider: NSSlider?
+    /// The rounded card behind the brightness page, mirroring the system
+    /// brightness control's panel.
+    private weak var panelCardView: NSView?
 
     private func buildPanel() {
         switch panel {
@@ -980,37 +1003,39 @@ public final class TouchBarMetricsContainerView: NSView {
         panelStack.addArrangedSubview(Self.spacer())
     }
 
+    /// Mirrors the system brightness control: a rounded card with a small sun,
+    /// the native slider (which brings AppKit's own drag tracking) and a large
+    /// sun, plus a close box that returns to the menu.
     private func buildBrightnessPanel() {
-        panelStack.addArrangedSubview(makeChevronCell(symbol: "chevron.left", identifier: "panel:back"))
-        let track = BrightnessTrackView()
-        track.identifier = NSUserInterfaceItemIdentifier("panel:brightness:track")
-        track.translatesAutoresizingMaskIntoConstraints = false
-        track.heightAnchor.constraint(equalToConstant: 16).isActive = true
-        track.widthAnchor.constraint(equalToConstant: Self.brightnessTrackWidth).isActive = true
-        track.fraction = {
-            let value = TouchBarOLEDTheme.indicatorBrightness
-            let span = TouchBarIndicatorBrightness.maximum - TouchBarIndicatorBrightness.minimum
-            return span > 0 ? (value - TouchBarIndicatorBrightness.minimum) / span : 1
-        }()
-        track.onChange = { [weak self] fraction in
-            self?.applyBrightness(fraction: fraction)
-        }
-        brightnessTrack = track
-        panelStack.addArrangedSubview(track)
-        panelStack.addArrangedSubview(makeTextCell(
-            Self.brightnessLabel(),
-            font: .monospacedDigitSystemFont(ofSize: 11, weight: .medium),
-            tint: TouchBarOLEDTheme.controlFill,
-            identifier: "panel:brightness:value"
-        ))
+        let card = NSView()
+        card.wantsLayer = true
+        card.layer?.backgroundColor = TouchBarOLEDTheme.panelCard.cgColor
+        card.layer?.cornerRadius = 8
+        card.translatesAutoresizingMaskIntoConstraints = false
+        // Constraints are activated in `rebuild` once the card is in the tree.
+        panelCardView = card
+
+        panelStack.addArrangedSubview(makeIconCell("sun.min", tint: TouchBarOLEDTheme.controlFill))
+        let slider = NSSlider(
+            value: TouchBarOLEDTheme.indicatorBrightness,
+            minValue: TouchBarIndicatorBrightness.minimum,
+            maxValue: TouchBarIndicatorBrightness.maximum,
+            target: self,
+            action: #selector(brightnessSliderChanged(_:))
+        )
+        slider.isContinuous = true
+        slider.controlSize = .small
+        slider.translatesAutoresizingMaskIntoConstraints = false
+        slider.widthAnchor.constraint(equalToConstant: Self.brightnessTrackWidth).isActive = true
+        brightnessSlider = slider
+        panelStack.addArrangedSubview(slider)
+        panelStack.addArrangedSubview(makeLargeIconCell("sun.max", tint: TouchBarOLEDTheme.controlFill))
         panelStack.addArrangedSubview(Self.spacer())
+        panelStack.addArrangedSubview(makeChevronCell(symbol: "xmark.circle.fill", identifier: "panel:done"))
     }
 
-    private func applyBrightness(fraction: Double) {
-        let span = TouchBarIndicatorBrightness.maximum - TouchBarIndicatorBrightness.minimum
-        let value = TouchBarIndicatorBrightness.minimum + min(max(fraction, 0), 1) * span
-        TouchBarOLEDTheme.setIndicatorBrightness(value)
-        brightnessTrack?.needsDisplay = true
+    @objc private func brightnessSliderChanged(_ sender: NSSlider) {
+        TouchBarOLEDTheme.setIndicatorBrightness(sender.doubleValue)
         // Recolor the bar's neutral content in place; stock colors are
         // deliberately left at their own brightness setting.
         updateVisibleValues()
@@ -1223,6 +1248,10 @@ public final class TouchBarMetricsContainerView: NSView {
             Task { await store.send(.touchBarMinimizeRequested) }
         case "panel:back":
             panel = panel == .menu ? nil : .menu
+        case "panel:done":
+            // The brightness page closes straight back to the main bar, like
+            // the system brightness control's close box.
+            panel = nil
         case "panel:page:prev":
             runnerPickerPage = max(0, runnerPickerPage - 1)
         case "panel:page:next":
@@ -1245,59 +1274,5 @@ public final class TouchBarMetricsContainerView: NSView {
     @objc private func detailPanelTapped(_ sender: NSClickGestureRecognizer) {
         expandedStockID = nil
         scheduleRebuildIfNeeded()
-    }
-}
-
-/// A tap-to-set brightness track. Touch Bar swipes are swallowed by the
-/// system before they become scroll events, so the value follows the tap's x
-/// position; a drag is honored too in case the row does deliver one.
-private final class BrightnessTrackView: NSView {
-    var fraction: Double = 1
-    var onChange: (Double) -> Void = { _ in }
-
-    override func draw(_ dirtyRect: NSRect) {
-        let height: CGFloat = 6
-        let y = (bounds.height - height) / 2
-        let radius = height / 2
-        let clamped = CGFloat(min(max(fraction, 0), 1))
-        let fillWidth = max(radius * 2, bounds.width * clamped)
-
-        TouchBarOLEDTheme.controlTrack.setFill()
-        NSBezierPath(
-            roundedRect: NSRect(x: 0, y: y, width: bounds.width, height: height),
-            xRadius: radius,
-            yRadius: radius
-        ).fill()
-        TouchBarOLEDTheme.controlFill.setFill()
-        NSBezierPath(
-            roundedRect: NSRect(x: 0, y: y, width: fillWidth, height: height),
-            xRadius: radius,
-            yRadius: radius
-        ).fill()
-
-        let knobSize = bounds.height
-        TouchBarOLEDTheme.controlFill.setFill()
-        NSBezierPath(ovalIn: NSRect(
-            x: fillWidth - knobSize / 2,
-            y: (bounds.height - knobSize) / 2,
-            width: knobSize,
-            height: knobSize
-        )).fill()
-    }
-
-    override func mouseDown(with event: NSEvent) {
-        apply(event)
-    }
-
-    override func mouseDragged(with event: NSEvent) {
-        apply(event)
-    }
-
-    private func apply(_ event: NSEvent) {
-        guard bounds.width > 0 else { return }
-        let point = convert(event.locationInWindow, from: nil)
-        fraction = min(max(Double(point.x / bounds.width), 0), 1)
-        needsDisplay = true
-        onChange(fraction)
     }
 }

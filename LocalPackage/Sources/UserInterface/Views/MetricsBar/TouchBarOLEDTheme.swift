@@ -89,6 +89,9 @@ enum TouchBarOLEDTheme {
     /// The brightness page's own controls must stay readable at any setting.
     static let controlTrack = NSColor(srgbRed: 0.30, green: 0.30, blue: 0.30, alpha: 1)
     static let controlFill = NSColor(srgbRed: 0.85, green: 0.85, blue: 0.85, alpha: 1)
+    /// The rounded card the brightness page sits on, like the system's
+    /// brightness panel (lighter than the black bar behind it).
+    static let panelCard = NSColor(srgbRed: 0.17, green: 0.17, blue: 0.18, alpha: 1)
 
     /// Preserve the app's mainland-China market convention: red is up,
     /// green is down. Saturation is moderated rather than changing meaning.
