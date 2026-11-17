@@ -1354,7 +1354,9 @@ public final class TouchBarMetricsContainerView: NSView {
     /// hence the re-apply.
     private func scheduleSystemCloseBoxHide() {
         guard !systemCloseBoxHidden else { return }
-        DispatchQueue.main.async { [weak self] in
+        // The system renders the button shortly after the row appears; hiding
+        // it on the next tick races that draw. Wait a beat, capture, then hide.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
             self?.hideSystemCloseBox()
         }
     }
@@ -1387,25 +1389,48 @@ public final class TouchBarMetricsContainerView: NSView {
 
     /// The system's own close-button rendering, captured once. The private
     /// NSButton cannot be instantiated, but the system draws it in our process
-    /// on every presentation — so the first capture wins and our dismiss
-    /// controls show the genuine image instead of a hand-drawn replica.
+    /// on every presentation. The button is layer-backed, so a capture before
+    /// its first draw comes out transparent: capture on a later runloop turn
+    /// by unhiding it for one tick, rendering offscreen, then hiding again.
     static var closeImage: NSImage?
     private static var closeImageFailed = false
 
     private static func captureSystemCloseImage(from button: NSButton) {
         guard closeImage == nil, !closeImageFailed else { return }
         let size = button.bounds.size
-        guard size.width >= 20, size.height >= 20,
-              let rep = button.bitmapImageRepForCachingDisplay(in: button.bounds) else {
+        guard size.width >= 20, size.height >= 20 else {
             closeImageFailed = true
             return
         }
-        button.cacheDisplay(in: button.bounds, to: rep)
-        guard let cg = rep.cgImage else {
-            closeImageFailed = true
-            return
+        button.isHidden = false
+        button.layoutSubtreeIfNeeded()
+        var captured = false
+        if let rep = button.bitmapImageRepForCachingDisplay(in: button.bounds) {
+            button.cacheDisplay(in: button.bounds, to: rep)
+            var opaque = false
+            if let cg = rep.cgImage {
+                // Reject an all-transparent capture: sample the center row.
+                let midY = cg.height / 2
+                for x in stride(from: 0, to: cg.width, by: max(cg.width / 16, 1)) {
+                    if let data = cg.dataProvider?.data, let bytes = CFDataGetBytePtr(data) {
+                        let bytesPerRow = cg.bytesPerRow
+                        let offset = midY * bytesPerRow + x * 4
+                        if offset + 3 < CFDataGetLength(data), bytes[offset + 3] > 0 {
+                            opaque = true
+                            break
+                        }
+                    }
+                }
+                if opaque {
+                    closeImage = NSImage(cgImage: cg, size: size)
+                    captured = true
+                }
+            }
         }
-        closeImage = NSImage(cgImage: cg, size: size)
+        button.isHidden = true
+        if !captured {
+            closeImageFailed = true
+        }
     }
 
     // MARK: - Rotation
