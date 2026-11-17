@@ -948,11 +948,13 @@ public final class TouchBarMetricsContainerView: NSView {
     private static let brightnessSunBoxSmall: CGFloat = 16
     private static let brightnessSunBoxLarge: CGFloat = 18
     private static let brightnessGap: CGFloat = 19
-    /// The runner menu shows a glyph over a label. The row is 30pt tall, so
-    /// the icon box is 15pt high with room for the 9pt title beneath it.
-    private static let menuIconBox = NSSize(width: 40, height: 15)
-    private static let menuIconPointSize: CGFloat = 13
-    private static let menuCellMinWidth: CGFloat = 46
+    /// The runner menu puts the glyph beside the label, not above it, so the
+    /// icon keeps its size on the 30pt row. The runner preview needs a wider
+    /// box than an SF Symbol because the frames are wider than they are tall.
+    private static let menuIconBox = NSSize(width: 26, height: 20)
+    private static let runnerMenuIconBox = NSSize(width: 34, height: 20)
+    private static let menuIconPointSize: CGFloat = 16
+    private static let menuCellMinWidth: CGFloat = 56
     private static let menuCellHeight: CGFloat = 30
     private static let menuCellGap: CGFloat = 16
 
@@ -973,31 +975,34 @@ public final class TouchBarMetricsContainerView: NSView {
     /// edge. Tapping a cell is captured by a recognizer on the cell itself,
     /// so the identifier carries the action.
     private func buildMenuPanel() {
-        let items: [(id: String, symbol: String, image: NSImage?, title: String)] = [
+        let items: [(id: String, symbol: String, image: NSImage?, title: String, iconBox: NSSize)] = [
             (
                 "panel:menu:runner",
                 "figure.run",
                 store.touchBarRunnerFrames.first.map {
                     Self.previewImage(
                         $0,
-                        box: Self.menuIconBox,
+                        box: Self.runnerMenuIconBox,
                         isTemplate: store.touchBarRunnerIsTemplate,
                         tint: TouchBarOLEDTheme.dynamicValue
                     )
                 },
-                String(localized: "touchBarPanelRunner", bundle: .module)
+                String(localized: "touchBarPanelRunner", bundle: .module),
+                Self.runnerMenuIconBox
             ),
             (
                 "panel:menu:brightness",
                 "sun.max",
                 nil,
-                String(localized: "touchBarPanelBrightness", bundle: .module)
+                String(localized: "touchBarPanelBrightness", bundle: .module),
+                Self.menuIconBox
             ),
             (
                 "panel:menu:hide",
                 "xmark.circle",
                 nil,
-                String(localized: "touchBarPanelHide", bundle: .module)
+                String(localized: "touchBarPanelHide", bundle: .module),
+                Self.menuIconBox
             ),
         ]
         for (index, item) in items.enumerated() {
@@ -1008,7 +1013,8 @@ public final class TouchBarMetricsContainerView: NSView {
                 identifier: item.id,
                 symbol: item.symbol,
                 image: item.image,
-                title: item.title
+                title: item.title,
+                iconBox: item.iconBox
             ))
         }
         panelStack.addArrangedSubview(Self.spacer())
@@ -1120,18 +1126,19 @@ public final class TouchBarMetricsContainerView: NSView {
         applyStockBrightness(TouchBarOLEDTheme.stockBrightness + step)
     }
 
-    /// A menu entry: a glyph above its 9pt label, so the action is named and
-    /// still easy to hit on the narrow bar.
+    /// A menu entry: the glyph beside its label, so the icon keeps the bar
+    /// glyph size instead of being squeezed above the text.
     private func makeMenuCell(
         identifier: String,
         symbol: String,
         image: NSImage?,
-        title: String
+        title: String,
+        iconBox: NSSize
     ) -> NSView {
         let cell = NSStackView()
-        cell.orientation = .vertical
-        cell.alignment = .centerX
-        cell.spacing = 1
+        cell.orientation = .horizontal
+        cell.alignment = .centerY
+        cell.spacing = 5
         cell.identifier = NSUserInterfaceItemIdentifier(identifier)
         cell.translatesAutoresizingMaskIntoConstraints = false
         cell.widthAnchor.constraint(
@@ -1145,12 +1152,12 @@ public final class TouchBarMetricsContainerView: NSView {
             .withSymbolConfiguration(.init(pointSize: Self.menuIconPointSize, weight: .regular))
         imageView.contentTintColor = TouchBarOLEDTheme.dynamicValue
         imageView.translatesAutoresizingMaskIntoConstraints = false
-        imageView.widthAnchor.constraint(equalToConstant: Self.menuIconBox.width).isActive = true
-        imageView.heightAnchor.constraint(equalToConstant: Self.menuIconBox.height).isActive = true
+        imageView.widthAnchor.constraint(equalToConstant: iconBox.width).isActive = true
+        imageView.heightAnchor.constraint(equalToConstant: iconBox.height).isActive = true
         cell.addArrangedSubview(imageView)
         cell.addArrangedSubview(makeTextCell(
             title,
-            font: .systemFont(ofSize: 9, weight: .medium),
+            font: .systemFont(ofSize: 10, weight: .medium),
             tint: TouchBarOLEDTheme.dynamicValue
         ))
 
