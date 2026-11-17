@@ -406,7 +406,16 @@ public final class TouchBarMetricsContainerView: NSView {
             if let field = view as? NSTextField,
                let key = field.identifier?.rawValue,
                let value = values[key] {
-                if field.stringValue != value.0 { field.stringValue = value.0 }
+                if field.stringValue != value.0 {
+                    field.stringValue = value.0
+                    // NSTextField's frame does not always follow a wider
+                    // live value inside an NSStackView. Refit the control
+                    // immediately so suffixes (K/M/B) are not clipped.
+                    field.invalidateIntrinsicContentSize()
+                    field.sizeToFit()
+                    field.superview?.invalidateIntrinsicContentSize()
+                    field.superview?.needsLayout = true
+                }
                 field.textColor = value.1
             } else if let imageView = view as? NSImageView,
                       let key = imageView.identifier?.rawValue,
@@ -428,6 +437,9 @@ public final class TouchBarMetricsContainerView: NSView {
         // Live labels can become wider after their stack slot was created.
         // Re-measure only stack slots whose member fitting width actually changed.
         for entry in stackViews where isInHierarchy(entry.view) {
+            entry.view.invalidateIntrinsicContentSize()
+            entry.view.needsLayout = true
+            entry.view.layoutSubtreeIfNeeded()
             _ = entry.view.refreshMemberWidths()
         }
 
