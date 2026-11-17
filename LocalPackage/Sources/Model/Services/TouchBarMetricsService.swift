@@ -249,6 +249,14 @@ public final class TouchBarMetricsService: NSObject, NSTouchBarDelegate {
                     self?.applyCurrentDecision(trigger: .frontmostChanged)
                 }
             }
+            // The bar's own hide control. The system close box is hidden, so
+            // this is the only way to collapse the bar while it is presented.
+            group.addImmediateTask { [weak self] in
+                let stream = appStateClient.withLock(\.touchBarMinimizeRequests.stream)
+                for await _ in stream {
+                    self?.minimizeMetricsBar()
+                }
+            }
         }
     }
 

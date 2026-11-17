@@ -214,8 +214,7 @@ struct MetricsBarTests {
     }
 
     @MainActor @Test
-    func send_viewAppeared_seeds_stockQuotes_from_the_latest_value() async {
-        let appState = AllocatedUnfairLock<AppState>(initialState: .init())
+    func send_viewAppeared_seeds_stockQuotes_from_the_latest_value() async {        let appState = AllocatedUnfairLock<AppState>(initialState: .init())
         let saved = [StockQuote(symbol: "sz000001", name: "平安银行", price: 11.02, changePercent: 0.5)]
         // Restored before any bar exists: the stream must not be the only
         // source, or a bar appearing later starts from nothing.
@@ -238,5 +237,40 @@ struct MetricsBarTests {
         // in the UserInterface bundle and only the Touch Bar needs them.
         #expect(sut.touchBarRunnerVersion == 0)
         #expect(sut.touchBarRunnerFrames.isEmpty)
+    }
+
+    @MainActor @Test
+    func send_viewAppeared_seeds_the_runner_bundle_list_for_the_picker() async {
+        let appState = AllocatedUnfairLock<AppState>(initialState: .init())
+        let list = [
+            RunnerBundle(runner: .default, frame: .preset("cat-frame-1")),
+            RunnerBundle(runner: Runner(kind: .coffee), frame: .preset("coffee-frame-1")),
+        ]
+        appState.withLock { $0.runnerBundleLists.send(list) }
+        let sut = MetricsBar(
+            .testDependencies(appStateClient: .testDependency(appState)),
+            touchBarRunnerImageProvider: { _ in NSImage(size: NSSize(width: 10, height: 18)) }
+        )
+        await sut.send(.viewAppeared("MetricsBarTests"))
+        #expect(sut.runnerBundleList.map(\.runner.id) == list.map(\.runner.id))
+        await sut.send(.viewDisappeared)
+    }
+
+    @MainActor @Test
+    func send_runnerSelectionRequested_publishes_on_the_request_stream() async {
+        let appState = AllocatedUnfairLock<AppState>(initialState: .init())
+        let sut = MetricsBar(.testDependencies(appStateClient: .testDependency(appState)))
+        let runner = Runner(kind: .dog)
+        await sut.send(.runnerSelectionRequested(runner))
+        #expect(appState.withLock(\.runnerSelectionRequests.latestValue) == runner)
+    }
+
+    @MainActor @Test
+    func send_touchBarMinimizeRequested_publishes_on_the_request_stream() async {
+        let appState = AllocatedUnfairLock<AppState>(initialState: .init())
+        let sut = MetricsBar(.testDependencies(appStateClient: .testDependency(appState)))
+        #expect(appState.withLock(\.touchBarMinimizeRequests.latestValue) == nil)
+        await sut.send(.touchBarMinimizeRequested)
+        #expect(appState.withLock(\.touchBarMinimizeRequests.latestValue) != nil)
     }
 }

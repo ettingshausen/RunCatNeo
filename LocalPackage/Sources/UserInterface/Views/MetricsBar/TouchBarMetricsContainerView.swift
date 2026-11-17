@@ -56,10 +56,28 @@ public final class TouchBarMetricsContainerView: NSView {
     /// rebuilds; rebuilds only move it in or out of the pinned stack.
     private let runnerView = TouchBarRunnerView()
 
+    /// The bar's own control pages. Like the stock detail, one of them owns the
+    /// whole bar while it is open, and rotation is suspended.
+    private enum Panel: Equatable {
+        case menu
+        case runnerPicker
+        case brightness
+    }
+
+    private var panel: Panel?
+    private var runnerPickerPage = 0
+    private let panelStack = NSStackView()
+    /// Set while the system close box is already hidden, so the deferred
+    /// re-hide does not loop.
+    private var systemCloseBoxHidden = false
+
     private var expandedStockID: UUID?
     private var lastMetricStructure: [String] = []
     private var lastStockStructure: [String] = []
     private var lastExpandedID: UUID?
+    private var lastPanel: Panel?
+    private var lastRunnerPickerPage = 0
+    private var lastRunnerListCount = 0
     private var lastPrioritizeStocks: Bool?
     private var lastShowsStocks = false
     private var lastShowsRunner: Bool?
@@ -157,6 +175,20 @@ public final class TouchBarMetricsContainerView: NSView {
             separatorView.heightAnchor.constraint(equalToConstant: 20),
         ])
 
+        panelStack.orientation = .horizontal
+        panelStack.alignment = .centerY
+        panelStack.spacing = 8
+        panelStack.translatesAutoresizingMaskIntoConstraints = false
+
+        // The runner is the bar's control entry point. Its width is 0 until
+        // frames arrive, so a minimum keeps it tappable from the first layout.
+        runnerView.translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([
+            runnerView.widthAnchor.constraint(greaterThanOrEqualToConstant: 28),
+            runnerView.heightAnchor.constraint(equalToConstant: TouchBarRunnerView.hostHeight),
+        ])
+        let runnerTap = NSClickGestureRecognizer(target: self, action: #selector(runnerTapped(_:)))
+        runnerView.addGestureRecognizer(runnerTap)
     }
 
     /// Register workspace notifications only while the Touch Bar view is
@@ -239,6 +271,10 @@ public final class TouchBarMetricsContainerView: NSView {
         }
 
         installWorkspaceObservers()
+        // A new presentation builds a new function row, so the close box
+        // hide has to be re-applied; the flag only guards within a session.
+        systemCloseBoxHidden = false
+        scheduleSystemCloseBoxHide()
         lifecycleTask = Task { @MainActor [weak self] in
             guard let self, self.lifecycleGeneration == generation else { return }
             await self.store.send(.viewAppeared(String(describing: TouchBarMetricsContainerView.self)))
@@ -368,6 +404,7 @@ public final class TouchBarMetricsContainerView: NSView {
             _ = store.touchBarRunnerVersion
             _ = store.touchBarRunnerSpeed
             _ = store.touchBarRunnerFrames
+            _ = store.runnerBundleList
         } onChange: { [weak self] in
             Task { @MainActor [weak self] in
                 guard let self, self.superview != nil else { return }
@@ -400,6 +437,9 @@ public final class TouchBarMetricsContainerView: NSView {
             values[prefix + "detail-name"] = (indicator.name, tint)
             values[prefix + "detail-line"] = (detailString(quote: indicator.quote), tint)
             values[prefix + "detail-change"] = (String(format: "%+.2f%%", indicator.changePercent), tint)
+        }
+        if panel == .brightness {
+            values["panel:brightness:value"] = (Self.brightnessLabel(), TouchBarOLEDTheme.controlFill)
         }
 
         func update(_ view: NSView) {
@@ -468,6 +508,9 @@ public final class TouchBarMetricsContainerView: NSView {
         guard metricStructure != lastMetricStructure
             || stockStructure != lastStockStructure
             || expandedStockID != lastExpandedID
+            || panel != lastPanel
+            || runnerPickerPage != lastRunnerPickerPage
+            || store.runnerBundleList.count != lastRunnerListCount
             || prioritizeStocks != lastPrioritizeStocks
             || showsStocks != lastShowsStocks
             || showsRunner != lastShowsRunner
@@ -477,6 +520,9 @@ public final class TouchBarMetricsContainerView: NSView {
         lastMetricStructure = metricStructure
         lastStockStructure = stockStructure
         lastExpandedID = expandedStockID
+        lastPanel = panel
+        lastRunnerPickerPage = runnerPickerPage
+        lastRunnerListCount = store.runnerBundleList.count
         lastPrioritizeStocks = prioritizeStocks
         lastShowsStocks = showsStocks
         lastShowsRunner = showsRunner
@@ -549,6 +595,23 @@ public final class TouchBarMetricsContainerView: NSView {
             return
         }
 
+        if panel != nil {
+            // A control page owns the bar exactly like the stock detail does.
+            runnerView.removeFromSuperview()
+            panelStack.arrangedSubviews.forEach { $0.removeFromSuperview() }
+            buildPanel()
+            contentContainerView.addSubview(panelStack)
+            layoutConstraints = [
+                panelStack.leadingAnchor.constraint(equalTo: contentContainerView.leadingAnchor, constant: Self.horizontalInset),
+                panelStack.centerYAnchor.constraint(equalTo: contentContainerView.centerYAnchor),
+                panelStack.trailingAnchor.constraint(equalTo: contentContainerView.trailingAnchor, constant: -Self.horizontalInset),
+            ]
+            NSLayoutConstraint.activate(layoutConstraints)
+            scheduleSystemCloseBoxHide()
+            return
+        }
+        panelStack.removeFromSuperview()
+
         // Build only the active presentation of each group. The previous
         // implementation built pinned and scrolling copies simultaneously,
         // doubling the NSView/NSImageView/NSTextField count.
@@ -595,14 +658,16 @@ public final class TouchBarMetricsContainerView: NSView {
                 ])
             }
         } else {
-            addSubview(leadingStack)
+            // Everything lives in the content container so Pixel Shift moves
+            // hit-testing together with the pixels.
+            contentContainerView.addSubview(leadingStack)
             layoutConstraints = [
                 leadingStack.leadingAnchor.constraint(equalTo: contentContainerView.leadingAnchor, constant: Self.horizontalInset),
                 leadingStack.centerYAnchor.constraint(equalTo: contentContainerView.centerYAnchor),
             ]
             if showsStocks {
-                addSubview(separatorView)
-                addSubview(scrollView)
+                contentContainerView.addSubview(separatorView)
+                contentContainerView.addSubview(scrollView)
                 scrollView.documentView = stocksScrollStack
                 sizeDocumentView(stocksScrollStack)
                 layoutConstraints.append(contentsOf: [
@@ -825,12 +890,284 @@ public final class TouchBarMetricsContainerView: NSView {
         TouchBarOLEDTheme.stockColor(for: direction)
     }
 
+    // MARK: - Control panel
+
+    private static let runnerPickerPageSize = 10
+    private static let runnerCellWidth: CGFloat = 46
+    private static let brightnessTrackWidth: CGFloat = 360
+
+    private weak var brightnessTrack: BrightnessTrackView?
+
+    private static func brightnessLabel() -> String {
+        let percent = Int((TouchBarOLEDTheme.indicatorBrightness * 100).rounded())
+        return "\(percent)%"
+    }
+
+    private func buildPanel() {
+        switch panel {
+        case .menu:
+            buildMenuPanel()
+        case .runnerPicker:
+            buildRunnerPickerPanel()
+        case .brightness:
+            buildBrightnessPanel()
+        case nil:
+            break
+        }
+    }
+
+    /// The runner's menu: three labeled cells. Tapping a cell is captured by
+    /// a recognizer on the cell itself, so the identifier carries the action.
+    private func buildMenuPanel() {
+        let items: [(id: String, title: String)] = [
+            ("panel:menu:runner", String(localized: "touchBarPanelRunner", bundle: .module)),
+            ("panel:menu:brightness", String(localized: "touchBarPanelBrightness", bundle: .module)),
+            ("panel:menu:hide", String(localized: "touchBarPanelHide", bundle: .module)),
+        ]
+        for (index, item) in items.enumerated() {
+            let image: NSImage?
+            let symbol: String
+            switch index {
+            case 0:
+                image = store.touchBarRunnerFrames.first.map { Self.scaledRunnerImage($0, height: 14) }
+                symbol = "figure.run"
+            case 1:
+                image = nil
+                symbol = "sun.max"
+            default:
+                image = nil
+                symbol = "xmark.circle"
+            }
+            panelStack.addArrangedSubview(makePanelCell(
+                identifier: item.id,
+                symbol: symbol,
+                image: image,
+                title: item.title
+            ))
+        }
+        panelStack.addArrangedSubview(Self.spacer())
+    }
+
+    private func buildRunnerPickerPanel() {
+        let runners = store.runnerBundleList
+        let pageSize = Self.runnerPickerPageSize
+        let pageCount = max(1, (runners.count + pageSize - 1) / pageSize)
+        let page = min(max(runnerPickerPage, 0), pageCount - 1)
+        runnerPickerPage = page
+
+        panelStack.addArrangedSubview(makeChevronCell(symbol: "chevron.left", identifier: "panel:back"))
+        if page > 0 {
+            panelStack.addArrangedSubview(makeChevronCell(symbol: "chevron.left", identifier: "panel:page:prev"))
+        }
+        let currentRunnerID = store.currentRunnerID
+        let pageRunners = Array(runners.dropFirst(page * pageSize).prefix(pageSize))
+        if pageRunners.isEmpty {
+            panelStack.addArrangedSubview(makeTextCell(
+                "—",
+                font: .systemFont(ofSize: 10),
+                tint: TouchBarOLEDTheme.dynamicValue
+            ))
+        }
+        for runnerBundle in pageRunners {
+            panelStack.addArrangedSubview(makeRunnerCell(
+                bundle: runnerBundle,
+                isCurrent: runnerBundle.runner.id == currentRunnerID
+            ))
+        }
+        if page < pageCount - 1 {
+            panelStack.addArrangedSubview(makeChevronCell(symbol: "chevron.right", identifier: "panel:page:next"))
+        }
+        panelStack.addArrangedSubview(Self.spacer())
+    }
+
+    private func buildBrightnessPanel() {
+        panelStack.addArrangedSubview(makeChevronCell(symbol: "chevron.left", identifier: "panel:back"))
+        let track = BrightnessTrackView()
+        track.identifier = NSUserInterfaceItemIdentifier("panel:brightness:track")
+        track.translatesAutoresizingMaskIntoConstraints = false
+        track.heightAnchor.constraint(equalToConstant: 16).isActive = true
+        track.widthAnchor.constraint(equalToConstant: Self.brightnessTrackWidth).isActive = true
+        track.fraction = {
+            let value = TouchBarOLEDTheme.indicatorBrightness
+            let span = TouchBarIndicatorBrightness.maximum - TouchBarIndicatorBrightness.minimum
+            return span > 0 ? (value - TouchBarIndicatorBrightness.minimum) / span : 1
+        }()
+        track.onChange = { [weak self] fraction in
+            self?.applyBrightness(fraction: fraction)
+        }
+        brightnessTrack = track
+        panelStack.addArrangedSubview(track)
+        panelStack.addArrangedSubview(makeTextCell(
+            Self.brightnessLabel(),
+            font: .monospacedDigitSystemFont(ofSize: 11, weight: .medium),
+            tint: TouchBarOLEDTheme.controlFill,
+            identifier: "panel:brightness:value"
+        ))
+        panelStack.addArrangedSubview(Self.spacer())
+    }
+
+    private func applyBrightness(fraction: Double) {
+        let span = TouchBarIndicatorBrightness.maximum - TouchBarIndicatorBrightness.minimum
+        let value = TouchBarIndicatorBrightness.minimum + min(max(fraction, 0), 1) * span
+        TouchBarOLEDTheme.setIndicatorBrightness(value)
+        brightnessTrack?.needsDisplay = true
+        // Recolor the bar's neutral content in place; stock colors are
+        // deliberately left at their own brightness setting.
+        updateVisibleValues()
+    }
+
+    private func makePanelCell(
+        identifier: String,
+        symbol: String,
+        image: NSImage?,
+        title: String
+    ) -> NSView {
+        let cell = NSStackView()
+        cell.orientation = .horizontal
+        cell.alignment = .centerY
+        cell.spacing = 4
+        cell.identifier = NSUserInterfaceItemIdentifier(identifier)
+        if let image {
+            let imageView = NSImageView()
+            imageView.image = image
+            imageView.contentTintColor = TouchBarOLEDTheme.dynamicValue
+            imageView.widthAnchor.constraint(equalToConstant: 14).isActive = true
+            imageView.heightAnchor.constraint(equalToConstant: 14).isActive = true
+            cell.addArrangedSubview(imageView)
+        } else {
+            cell.addArrangedSubview(makeIconCell(symbol, tint: TouchBarOLEDTheme.dynamicValue))
+        }
+        cell.addArrangedSubview(makeTextCell(
+            title,
+            font: .systemFont(ofSize: 10, weight: .medium),
+            tint: TouchBarOLEDTheme.dynamicValue
+        ))
+        cell.setContentHuggingPriority(.required, for: .horizontal)
+        let tap = NSClickGestureRecognizer(target: self, action: #selector(panelCellTapped(_:)))
+        cell.addGestureRecognizer(tap)
+        return cell
+    }
+
+    private func makeChevronCell(symbol: String, identifier: String) -> NSView {
+        let cell = NSStackView()
+        cell.identifier = NSUserInterfaceItemIdentifier(identifier)
+        cell.addArrangedSubview(makeIconCell(symbol, tint: TouchBarOLEDTheme.dynamicValue))
+        let tap = NSClickGestureRecognizer(target: self, action: #selector(panelCellTapped(_:)))
+        cell.addGestureRecognizer(tap)
+        return cell
+    }
+
+    /// One runner in the picker: its first frame above its 8pt name.
+    private func makeRunnerCell(bundle: RunnerBundle, isCurrent: Bool) -> NSView {
+        let cell = NSStackView()
+        cell.orientation = .vertical
+        cell.alignment = .centerX
+        cell.spacing = 0
+        cell.identifier = NSUserInterfaceItemIdentifier("panel:runner:\(bundle.runner.id)")
+        cell.translatesAutoresizingMaskIntoConstraints = false
+        cell.widthAnchor.constraint(equalToConstant: Self.runnerCellWidth).isActive = true
+
+        let imageView = NSImageView()
+        imageView.image = Self.thumbnail(of: bundle, height: 14)
+        imageView.contentTintColor = isCurrent ? TouchBarOLEDTheme.controlFill : TouchBarOLEDTheme.dynamicValue
+        imageView.heightAnchor.constraint(equalToConstant: 15).isActive = true
+        cell.addArrangedSubview(imageView)
+
+        let label = makeTextCell(
+            bundle.runner.formatted,
+            font: .systemFont(ofSize: 8, weight: isCurrent ? .semibold : .regular),
+            tint: isCurrent ? TouchBarOLEDTheme.controlFill : TouchBarOLEDTheme.staticIcon
+        )
+        label.lineBreakMode = .byTruncatingTail
+        label.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+        cell.addArrangedSubview(label)
+
+        let tap = NSClickGestureRecognizer(target: self, action: #selector(panelCellTapped(_:)))
+        cell.addGestureRecognizer(tap)
+        return cell
+    }
+
+    private static func thumbnail(of bundle: RunnerBundle, height: CGFloat) -> NSImage? {
+        let frame: Frame
+        switch bundle.displayFormat {
+        case let .thumbnail(value):
+            frame = value
+        case let .keyFrameAnimation(frames):
+            guard let first = frames.first else { return nil }
+            frame = first
+        }
+        let image: NSImage?
+        switch frame {
+        case let .preset(resourceName):
+            image = NSImage(resource: .init(name: resourceName, bundle: .module))
+        case let .custom(data):
+            image = NSImage(data: data)
+        case .broken:
+            image = nil
+        }
+        return image.map { scaledRunnerImage($0, height: height) }
+    }
+
+    private static func scaledRunnerImage(_ image: NSImage, height: CGFloat) -> NSImage {
+        let copy = image.copy() as! NSImage
+        let aspect = image.size.height > 0 ? image.size.width / image.size.height : 1
+        copy.size = NSSize(width: height * aspect, height: height)
+        return copy
+    }
+
+    private static func spacer() -> NSView {
+        let spacer = NSView()
+        spacer.setContentHuggingPriority(.defaultLow, for: .horizontal)
+        spacer.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+        return spacer
+    }
+
+    // MARK: - System close box
+
+    /// The system-modal presentation draws its own close box, which the bar
+    /// does not want (the runner menu carries a hide control instead). It is
+    /// a sibling stack left of this view inside the function row, in our own
+    /// process, so it can be hidden — but the row is rebuilt on every present,
+    /// hence the re-apply.
+    private func scheduleSystemCloseBoxHide() {
+        guard !systemCloseBoxHidden else { return }
+        DispatchQueue.main.async { [weak self] in
+            self?.hideSystemCloseBox()
+        }
+    }
+
+    private func hideSystemCloseBox() {
+        var ancestor: NSView? = superview
+        var host: NSView?
+        var depth = 0
+        while let view = ancestor, depth < 6 {
+            if String(describing: type(of: view)) == "NSFunctionRowBackgroundColorView" {
+                host = view
+                break
+            }
+            ancestor = view.superview
+            depth += 1
+        }
+        guard let host else { return }
+        let ownFrame = convert(bounds, to: host)
+        for sibling in host.subviews where sibling !== self {
+            guard String(describing: type(of: sibling)) == "NSStackView",
+                  let button = sibling.subviews.compactMap({ $0 as? NSButton }).first,
+                  sibling.frame.maxX <= ownFrame.minX + 1 else {
+                continue
+            }
+            button.isHidden = true
+            sibling.isHidden = true
+            systemCloseBoxHidden = true
+        }
+    }
+
     // MARK: - Rotation
 
     /// Advances each active stack one member. Inactive presentation copies
     /// are no longer built, so every entry here is a live candidate.
     private func rotateStacks() {
-        guard expandedStockID == nil else { return }
+        guard expandedStockID == nil, panel == nil else { return }
         var advanced = Set<String>()
         for entry in stackViews where isInHierarchy(entry.view) {
             guard entry.view.memberCount > 1 else { continue }
@@ -866,8 +1203,101 @@ public final class TouchBarMetricsContainerView: NSView {
         scheduleRebuildIfNeeded()
     }
 
+    @objc private func runnerTapped(_ sender: NSClickGestureRecognizer) {
+        guard expandedStockID == nil else { return }
+        panel = .menu
+        scheduleRebuildIfNeeded()
+        updateVisibleValues()
+    }
+
+    @objc private func panelCellTapped(_ sender: NSClickGestureRecognizer) {
+        guard let identifier = sender.view?.identifier?.rawValue else { return }
+        switch identifier {
+        case "panel:menu:runner":
+            runnerPickerPage = 0
+            panel = .runnerPicker
+        case "panel:menu:brightness":
+            panel = .brightness
+        case "panel:menu:hide":
+            panel = nil
+            Task { await store.send(.touchBarMinimizeRequested) }
+        case "panel:back":
+            panel = panel == .menu ? nil : .menu
+        case "panel:page:prev":
+            runnerPickerPage = max(0, runnerPickerPage - 1)
+        case "panel:page:next":
+            runnerPickerPage += 1
+        default:
+            guard identifier.hasPrefix("panel:runner:") else { return }
+            let runnerID = String(identifier.dropFirst("panel:runner:".count))
+            guard let runner = store.runnerBundleList
+                .first(where: { $0.runner.id == runnerID })?.runner else {
+                return
+            }
+            // Selecting closes the panel: the new runner is the feedback.
+            panel = nil
+            Task { await store.send(.runnerSelectionRequested(runner)) }
+        }
+        scheduleRebuildIfNeeded()
+        updateVisibleValues()
+    }
+
     @objc private func detailPanelTapped(_ sender: NSClickGestureRecognizer) {
         expandedStockID = nil
         scheduleRebuildIfNeeded()
+    }
+}
+
+/// A tap-to-set brightness track. Touch Bar swipes are swallowed by the
+/// system before they become scroll events, so the value follows the tap's x
+/// position; a drag is honored too in case the row does deliver one.
+private final class BrightnessTrackView: NSView {
+    var fraction: Double = 1
+    var onChange: (Double) -> Void = { _ in }
+
+    override func draw(_ dirtyRect: NSRect) {
+        let height: CGFloat = 6
+        let y = (bounds.height - height) / 2
+        let radius = height / 2
+        let clamped = CGFloat(min(max(fraction, 0), 1))
+        let fillWidth = max(radius * 2, bounds.width * clamped)
+
+        TouchBarOLEDTheme.controlTrack.setFill()
+        NSBezierPath(
+            roundedRect: NSRect(x: 0, y: y, width: bounds.width, height: height),
+            xRadius: radius,
+            yRadius: radius
+        ).fill()
+        TouchBarOLEDTheme.controlFill.setFill()
+        NSBezierPath(
+            roundedRect: NSRect(x: 0, y: y, width: fillWidth, height: height),
+            xRadius: radius,
+            yRadius: radius
+        ).fill()
+
+        let knobSize = bounds.height
+        TouchBarOLEDTheme.controlFill.setFill()
+        NSBezierPath(ovalIn: NSRect(
+            x: fillWidth - knobSize / 2,
+            y: (bounds.height - knobSize) / 2,
+            width: knobSize,
+            height: knobSize
+        )).fill()
+    }
+
+    override func mouseDown(with event: NSEvent) {
+        apply(event)
+    }
+
+    override func mouseDragged(with event: NSEvent) {
+        apply(event)
+    }
+
+    private func apply(_ event: NSEvent) {
+        guard bounds.width > 0 else { return }
+        let point = convert(event.locationInWindow, from: nil)
+        fraction = min(max(Double(point.x / bounds.width), 0), 1)
+        needsDisplay = true
+        onChange(fraction)
     }
 }

@@ -40,6 +40,13 @@ public struct AppState: Sendable {
     public var runnerBundleLists = AsyncStreamBundle<[RunnerBundle]>()
     public var runnerBundles = AsyncStreamBundle<RunnerBundle>()
     public var runnerSpeeds = AsyncStreamBundle<Float>()
+    /// The Touch Bar bar asks to collapse itself (its own hide control, since
+    /// the system-wide close box is hidden). `TouchBarMetricsService` consumes
+    /// this and minimizes the system-modal bar.
+    public var touchBarMinimizeRequests = AsyncStreamBundle<Void>()
+    /// The Touch Bar runner picker asks to switch the runner. A Model-layer
+    /// consumer (AppDelegate) owns `RunnerService` and applies it.
+    public var runnerSelectionRequests = AsyncStreamBundle<Runner>()
 
     init(
         name: String = "",

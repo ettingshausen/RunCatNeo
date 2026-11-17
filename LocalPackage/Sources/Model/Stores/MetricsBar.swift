@@ -47,6 +47,10 @@ public final class MetricsBar: Composable {
     public private(set) var touchBarRunnerFrames: [NSImage] = []
     public private(set) var touchBarRunnerIsTemplate = true
     public private(set) var touchBarRunnerSpeed: Float = 1
+    /// All runners for the Touch Bar runner picker, as thumbnail bundles.
+    public private(set) var runnerBundleList: [RunnerBundle] = []
+    /// The runner currently shown, so the picker can mark it.
+    public private(set) var currentRunnerID = ""
     /// Bumped whenever the runner frames change; renderers diff on this
     /// instead of comparing NSImages by value.
     public private(set) var touchBarRunnerVersion = 0
@@ -106,6 +110,7 @@ public final class MetricsBar: Composable {
                 if let speed = appStateClient.withLock(\.runnerSpeeds.latestValue) {
                     touchBarRunnerSpeed = speed
                 }
+                runnerBundleList = appStateClient.withLock(\.runnerBundleLists.latestValue) ?? []
             }
             task?.cancel()
             task = Task.immediate { [weak self, appStateClient] in
@@ -159,6 +164,12 @@ public final class MetricsBar: Composable {
                                 self?.touchBarRunnerSpeed = value
                             }
                         }
+                        group.addImmediateTask {
+                            let stream = appStateClient.withLock(\.runnerBundleLists.stream)
+                            for await value in stream {
+                                self?.runnerBundleList = value
+                            }
+                        }
                     }
                 }
             }
@@ -166,6 +177,14 @@ public final class MetricsBar: Composable {
         case .viewDisappeared:
             task?.cancel()
             task = nil
+
+        case let .runnerSelectionRequested(runner):
+            // Nothing in UserInterface may construct a RunnerService, so the
+            // bar asks through a stream that AppDelegate consumes.
+            appStateClient.send(\.runnerSelectionRequests, runner)
+
+        case .touchBarMinimizeRequested:
+            appStateClient.send(\.touchBarMinimizeRequests, ())
         }
     }
 
@@ -229,6 +248,7 @@ public final class MetricsBar: Composable {
         guard !images.isEmpty else { return }
         touchBarRunnerFrames = images
         touchBarRunnerIsTemplate = bundle.runner.isTemplate
+        currentRunnerID = bundle.runner.id
         touchBarRunnerVersion += 1
     }
 
@@ -342,5 +362,7 @@ public final class MetricsBar: Composable {
     public enum Action: Sendable {
         case viewAppeared(String)
         case viewDisappeared
+        case runnerSelectionRequested(Runner)
+        case touchBarMinimizeRequested
     }
 }

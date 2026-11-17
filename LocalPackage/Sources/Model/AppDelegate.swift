@@ -85,6 +85,18 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
                         keyboardBatteryService.updateMetrics(from: infos)
                     }
                 }
+                // The Touch Bar runner picker cannot call RunnerService from
+                // the UserInterface module, so it emits a request instead.
+                group.addTask {
+                    let stream = appStateClient.withLock(\.runnerSelectionRequests.stream)
+                    for await runner in stream {
+                        do {
+                            try runnerService.update(runner: runner)
+                        } catch {
+                            logService.error(.switchingRunnerFailed(error))
+                        }
+                    }
+                }
             }
         }
         logService.notice(.launchApp)
