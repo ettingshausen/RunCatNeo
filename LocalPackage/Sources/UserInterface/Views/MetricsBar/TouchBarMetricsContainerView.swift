@@ -1496,6 +1496,17 @@ final class TouchBarBrightnessTrack: NSView {
     private var animationTarget: CGFloat = 0
     private var animationFrom: CGFloat = 0
 
+    init() {
+        super.init(frame: .zero)
+        // The function row routes `.directTouch` events to the hit-tested
+        // view's touches* methods; declaring the interest makes that explicit.
+        acceptsTouchEvents = true
+    }
+
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
     private var progress: CGFloat {
         let span = maximum - minimum
         guard span > 0 else { return 1 }
@@ -1511,32 +1522,40 @@ final class TouchBarBrightnessTrack: NSView {
         return minimum + Double(fraction) * (maximum - minimum)
     }
 
-    override func mouseDown(with event: NSEvent) {
-        guard isEnabledForPresses else { return }
+    /// The DFR bridge delivers this bar's touches as `.directTouch` events
+    /// routed to the hit-tested view; `locationInWindow` on them is constant
+    /// and useless, but `NSTouch.location(in:)` carries the real finger
+    /// position. A click recognizer cannot follow a finger, and mouseDown
+    /// never arrives, so the touches ARE the drag stream.
+    override func touchesBegan(with event: NSEvent) {
+        guard let touch = event.touches(matching: .touching, in: self).first else { return }
         isPressed = true
         animateExpansion(to: 1)
-        applyPoint(event)
+        applyTouch(touch)
     }
 
-    override func mouseDragged(with event: NSEvent) {
-        guard isPressed else { return }
-        applyPoint(event)
+    override func touchesMoved(with event: NSEvent) {
+        guard isPressed, let touch = event.touches(matching: .touching, in: self).first else { return }
+        applyTouch(touch)
     }
 
-    override func mouseUp(with event: NSEvent) {
+    override func touchesEnded(with event: NSEvent) {
         guard isPressed else { return }
         isPressed = false
         animateExpansion(to: 0)
-        applyPoint(event)
+        if let touch = event.touches(matching: .touching, in: self).first {
+            applyTouch(touch)
+        }
     }
 
-    /// Whether the container currently lets the track follow presses. The
-    /// panel owns the track's lifetime, so it stays enabled while visible.
-    private var isEnabledForPresses: Bool { window != nil }
+    override func touchesCancelled(with event: NSEvent) {
+        guard isPressed else { return }
+        isPressed = false
+        animateExpansion(to: 0)
+    }
 
-    private func applyPoint(_ event: NSEvent) {
-        let point = convert(event.locationInWindow, from: nil)
-        let newValue = value(at: point)
+    private func applyTouch(_ touch: NSTouch) {
+        let newValue = value(at: touch.location(in: self))
         guard newValue != value else { return }
         value = newValue
         onValueChange(value)
