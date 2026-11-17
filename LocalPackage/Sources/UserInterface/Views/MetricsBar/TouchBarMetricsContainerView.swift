@@ -951,9 +951,12 @@ public final class TouchBarMetricsContainerView: NSView {
     /// The runner menu puts the glyph beside the label, not above it, so the
     /// icon keeps its size on the 30pt row. The runner preview needs a wider
     /// box than an SF Symbol because the frames are wider than they are tall.
-    private static let menuIconBox = NSSize(width: 26, height: 20)
-    private static let runnerMenuIconBox = NSSize(width: 34, height: 20)
-    private static let menuIconPointSize: CGFloat = 16
+    /// The menu glyphs use the same 18pt point size and 22pt height as the
+    /// bar's own icons, so the entries look as big as the bar's content; the
+    /// box only widens to make room for the label beside it.
+    private static let menuIconBox = NSSize(width: 26, height: 22)
+    private static let runnerMenuIconBox = NSSize(width: 40, height: 22)
+    private static let menuIconPointSize: CGFloat = 18
     private static let menuCellMinWidth: CGFloat = 56
     private static let menuCellHeight: CGFloat = 30
     private static let menuCellGap: CGFloat = 16
