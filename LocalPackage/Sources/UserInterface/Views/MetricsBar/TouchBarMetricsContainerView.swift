@@ -607,15 +607,16 @@ public final class TouchBarMetricsContainerView: NSView {
             ]
             NSLayoutConstraint.activate(layoutConstraints)
             if let panelCardView {
-                // The card was sized before it joined the hierarchy, so its
-                // constraints could not be activated inside buildPanel.
+                // The card must join the hierarchy before its constraints are
+                // activated: activating against a view with no common
+                // ancestor raises inside NSLayoutConstraint and aborts.
+                contentContainerView.addSubview(panelCardView, positioned: .below, relativeTo: panelStack)
                 NSLayoutConstraint.activate([
                     panelCardView.leadingAnchor.constraint(equalTo: contentContainerView.leadingAnchor, constant: 6),
                     panelCardView.trailingAnchor.constraint(equalTo: contentContainerView.trailingAnchor, constant: -6),
                     panelCardView.topAnchor.constraint(equalTo: contentContainerView.topAnchor, constant: 3),
                     panelCardView.bottomAnchor.constraint(equalTo: contentContainerView.bottomAnchor, constant: -3),
                 ])
-                contentContainerView.addSubview(panelCardView, positioned: .below, relativeTo: panelStack)
             }
             scheduleSystemCloseBoxHide()
             return
