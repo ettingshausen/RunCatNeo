@@ -969,7 +969,12 @@ public final class TouchBarMetricsContainerView: NSView {
                 "panel:menu:runner",
                 "figure.run",
                 store.touchBarRunnerFrames.first.map {
-                    Self.scaledRunnerImage($0, height: Self.menuIconSize)
+                    Self.previewImage(
+                        $0,
+                        height: Self.menuIconSize,
+                        isTemplate: store.touchBarRunnerIsTemplate,
+                        tint: TouchBarOLEDTheme.dynamicValue
+                    )
                 }
             ),
             ("panel:menu:brightness", "sun.max", nil),
@@ -1148,11 +1153,12 @@ public final class TouchBarMetricsContainerView: NSView {
             cell.layer?.cornerRadius = 7
         }
 
+        let tint = isCurrent ? TouchBarOLEDTheme.controlFill : TouchBarOLEDTheme.dynamicValue
         let imageView = NSImageView()
-        imageView.image = Self.thumbnail(of: bundle, height: Self.runnerPreviewSize)
+        imageView.image = Self.thumbnail(of: bundle, height: Self.runnerPreviewSize, tint: tint)
             ?? NSImage(systemSymbolName: "questionmark.square.dashed", accessibilityDescription: nil)?
                 .withSymbolConfiguration(.init(pointSize: Self.runnerPreviewSize, weight: .regular))
-        imageView.contentTintColor = isCurrent ? TouchBarOLEDTheme.controlFill : TouchBarOLEDTheme.dynamicValue
+        imageView.contentTintColor = tint
         imageView.translatesAutoresizingMaskIntoConstraints = false
         cell.addSubview(imageView)
         NSLayoutConstraint.activate([
@@ -1165,7 +1171,11 @@ public final class TouchBarMetricsContainerView: NSView {
         return cell
     }
 
-    private static func thumbnail(of bundle: RunnerBundle, height: CGFloat) -> NSImage? {
+    private static func thumbnail(
+        of bundle: RunnerBundle,
+        height: CGFloat,
+        tint: NSColor
+    ) -> NSImage? {
         let frame: Frame
         switch bundle.displayFormat {
         case let .thumbnail(value):
@@ -1183,14 +1193,54 @@ public final class TouchBarMetricsContainerView: NSView {
         case .broken:
             image = nil
         }
-        return image.map { scaledRunnerImage($0, height: height) }
+        guard let image else { return nil }
+        return previewImage(
+            image,
+            height: height,
+            isTemplate: bundle.runner.isTemplate,
+            tint: tint
+        )
     }
 
-    private static func scaledRunnerImage(_ image: NSImage, height: CGFloat) -> NSImage {
+    /// Scales a runner frame for a preview. Preset frames are monochrome
+    /// masks (the menu bar tints them through a mask layer), so drawing them
+    /// as-is leaves an invisible black silhouette on the bar; template
+    /// runners are therefore filled with the tint while custom runners keep
+    /// their own colours.
+    private static func previewImage(
+        _ image: NSImage,
+        height: CGFloat,
+        isTemplate: Bool,
+        tint: NSColor
+    ) -> NSImage {
+        let scaled = scaledRunnerImage(image, height: height, isTemplate: isTemplate)
+        guard isTemplate else { return scaled }
+        return tinted(scaled, color: tint)
+    }
+
+    private static func scaledRunnerImage(
+        _ image: NSImage,
+        height: CGFloat,
+        isTemplate: Bool
+    ) -> NSImage {
         let copy = image.copy() as! NSImage
         let aspect = image.size.height > 0 ? image.size.width / image.size.height : 1
         copy.size = NSSize(width: height * aspect, height: height)
+        copy.isTemplate = isTemplate
         return copy
+    }
+
+    /// Fills the image's alpha silhouette with `color`.
+    private static func tinted(_ image: NSImage, color: NSColor) -> NSImage {
+        let size = image.size
+        let rect = NSRect(origin: .zero, size: size)
+        let tintedImage = NSImage(size: size)
+        tintedImage.lockFocus()
+        color.setFill()
+        rect.fill()
+        image.draw(in: rect, from: rect, operation: .destinationIn, fraction: 1)
+        tintedImage.unlockFocus()
+        return tintedImage
     }
 
     private static func spacer() -> NSView {
