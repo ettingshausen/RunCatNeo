@@ -13,32 +13,26 @@ import DataSource
 /// legible. They cannot prevent or measure OLED wear.
 enum TouchBarOLEDTheme {
     static let pixelShiftDefaultsKey = "TouchBarOLEDProtectionPixelShiftEnabled"
-    static let stockBrightnessDefaultsKey = "TouchBarStockIndicatorBrightness"
 
     static func registerDefaults() {
         UserDefaults.standard.register(defaults: [
             pixelShiftDefaultsKey: true,
-            stockBrightnessDefaultsKey: 1.0,
-            TouchBarIndicatorBrightness.defaultsKey: TouchBarIndicatorBrightness.default,
+            TouchBarStockBrightness.defaultsKey: TouchBarStockBrightness.default,
         ])
     }
 
     static var stockBrightness: Double {
-        min(max(UserDefaults.standard.double(forKey: stockBrightnessDefaultsKey), 0.7), 1.5)
-    }
-
-    /// The neutral-content luminance factor set from the bar's brightness
-    /// page. Stock colors do not use it.
-    static var indicatorBrightness: Double {
-        TouchBarIndicatorBrightness.clamp(
-            UserDefaults.standard.double(forKey: TouchBarIndicatorBrightness.defaultsKey)
+        TouchBarStockBrightness.clamp(
+            UserDefaults.standard.double(forKey: TouchBarStockBrightness.defaultsKey)
         )
     }
 
-    static func setIndicatorBrightness(_ value: Double) {
+    /// Used by the settings slider and the Touch Bar's brightness page; both
+    /// write the same key, so they always agree.
+    static func setStockBrightness(_ value: Double) {
         UserDefaults.standard.set(
-            TouchBarIndicatorBrightness.clamp(value),
-            forKey: TouchBarIndicatorBrightness.defaultsKey
+            TouchBarStockBrightness.rounded(value),
+            forKey: TouchBarStockBrightness.defaultsKey
         )
     }
 
@@ -60,31 +54,10 @@ enum TouchBarOLEDTheme {
 
     static let background = NSColor.black
 
-    /// Neutral content follows the bar's brightness setting; scaled in place
-    /// so the values read as one consistent dim level.
-    private static func dimmed(_ color: NSColor, by factor: Double) -> NSColor {
-        let components = color.usingColorSpace(.deviceRGB) ?? color
-        let scale = CGFloat(factor)
-        return NSColor(
-            srgbRed: components.redComponent * scale,
-            green: components.greenComponent * scale,
-            blue: components.blueComponent * scale,
-            alpha: components.alphaComponent
-        )
-    }
-
     /// Fixed symbols and separators should be dimmer than live values.
-    static var staticIcon: NSColor {
-        dimmed(NSColor(srgbRed: 0.49, green: 0.49, blue: 0.49, alpha: 1), by: indicatorBrightness)
-    }
-
-    static var separator: NSColor {
-        dimmed(NSColor(srgbRed: 0.20, green: 0.20, blue: 0.20, alpha: 1), by: indicatorBrightness)
-    }
-
-    static var dynamicValue: NSColor {
-        dimmed(NSColor(srgbRed: 0.76, green: 0.76, blue: 0.76, alpha: 1), by: indicatorBrightness)
-    }
+    static let staticIcon = NSColor(srgbRed: 0.49, green: 0.49, blue: 0.49, alpha: 1)
+    static let separator = NSColor(srgbRed: 0.20, green: 0.20, blue: 0.20, alpha: 1)
+    static let dynamicValue = NSColor(srgbRed: 0.76, green: 0.76, blue: 0.76, alpha: 1)
 
     /// The brightness page's own controls must stay readable at any setting.
     static let controlTrack = NSColor(srgbRed: 0.30, green: 0.30, blue: 0.30, alpha: 1)

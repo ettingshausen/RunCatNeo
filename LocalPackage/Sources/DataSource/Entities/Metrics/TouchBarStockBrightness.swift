@@ -1,5 +1,5 @@
 /*
- TouchBarIndicatorBrightness.swift
+ TouchBarStockBrightness.swift
  DataSource
 
  Created by ettingshausen on 2026/11/17.
@@ -20,20 +20,24 @@
 
 import Foundation
 
-/// The luminance factor of the Touch Bar's neutral content (indicator text
-/// and icons). Stock colors are deliberately excluded: up and down keep the
-/// market convention red/green at their own brightness setting.
-public enum TouchBarIndicatorBrightness {
-    public static let defaultsKey = "TouchBarIndicatorBrightness"
-    public static let minimum = 0.3
-    public static let maximum = 1.0
+/// The stock indicator brightness. One definition shared by the settings
+/// slider and the Touch Bar's brightness page, so both behave identically.
+public enum TouchBarStockBrightness {
+    public static let defaultsKey = "TouchBarStockIndicatorBrightness"
+    public static let minimum = 0.7
+    public static let maximum = 1.5
     public static let `default` = 1.0
+    public static let step = 0.05
 
     public static func clamp(_ value: Double) -> Double {
         guard value.isFinite else { return `default` }
         return min(max(value, minimum), maximum)
     }
 
-    /// Steps the value one notch, used by the bar's brightness page.
-    public static let step = 0.05
+    /// Rounds to the slider's step so a drag lands on the same values the
+    /// settings slider offers.
+    public static func rounded(_ value: Double) -> Double {
+        let steps = (clamp(value) - minimum) / step
+        return clamp(minimum + steps.rounded() * step)
+    }
 }

@@ -595,8 +595,6 @@ public final class TouchBarMetricsContainerView: NSView {
         if panel != nil {
             // A control page owns the bar exactly like the stock detail does.
             runnerView.removeFromSuperview()
-            panelCardView?.removeFromSuperview()
-            panelCardView = nil
             panelStack.arrangedSubviews.forEach { $0.removeFromSuperview() }
             buildPanel()
             contentContainerView.addSubview(panelStack)
@@ -606,24 +604,10 @@ public final class TouchBarMetricsContainerView: NSView {
                 panelStack.trailingAnchor.constraint(equalTo: contentContainerView.trailingAnchor, constant: -Self.horizontalInset),
             ]
             NSLayoutConstraint.activate(layoutConstraints)
-            if let panelCardView {
-                // The card must join the hierarchy before its constraints are
-                // activated: activating against a view with no common
-                // ancestor raises inside NSLayoutConstraint and aborts.
-                contentContainerView.addSubview(panelCardView, positioned: .below, relativeTo: panelStack)
-                NSLayoutConstraint.activate([
-                    panelCardView.leadingAnchor.constraint(equalTo: contentContainerView.leadingAnchor, constant: 6),
-                    panelCardView.trailingAnchor.constraint(equalTo: contentContainerView.trailingAnchor, constant: -6),
-                    panelCardView.topAnchor.constraint(equalTo: contentContainerView.topAnchor, constant: 3),
-                    panelCardView.bottomAnchor.constraint(equalTo: contentContainerView.bottomAnchor, constant: -3),
-                ])
-            }
             scheduleSystemCloseBoxHide()
             return
         }
         panelStack.removeFromSuperview()
-        panelCardView?.removeFromSuperview()
-        panelCardView = nil
 
         // Build only the active presentation of each group. The previous
         // implementation built pinned and scrolling copies simultaneously,
@@ -920,12 +904,9 @@ public final class TouchBarMetricsContainerView: NSView {
 
     private static let runnerPickerPageSize = 10
     private static let runnerCellWidth: CGFloat = 46
-    private static let brightnessTrackWidth: CGFloat = 420
-
-    private weak var brightnessSlider: NSSlider?
-    /// The rounded card behind the brightness page, mirroring the system
-    /// brightness control's panel.
-    private weak var panelCardView: NSView?
+    /// The brightness card stays compact like the system control; the close
+    /// box sits outside it instead of stretching the card across the bar.
+    private static let brightnessCardWidth: CGFloat = 380
 
     private func buildPanel() {
         switch panel {
@@ -1004,41 +985,51 @@ public final class TouchBarMetricsContainerView: NSView {
         panelStack.addArrangedSubview(Self.spacer())
     }
 
-    /// Mirrors the system brightness control: a rounded card with a small sun,
-    /// the native slider (which brings AppKit's own drag tracking) and a large
-    /// sun, plus a close box that returns to the menu.
+    /// Mirrors the system brightness control: a compact rounded card holding a
+    /// small sun, the native slider and a large sun; the close box is a
+    /// separate control beside the card, exactly like the system's panel.
     private func buildBrightnessPanel() {
         let card = NSView()
         card.wantsLayer = true
         card.layer?.backgroundColor = TouchBarOLEDTheme.panelCard.cgColor
         card.layer?.cornerRadius = 8
         card.translatesAutoresizingMaskIntoConstraints = false
-        // Constraints are activated in `rebuild` once the card is in the tree.
-        panelCardView = card
+        card.widthAnchor.constraint(equalToConstant: Self.brightnessCardWidth).isActive = true
+        card.heightAnchor.constraint(equalToConstant: 22).isActive = true
 
-        panelStack.addArrangedSubview(makeIconCell("sun.min", tint: TouchBarOLEDTheme.controlFill))
+        let smallSun = makeIconCell("sun.min", tint: TouchBarOLEDTheme.controlFill)
+        let bigSun = makeLargeIconCell("sun.max", tint: TouchBarOLEDTheme.controlFill)
         let slider = NSSlider(
-            value: TouchBarOLEDTheme.indicatorBrightness,
-            minValue: TouchBarIndicatorBrightness.minimum,
-            maxValue: TouchBarIndicatorBrightness.maximum,
+            value: TouchBarOLEDTheme.stockBrightness,
+            minValue: TouchBarStockBrightness.minimum,
+            maxValue: TouchBarStockBrightness.maximum,
             target: self,
             action: #selector(brightnessSliderChanged(_:))
         )
         slider.isContinuous = true
         slider.controlSize = .small
         slider.translatesAutoresizingMaskIntoConstraints = false
-        slider.widthAnchor.constraint(equalToConstant: Self.brightnessTrackWidth).isActive = true
-        brightnessSlider = slider
-        panelStack.addArrangedSubview(slider)
-        panelStack.addArrangedSubview(makeLargeIconCell("sun.max", tint: TouchBarOLEDTheme.controlFill))
+        card.addSubview(smallSun)
+        card.addSubview(slider)
+        card.addSubview(bigSun)
+        NSLayoutConstraint.activate([
+            smallSun.leadingAnchor.constraint(equalTo: card.leadingAnchor, constant: 12),
+            smallSun.centerYAnchor.constraint(equalTo: card.centerYAnchor),
+            slider.leadingAnchor.constraint(equalTo: smallSun.trailingAnchor, constant: 10),
+            slider.centerYAnchor.constraint(equalTo: card.centerYAnchor),
+            bigSun.leadingAnchor.constraint(equalTo: slider.trailingAnchor, constant: 10),
+            bigSun.trailingAnchor.constraint(equalTo: card.trailingAnchor, constant: -12),
+            bigSun.centerYAnchor.constraint(equalTo: card.centerYAnchor),
+        ])
+        panelStack.addArrangedSubview(card)
         panelStack.addArrangedSubview(Self.spacer())
         panelStack.addArrangedSubview(makeChevronCell(symbol: "xmark.circle.fill", identifier: "panel:done"))
     }
 
     @objc private func brightnessSliderChanged(_ sender: NSSlider) {
-        TouchBarOLEDTheme.setIndicatorBrightness(sender.doubleValue)
-        // Recolor the bar's neutral content in place; stock colors are
-        // deliberately left at their own brightness setting.
+        // The same key the settings slider writes, so both stay in sync and
+        // the stock colors recolor in place (hue preserved).
+        TouchBarOLEDTheme.setStockBrightness(sender.doubleValue)
         updateVisibleValues()
     }
 

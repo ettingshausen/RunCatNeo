@@ -46,7 +46,6 @@ public enum SandboxPreferencesImporter {
         String.showsMetricsBarOnTouchBar,
         "TouchBarOLEDProtectionPixelShiftEnabled",
         "TouchBarStockIndicatorBrightness",
-        "TouchBarIndicatorBrightness",
     ]
 
     /// The marker key that keeps the import to a single run.

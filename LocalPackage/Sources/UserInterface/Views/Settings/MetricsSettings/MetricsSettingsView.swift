@@ -440,7 +440,7 @@ private struct TouchBarBehaviorSectionView: View {
 /// shared for adding. Stocks appear on the Touch Bar only.
 private struct StockSectionView: View {
     @StateObject var store: MetricsSettings
-    @AppStorage(TouchBarOLEDTheme.stockBrightnessDefaultsKey) private var stockBrightness = 1.0
+    @AppStorage(TouchBarStockBrightness.defaultsKey) private var stockBrightness = TouchBarStockBrightness.default
 
     /// "5 s" / "5 秒" comes from the system formatter, so the four options need
     /// no locale-specific strings.
@@ -459,7 +459,11 @@ private struct StockSectionView: View {
                         .monospacedDigit()
                         .foregroundStyle(.secondary)
                 }
-                Slider(value: $stockBrightness, in: 0.7...1.5, step: 0.05)
+                Slider(
+                    value: $stockBrightness,
+                    in: TouchBarStockBrightness.minimum...TouchBarStockBrightness.maximum,
+                    step: TouchBarStockBrightness.step
+                )
                 HStack {
                     Text("较暗")
                     Spacer()
