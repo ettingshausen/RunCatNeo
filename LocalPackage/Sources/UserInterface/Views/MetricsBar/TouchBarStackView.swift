@@ -28,8 +28,9 @@ final class TouchBarStackView: NSView {
     private static let animationDuration: TimeInterval = 0.3
 
     private let bands: [NSView]
-    private let slotWidth: CGFloat
+    private var slotWidth: CGFloat
     private let bandHeight: CGFloat
+    private var slotWidthConstraint: NSLayoutConstraint!
     private var isAnimating = false
     private(set) var activeIndex = 0
 
@@ -57,8 +58,9 @@ final class TouchBarStackView: NSView {
         wantsLayer = true
         layer?.masksToBounds = true
         translatesAutoresizingMaskIntoConstraints = false
+        slotWidthConstraint = widthAnchor.constraint(equalToConstant: slotWidth)
         NSLayoutConstraint.activate([
-            widthAnchor.constraint(equalToConstant: slotWidth),
+            slotWidthConstraint,
             heightAnchor.constraint(equalToConstant: height),
         ])
         for band in bands {
@@ -69,6 +71,43 @@ final class TouchBarStackView: NSView {
 
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+
+    /// Re-measures every member after its labels change. The stack's slot
+    /// width is based on the widest member, but NSTextField intrinsic widths
+    /// can change after a live value update (for example, 980K -> 1.02M).
+    /// Refreshing the slot and member frames keeps the suffix visible without
+    /// rebuilding the Touch Bar hierarchy.
+    @discardableResult
+    func refreshMemberWidths() -> Bool {
+        guard !bands.isEmpty else { return false }
+
+        var measured: [(view: NSView, size: NSSize)] = []
+        var widest: CGFloat = 1
+        for band in bands {
+            guard let member = band.subviews.first else { continue }
+            member.layoutSubtreeIfNeeded()
+            let fitting = member.fittingSize
+            measured.append((member, fitting))
+            widest = max(widest, ceil(fitting.width))
+        }
+
+        guard abs(widest - slotWidth) >= 0.5 else { return false }
+        slotWidth = widest
+        slotWidthConstraint.constant = slotWidth
+        frame.size.width = slotWidth
+
+        for (band, member) in zip(bands, measured) {
+            band.frame.size.width = slotWidth
+            member.view.frame = NSRect(
+                x: 0,
+                y: floor((bandHeight - max(member.size.height, 1)) / 2),
+                width: min(ceil(member.size.width), slotWidth),
+                height: max(member.size.height, 1)
+            )
+        }
+        needsLayout = true
+        return true
     }
 
     /// Shows a member immediately. Used when the bar is rebuilt so a stack
