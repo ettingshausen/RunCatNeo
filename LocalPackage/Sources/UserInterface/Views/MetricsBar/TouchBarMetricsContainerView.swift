@@ -937,6 +937,12 @@ public final class TouchBarMetricsContainerView: NSView {
     private static let brightnessSunBoxSmall: CGFloat = 16
     private static let brightnessSunBoxLarge: CGFloat = 18
     private static let brightnessGap: CGFloat = 19
+    /// The runner menu is icon-only: generous glyphs in wide, empty hit
+    /// targets, separated by a gap wide enough to read as distinct buttons.
+    private static let menuIconSize: CGFloat = 20
+    private static let menuCellWidth: CGFloat = 48
+    private static let menuCellHeight: CGFloat = 30
+    private static let menuCellGap: CGFloat = 20
 
     private func buildPanel() {
         switch panel {
@@ -951,33 +957,30 @@ public final class TouchBarMetricsContainerView: NSView {
         }
     }
 
-    /// The runner's menu: three labeled cells. Tapping a cell is captured by
-    /// a recognizer on the cell itself, so the identifier carries the action.
+    /// The runner's menu: three large icon-only cells, centered on the bar.
+    /// Tapping a cell is captured by a recognizer on the cell itself, so the
+    /// identifier carries the action.
     private func buildMenuPanel() {
-        let items: [(id: String, title: String)] = [
-            ("panel:menu:runner", String(localized: "touchBarPanelRunner", bundle: .module)),
-            ("panel:menu:brightness", String(localized: "touchBarPanelBrightness", bundle: .module)),
-            ("panel:menu:hide", String(localized: "touchBarPanelHide", bundle: .module)),
+        let items: [(id: String, symbol: String, image: NSImage?)] = [
+            (
+                "panel:menu:runner",
+                "figure.run",
+                store.touchBarRunnerFrames.first.map {
+                    Self.scaledRunnerImage($0, height: Self.menuIconSize)
+                }
+            ),
+            ("panel:menu:brightness", "sun.max", nil),
+            ("panel:menu:hide", "xmark.circle", nil),
         ]
+        panelStack.addArrangedSubview(Self.spacer())
         for (index, item) in items.enumerated() {
-            let image: NSImage?
-            let symbol: String
-            switch index {
-            case 0:
-                image = store.touchBarRunnerFrames.first.map { Self.scaledRunnerImage($0, height: 14) }
-                symbol = "figure.run"
-            case 1:
-                image = nil
-                symbol = "sun.max"
-            default:
-                image = nil
-                symbol = "xmark.circle"
+            if index > 0 {
+                panelStack.addArrangedSubview(Self.fixedSpace(width: Self.menuCellGap))
             }
-            panelStack.addArrangedSubview(makePanelCell(
+            panelStack.addArrangedSubview(makeMenuCell(
                 identifier: item.id,
-                symbol: symbol,
-                image: image,
-                title: item.title
+                symbol: item.symbol,
+                image: item.image
             ))
         }
         panelStack.addArrangedSubview(Self.spacer())
@@ -1090,33 +1093,26 @@ public final class TouchBarMetricsContainerView: NSView {
         applyStockBrightness(TouchBarOLEDTheme.stockBrightness + step)
     }
 
-    private func makePanelCell(
-        identifier: String,
-        symbol: String,
-        image: NSImage?,
-        title: String
-    ) -> NSView {
-        let cell = NSStackView()
-        cell.orientation = .horizontal
-        cell.alignment = .centerY
-        cell.spacing = 4
+    /// A menu entry: one large glyph centered in an empty hit target, so the
+    /// icon reads at a glance and the target stays easy to hit without a label.
+    private func makeMenuCell(identifier: String, symbol: String, image: NSImage?) -> NSView {
+        let cell = NSView()
         cell.identifier = NSUserInterfaceItemIdentifier(identifier)
-        if let image {
-            let imageView = NSImageView()
-            imageView.image = image
-            imageView.contentTintColor = TouchBarOLEDTheme.dynamicValue
-            imageView.widthAnchor.constraint(equalToConstant: 14).isActive = true
-            imageView.heightAnchor.constraint(equalToConstant: 14).isActive = true
-            cell.addArrangedSubview(imageView)
-        } else {
-            cell.addArrangedSubview(makeIconCell(symbol, tint: TouchBarOLEDTheme.dynamicValue))
-        }
-        cell.addArrangedSubview(makeTextCell(
-            title,
-            font: .systemFont(ofSize: 10, weight: .medium),
-            tint: TouchBarOLEDTheme.dynamicValue
-        ))
-        cell.setContentHuggingPriority(.required, for: .horizontal)
+        cell.translatesAutoresizingMaskIntoConstraints = false
+        cell.widthAnchor.constraint(equalToConstant: Self.menuCellWidth).isActive = true
+        cell.heightAnchor.constraint(equalToConstant: Self.menuCellHeight).isActive = true
+
+        let imageView = NSImageView()
+        imageView.image = image ?? NSImage(systemSymbolName: symbol, accessibilityDescription: nil)?
+            .withSymbolConfiguration(.init(pointSize: Self.menuIconSize, weight: .regular))
+        imageView.contentTintColor = TouchBarOLEDTheme.dynamicValue
+        imageView.translatesAutoresizingMaskIntoConstraints = false
+        cell.addSubview(imageView)
+        NSLayoutConstraint.activate([
+            imageView.centerXAnchor.constraint(equalTo: cell.centerXAnchor),
+            imageView.centerYAnchor.constraint(equalTo: cell.centerYAnchor),
+        ])
+
         let tap = NSClickGestureRecognizer(target: self, action: #selector(panelCellTapped(_:)))
         cell.addGestureRecognizer(tap)
         return cell
