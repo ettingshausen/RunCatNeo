@@ -424,6 +424,13 @@ public final class TouchBarMetricsContainerView: NSView {
         }
         lastMetricIconSymbols = lastMetricIconSymbols.filter { icons[$0.key] != nil }
         update(self)
+
+        // Live labels can become wider after their stack slot was created.
+        // Re-measure only stack slots whose member fitting width actually changed.
+        for entry in stackViews where isInHierarchy(entry.view) {
+            _ = entry.view.refreshMemberWidths()
+        }
+
         if let documentStack = scrollView.documentView as? NSStackView {
             sizeDocumentView(documentStack)
         }
@@ -682,22 +689,12 @@ public final class TouchBarMetricsContainerView: NSView {
             ))
             cell.addArrangedSubview(column)
         } else {
-            let valueField = makeTextCell(
+            cell.addArrangedSubview(makeTextCell(
                 indicator.primaryText,
-                font: .monospacedDigitSystemFont(
-                    ofSize: indicator.member.key == "aiTokenUsage" ? 11 : 12,
-                    weight: .regular
-                ),
+                font: .monospacedDigitSystemFont(ofSize: 12, weight: .regular),
                 tint: TouchBarOLEDTheme.dynamicValue,
                 identifier: "metric:\(indicator.member.key):primary"
-            )
-            // Token values can grow from K to M/B after the cell is created.
-            // Reserve enough trailing width for the unit suffix so it is not
-            // clipped by the fixed-width Touch Bar stack slot.
-            if indicator.member.key == "aiTokenUsage" {
-                valueField.widthAnchor.constraint(greaterThanOrEqualToConstant: 44).isActive = true
-            }
-            cell.addArrangedSubview(valueField)
+            ))
         }
         return cell
     }
