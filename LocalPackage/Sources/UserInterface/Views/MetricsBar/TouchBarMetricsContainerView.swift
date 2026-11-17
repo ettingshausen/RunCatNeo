@@ -872,16 +872,6 @@ public final class TouchBarMetricsContainerView: NSView {
         return imageView
     }
 
-    /// Finds the brightness track in the current panel, used to refresh its
-    /// knob after a step or a tap changes the stored value.
-    private func findTrack(in view: NSView) -> NSView? {
-        if view is TouchBarBrightnessTrack { return view }
-        for child in view.subviews {
-            if let found = findTrack(in: child) { return found }
-        }
-        return nil
-    }
-
     /// The separate close box beside the brightness card: the system draws a
     /// large gray disc with a white cross, so this draws the same instead of
     /// scaling a symbol (which looked small).
@@ -948,6 +938,9 @@ public final class TouchBarMetricsContainerView: NSView {
     private static let brightnessSunBoxSmall: CGFloat = 16
     private static let brightnessSunBoxLarge: CGFloat = 18
     private static let brightnessGap: CGFloat = 19
+    /// The brightness page's live track, set while the panel is built so
+    /// step taps and external value changes can refresh its knob.
+    private weak var brightnessTrack: TouchBarBrightnessTrack?
     /// The runner menu puts the glyph beside the label, not above it, so the
     /// icon keeps its size on the 30pt row. The runner preview needs a wider
     /// box than an SF Symbol because the frames are wider than they are tall.
@@ -1080,8 +1073,13 @@ public final class TouchBarMetricsContainerView: NSView {
         track.maximum = TouchBarStockBrightness.maximum
         track.value = TouchBarOLEDTheme.stockBrightness
         track.translatesAutoresizingMaskIntoConstraints = false
-        let tap = NSClickGestureRecognizer(target: self, action: #selector(brightnessTrackTapped(_:)))
-        track.addGestureRecognizer(tap)
+        // The track follows presses itself (mouseDown/Dragged/Up — the path
+        // the stock cells prove the DFR bridge delivers); the callback feeds
+        // each intermediate value into the shared settings key.
+        track.onValueChange = { [weak self] value in
+            self?.stockBrightnessChanged(to: value)
+        }
+        brightnessTrack = track
         card.addSubview(smallSun)
         card.addSubview(track)
         card.addSubview(bigSun)
@@ -1110,15 +1108,14 @@ public final class TouchBarMetricsContainerView: NSView {
     /// stock colors recolor in place with their hue preserved.
     private func applyStockBrightness(_ value: Double) {
         TouchBarOLEDTheme.setStockBrightness(value)
-        if let track = findTrack(in: self) as? TouchBarBrightnessTrack {
-            track.value = TouchBarOLEDTheme.stockBrightness
-        }
+        brightnessTrack?.value = TouchBarOLEDTheme.stockBrightness
         updateVisibleValues()
     }
 
-    @objc private func brightnessTrackTapped(_ sender: NSClickGestureRecognizer) {
-        guard let track = sender.view as? TouchBarBrightnessTrack else { return }
-        applyStockBrightness(track.value(at: sender.location(in: track)))
+    /// Called by the track for every intermediate value while a finger drags
+    /// along it (and by a tap landing anywhere on the track).
+    private func stockBrightnessChanged(to value: Double) {
+        applyStockBrightness(value)
     }
 
     @objc private func brightnessStepTapped(_ sender: NSClickGestureRecognizer) {
@@ -1467,17 +1464,23 @@ public final class TouchBarMetricsContainerView: NSView {
 }
 
 /// The brightness track's visuals: hairline track, blue fill and the white
-/// knob that grows while it is touched. Input is handled by a click recognizer
-/// on the view (see the container): the Touch Bar reports third-party content
-/// as taps, while Apple's own brightness item reads the private gesture stream.
+/// knob that grows while it is touched. Presses are tracked with mouseDown /
+/// mouseDragged / mouseUp — the same responder path the stock cells use,
+/// which the Touch Bar's DFR bridge does deliver (a drag stream was attempted
+/// through touch events and never arrived). A knob press tweens its height
+/// with a `.common`-mode timer so the growth also advances while tracking.
 final class TouchBarBrightnessTrack: NSView {
     private static let knobWidth: CGFloat = 30
     private static let knobIdleHeight: CGFloat = 20
+    private static let knobPressedHeight: CGFloat = 26
     private static let knobRadius: CGFloat = 7
     private static let trackHeight: CGFloat = 4
+    private static let pressAnimationDuration: TimeInterval = 0.16
 
     var minimum: Double = 0.7
     var maximum: Double = 1.5
+    /// Called for every value change while the finger is down or stepping.
+    var onValueChange: (Double) -> Void = { _ in }
 
     var value: Double = 1.0 {
         didSet {
@@ -1485,6 +1488,13 @@ final class TouchBarBrightnessTrack: NSView {
             needsDisplay = true
         }
     }
+
+    private var isPressed = false
+    private var expansion: CGFloat = 0
+    private var animationTimer: Timer?
+    private var animationStart = Date()
+    private var animationTarget: CGFloat = 0
+    private var animationFrom: CGFloat = 0
 
     private var progress: CGFloat {
         let span = maximum - minimum
@@ -1501,9 +1511,67 @@ final class TouchBarBrightnessTrack: NSView {
         return minimum + Double(fraction) * (maximum - minimum)
     }
 
+    override func mouseDown(with event: NSEvent) {
+        guard isEnabledForPresses else { return }
+        isPressed = true
+        animateExpansion(to: 1)
+        applyPoint(event)
+    }
+
+    override func mouseDragged(with event: NSEvent) {
+        guard isPressed else { return }
+        applyPoint(event)
+    }
+
+    override func mouseUp(with event: NSEvent) {
+        guard isPressed else { return }
+        isPressed = false
+        animateExpansion(to: 0)
+        applyPoint(event)
+    }
+
+    /// Whether the container currently lets the track follow presses. The
+    /// panel owns the track's lifetime, so it stays enabled while visible.
+    private var isEnabledForPresses: Bool { window != nil }
+
+    private func applyPoint(_ event: NSEvent) {
+        let point = convert(event.locationInWindow, from: nil)
+        let newValue = value(at: point)
+        guard newValue != value else { return }
+        value = newValue
+        onValueChange(value)
+    }
+
+    private func animateExpansion(to target: CGFloat) {
+        animationTimer?.invalidate()
+        animationFrom = expansion
+        animationTarget = target
+        animationStart = Date()
+        let timer = Timer(timeInterval: 1.0 / 60.0, repeats: true) { [weak self] _ in
+            MainActor.assumeIsolated { self?.stepAnimation() }
+        }
+        // `.common` keeps the tween running while the responder chain is busy.
+        RunLoop.main.add(timer, forMode: .common)
+        animationTimer = timer
+    }
+
+    private func stepAnimation() {
+        let elapsed = Date().timeIntervalSince(animationStart)
+        let progress = min(max(elapsed / Self.pressAnimationDuration, 0), 1)
+        let eased = CGFloat(1 - pow(1 - progress, 3))
+        expansion = animationFrom + (animationTarget - animationFrom) * eased
+        needsDisplay = true
+        if progress >= 1 {
+            animationTimer?.invalidate()
+            animationTimer = nil
+        }
+    }
+
     override func draw(_ dirtyRect: NSRect) {
         let inset = Self.knobWidth / 2
         let centerY = bounds.midY
+        let knobHeight = Self.knobIdleHeight
+            + (Self.knobPressedHeight - Self.knobIdleHeight) * expansion
 
         let trackRect = NSRect(
             x: inset,
@@ -1526,9 +1594,9 @@ final class TouchBarBrightnessTrack: NSView {
 
         let knobRect = NSRect(
             x: knobCenterX - Self.knobWidth / 2,
-            y: centerY - Self.knobIdleHeight / 2,
+            y: centerY - knobHeight / 2,
             width: Self.knobWidth,
-            height: Self.knobIdleHeight
+            height: knobHeight
         )
         TouchBarOLEDTheme.sliderKnob.setFill()
         NSBezierPath(
