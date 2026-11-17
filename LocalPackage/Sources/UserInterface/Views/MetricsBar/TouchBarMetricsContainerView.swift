@@ -872,15 +872,11 @@ public final class TouchBarMetricsContainerView: NSView {
         return imageView
     }
 
-    /// The separate close box beside the brightness card: the system draws a
-    /// large gray disc with a white cross, so this draws the same instead of
-    /// scaling a symbol (which looked small).
+    /// Brightness-panel dismiss action, using the same 18pt SF Symbol,
+    /// tint and 22pt hit target as the other panel controls.
     private func makeCloseCell(identifier: String) -> NSView {
-        let cell = CloseCircleView()
+        let cell = makeIconCell("xmark", tint: TouchBarOLEDTheme.dynamicValue)
         cell.identifier = NSUserInterfaceItemIdentifier(identifier)
-        cell.translatesAutoresizingMaskIntoConstraints = false
-        cell.widthAnchor.constraint(equalToConstant: CloseCircleView.side).isActive = true
-        cell.heightAnchor.constraint(equalToConstant: CloseCircleView.side).isActive = true
         let tap = NSClickGestureRecognizer(target: self, action: #selector(panelCellTapped(_:)))
         cell.addGestureRecognizer(tap)
         return cell
@@ -995,7 +991,7 @@ public final class TouchBarMetricsContainerView: NSView {
             ),
             (
                 "panel:menu:hide",
-                "xmark.circle",
+                "eye.slash",
                 nil,
                 String(localized: "touchBarPanelHide", bundle: .module),
                 Self.menuIconBox
@@ -1005,16 +1001,13 @@ public final class TouchBarMetricsContainerView: NSView {
             if index > 0 {
                 panelStack.addArrangedSubview(Self.fixedSpace(width: Self.menuCellGap))
             }
-            // The hide entry uses the system close disc instead of an SF
-            // Symbol, matching the brightness page's dismiss button.
-            let iconView = item.id == "panel:menu:hide" ? CloseCircleView() : nil
+            // Use the same SF Symbol treatment for every menu action.
             panelStack.addArrangedSubview(makeMenuCell(
                 identifier: item.id,
                 symbol: item.symbol,
                 image: item.image,
                 title: item.title,
-                iconBox: item.iconBox,
-                iconView: iconView
+                iconBox: item.iconBox
             ))
         }
         panelStack.addArrangedSubview(Self.spacer())
@@ -1683,60 +1676,5 @@ final class TouchBarBrightnessTrack: NSView {
             xRadius: Self.knobRadius,
             yRadius: Self.knobRadius
         ).fill()
-    }
-}
-
-/// The brightness page's and the menu's dismiss control: the system close
-/// button's own rendering captured when the bar is presented (see
-/// `captureSystemCloseImage`), with a hand-drawn 22pt gray disc + 19pt
-/// cut-out cross as the fallback for the first presentation.
-final class CloseCircleView: NSView {
-    static let side: CGFloat = 22
-    private static let diameter: CGFloat = 22
-    private static let crossSpan: CGFloat = 19
-    private static let crossLineWidth: CGFloat = 1.8
-
-    override func draw(_ dirtyRect: NSRect) {
-        if let image = TouchBarMetricsContainerView.closeImage {
-            // The capture is 64x30pt including transparent padding around the
-            // disc; draw it aspect-fit and centered so the disc lands where
-            // the fallback would.
-            let size = image.size
-            let scale = min(bounds.width / size.width, bounds.height / size.height)
-            let drawSize = NSSize(width: size.width * scale, height: size.height * scale)
-            image.draw(
-                in: NSRect(
-                    x: (bounds.width - drawSize.width) / 2,
-                    y: (bounds.height - drawSize.height) / 2,
-                    width: drawSize.width,
-                    height: drawSize.height
-                )
-            )
-            return
-        }
-
-        let diameter = Self.diameter
-        let disc = NSRect(
-            x: (bounds.width - diameter) / 2,
-            y: (bounds.height - diameter) / 2,
-            width: diameter,
-            height: diameter
-        )
-        TouchBarOLEDTheme.closeBox.setFill()
-        NSBezierPath(ovalIn: disc).fill()
-
-        // The cross is cut out of the disc (the black bar shows through),
-        // which is why the system's ✕ reads as black-on-gray.
-        let arm = Self.crossSpan / 2
-        let center = NSPoint(x: disc.midX, y: disc.midY)
-        NSColor.black.setStroke()
-        for sign in [CGFloat(1), -1] {
-            let path = NSBezierPath()
-            path.lineWidth = Self.crossLineWidth
-            path.lineCapStyle = .round
-            path.move(to: NSPoint(x: center.x - arm, y: center.y + sign * arm))
-            path.line(to: NSPoint(x: center.x + arm, y: center.y - sign * arm))
-            path.stroke()
-        }
     }
 }
