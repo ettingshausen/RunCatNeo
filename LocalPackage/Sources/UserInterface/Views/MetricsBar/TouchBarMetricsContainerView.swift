@@ -1005,12 +1005,16 @@ public final class TouchBarMetricsContainerView: NSView {
             if index > 0 {
                 panelStack.addArrangedSubview(Self.fixedSpace(width: Self.menuCellGap))
             }
+            // The hide entry uses the system close disc instead of an SF
+            // Symbol, matching the brightness page's dismiss button.
+            let iconView = item.id == "panel:menu:hide" ? CloseCircleView() : nil
             panelStack.addArrangedSubview(makeMenuCell(
                 identifier: item.id,
                 symbol: item.symbol,
                 image: item.image,
                 title: item.title,
-                iconBox: item.iconBox
+                iconBox: item.iconBox,
+                iconView: iconView
             ))
         }
         panelStack.addArrangedSubview(Self.spacer())
@@ -1099,7 +1103,7 @@ public final class TouchBarMetricsContainerView: NSView {
         // Every control page starts at the bar's leading edge, like the rest
         // of the app's content.
         panelStack.addArrangedSubview(card)
-        panelStack.addArrangedSubview(Self.fixedSpace(width: 22))
+        panelStack.addArrangedSubview(Self.fixedSpace(width: 24))
         panelStack.addArrangedSubview(makeCloseCell(identifier: "panel:done"))
         panelStack.addArrangedSubview(Self.spacer())
     }
@@ -1133,7 +1137,8 @@ public final class TouchBarMetricsContainerView: NSView {
         symbol: String,
         image: NSImage?,
         title: String,
-        iconBox: NSSize
+        iconBox: NSSize,
+        iconView: NSView? = nil
     ) -> NSView {
         let cell = NSStackView()
         cell.orientation = .horizontal
@@ -1147,14 +1152,21 @@ public final class TouchBarMetricsContainerView: NSView {
         cell.setContentHuggingPriority(.required, for: .horizontal)
         cell.setContentCompressionResistancePriority(.required, for: .horizontal)
 
-        let imageView = NSImageView()
-        imageView.image = image ?? NSImage(systemSymbolName: symbol, accessibilityDescription: nil)?
-            .withSymbolConfiguration(.init(pointSize: Self.menuIconPointSize, weight: .regular))
-        imageView.contentTintColor = TouchBarOLEDTheme.dynamicValue
-        imageView.translatesAutoresizingMaskIntoConstraints = false
-        imageView.widthAnchor.constraint(equalToConstant: iconBox.width).isActive = true
-        imageView.heightAnchor.constraint(equalToConstant: iconBox.height).isActive = true
-        cell.addArrangedSubview(imageView)
+        if let iconView {
+            iconView.translatesAutoresizingMaskIntoConstraints = false
+            iconView.widthAnchor.constraint(equalToConstant: iconBox.width).isActive = true
+            iconView.heightAnchor.constraint(equalToConstant: iconBox.height).isActive = true
+            cell.addArrangedSubview(iconView)
+        } else {
+            let imageView = NSImageView()
+            imageView.image = image ?? NSImage(systemSymbolName: symbol, accessibilityDescription: nil)?
+                .withSymbolConfiguration(.init(pointSize: Self.menuIconPointSize, weight: .regular))
+            imageView.contentTintColor = TouchBarOLEDTheme.dynamicValue
+            imageView.translatesAutoresizingMaskIntoConstraints = false
+            imageView.widthAnchor.constraint(equalToConstant: iconBox.width).isActive = true
+            imageView.heightAnchor.constraint(equalToConstant: iconBox.height).isActive = true
+            cell.addArrangedSubview(imageView)
+        }
         cell.addArrangedSubview(makeTextCell(
             title,
             font: .systemFont(ofSize: 10, weight: .medium),
@@ -1626,12 +1638,13 @@ final class TouchBarBrightnessTrack: NSView {
     }
 }
 
-/// The brightness page's close box: a large gray disc with a white cross,
-/// drawn rather than scaled from a symbol so it matches the system control.
+/// The brightness page's close box: a large gray disc with the cross cut out,
+/// matching the system control's measured geometry (2px/pt screenshot):
+/// a 22pt disc whose ✕ glyph spans 19pt with ~1.8pt strokes.
 final class CloseCircleView: NSView {
-    static let side: CGFloat = 26
-    private static let diameter: CGFloat = 24
-    private static let crossArm: CGFloat = 4.2
+    static let side: CGFloat = 22
+    private static let diameter: CGFloat = 22
+    private static let crossSpan: CGFloat = 19
     private static let crossLineWidth: CGFloat = 1.8
 
     override func draw(_ dirtyRect: NSRect) {
@@ -1645,9 +1658,11 @@ final class CloseCircleView: NSView {
         TouchBarOLEDTheme.closeBox.setFill()
         NSBezierPath(ovalIn: disc).fill()
 
+        // The cross is cut out of the disc (the black bar shows through),
+        // which is why the system's ✕ reads as black-on-gray.
+        let arm = Self.crossSpan / 2
         let center = NSPoint(x: disc.midX, y: disc.midY)
-        let arm = Self.crossArm
-        TouchBarOLEDTheme.sliderKnob.setStroke()
+        NSColor.black.setStroke()
         for sign in [CGFloat(1), -1] {
             let path = NSBezierPath()
             path.lineWidth = Self.crossLineWidth
