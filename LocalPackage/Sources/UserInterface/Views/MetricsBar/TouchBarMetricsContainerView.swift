@@ -875,7 +875,7 @@ public final class TouchBarMetricsContainerView: NSView {
     /// Brightness-panel dismiss action, using the same 18pt SF Symbol,
     /// tint and 22pt hit target as the other panel controls.
     private func makeCloseCell(identifier: String) -> NSView {
-        let cell = makeIconCell("xmark", tint: TouchBarOLEDTheme.dynamicValue)
+        let cell = makeIconCell("xmark.circle.fill", tint: TouchBarOLEDTheme.dynamicValue)
         cell.identifier = NSUserInterfaceItemIdentifier(identifier)
         let tap = NSClickGestureRecognizer(target: self, action: #selector(panelCellTapped(_:)))
         cell.addGestureRecognizer(tap)
