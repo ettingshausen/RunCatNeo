@@ -100,11 +100,11 @@ public final class TouchBarMetricsContainerView: NSView {
     private var rotationPhases: [String: Int] = [:]
     private var stackViews: [(id: String, view: TouchBarStackView)] = []
 
-    /// The system-modal bar's viewport is narrower than the DFR display: on a
-    /// 1085pt Touch Bar the host gives the bar 621pt and clips anything wider
-    /// (measured from `NSTouchBarView`'s frame), so the item must request
-    /// exactly that or its trailing content is cut off.
-    static let barWidth: CGFloat = 621
+    /// The system-modal function row is 685pt wide on the DFR display
+    /// (`NSTouchBarView`, measured live). The item container used to be
+    /// capped at 621pt because the system close box reserved the left 64pt;
+    /// the close box is hidden and collapsed now, so the whole row is usable.
+    static let barWidth: CGFloat = 685
     static let height: CGFloat = 28
     private static let documentHeight: CGFloat = height - 4
     private static let horizontalInset: CGFloat = 12
