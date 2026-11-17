@@ -948,12 +948,13 @@ public final class TouchBarMetricsContainerView: NSView {
     private static let brightnessSunBoxSmall: CGFloat = 16
     private static let brightnessSunBoxLarge: CGFloat = 18
     private static let brightnessGap: CGFloat = 19
-    /// The runner menu is icon-only: generous glyphs in wide, empty hit
-    /// targets, separated by a gap wide enough to read as distinct buttons.
-    private static let menuIconSize: CGFloat = 20
-    private static let menuCellWidth: CGFloat = 48
+    /// The runner menu shows a glyph over a label. The row is 30pt tall, so
+    /// the icon box is 15pt high with room for the 9pt title beneath it.
+    private static let menuIconBox = NSSize(width: 40, height: 15)
+    private static let menuIconPointSize: CGFloat = 13
+    private static let menuCellMinWidth: CGFloat = 46
     private static let menuCellHeight: CGFloat = 30
-    private static let menuCellGap: CGFloat = 20
+    private static let menuCellGap: CGFloat = 16
 
     private func buildPanel() {
         switch panel {
@@ -968,26 +969,36 @@ public final class TouchBarMetricsContainerView: NSView {
         }
     }
 
-    /// The runner's menu: three large icon-only cells, starting at the bar's
-    /// leading edge.
-    /// Tapping a cell is captured by a recognizer on the cell itself, so the
-    /// identifier carries the action.
+    /// The runner's menu: three labeled cells, starting at the bar's leading
+    /// edge. Tapping a cell is captured by a recognizer on the cell itself,
+    /// so the identifier carries the action.
     private func buildMenuPanel() {
-        let items: [(id: String, symbol: String, image: NSImage?)] = [
+        let items: [(id: String, symbol: String, image: NSImage?, title: String)] = [
             (
                 "panel:menu:runner",
                 "figure.run",
                 store.touchBarRunnerFrames.first.map {
                     Self.previewImage(
                         $0,
-                        box: NSSize(width: Self.menuCellWidth - 4, height: Self.menuIconSize),
+                        box: Self.menuIconBox,
                         isTemplate: store.touchBarRunnerIsTemplate,
                         tint: TouchBarOLEDTheme.dynamicValue
                     )
-                }
+                },
+                String(localized: "touchBarPanelRunner", bundle: .module)
             ),
-            ("panel:menu:brightness", "sun.max", nil),
-            ("panel:menu:hide", "xmark.circle", nil),
+            (
+                "panel:menu:brightness",
+                "sun.max",
+                nil,
+                String(localized: "touchBarPanelBrightness", bundle: .module)
+            ),
+            (
+                "panel:menu:hide",
+                "xmark.circle",
+                nil,
+                String(localized: "touchBarPanelHide", bundle: .module)
+            ),
         ]
         for (index, item) in items.enumerated() {
             if index > 0 {
@@ -996,7 +1007,8 @@ public final class TouchBarMetricsContainerView: NSView {
             panelStack.addArrangedSubview(makeMenuCell(
                 identifier: item.id,
                 symbol: item.symbol,
-                image: item.image
+                image: item.image,
+                title: item.title
             ))
         }
         panelStack.addArrangedSubview(Self.spacer())
@@ -1108,27 +1120,39 @@ public final class TouchBarMetricsContainerView: NSView {
         applyStockBrightness(TouchBarOLEDTheme.stockBrightness + step)
     }
 
-    /// A menu entry: one large glyph centered in an empty hit target, so the
-    /// icon reads at a glance and the target stays easy to hit without a label.
-    private func makeMenuCell(identifier: String, symbol: String, image: NSImage?) -> NSView {
-        let cell = NSView()
+    /// A menu entry: a glyph above its 9pt label, so the action is named and
+    /// still easy to hit on the narrow bar.
+    private func makeMenuCell(
+        identifier: String,
+        symbol: String,
+        image: NSImage?,
+        title: String
+    ) -> NSView {
+        let cell = NSStackView()
+        cell.orientation = .vertical
+        cell.alignment = .centerX
+        cell.spacing = 1
         cell.identifier = NSUserInterfaceItemIdentifier(identifier)
         cell.translatesAutoresizingMaskIntoConstraints = false
-        cell.widthAnchor.constraint(equalToConstant: Self.menuCellWidth).isActive = true
-        cell.heightAnchor.constraint(equalToConstant: Self.menuCellHeight).isActive = true
+        cell.widthAnchor.constraint(
+            greaterThanOrEqualToConstant: Self.menuCellMinWidth
+        ).isActive = true
         cell.setContentHuggingPriority(.required, for: .horizontal)
         cell.setContentCompressionResistancePriority(.required, for: .horizontal)
 
         let imageView = NSImageView()
         imageView.image = image ?? NSImage(systemSymbolName: symbol, accessibilityDescription: nil)?
-            .withSymbolConfiguration(.init(pointSize: Self.menuIconSize, weight: .regular))
+            .withSymbolConfiguration(.init(pointSize: Self.menuIconPointSize, weight: .regular))
         imageView.contentTintColor = TouchBarOLEDTheme.dynamicValue
         imageView.translatesAutoresizingMaskIntoConstraints = false
-        cell.addSubview(imageView)
-        NSLayoutConstraint.activate([
-            imageView.centerXAnchor.constraint(equalTo: cell.centerXAnchor),
-            imageView.centerYAnchor.constraint(equalTo: cell.centerYAnchor),
-        ])
+        imageView.widthAnchor.constraint(equalToConstant: Self.menuIconBox.width).isActive = true
+        imageView.heightAnchor.constraint(equalToConstant: Self.menuIconBox.height).isActive = true
+        cell.addArrangedSubview(imageView)
+        cell.addArrangedSubview(makeTextCell(
+            title,
+            font: .systemFont(ofSize: 9, weight: .medium),
+            tint: TouchBarOLEDTheme.dynamicValue
+        ))
 
         let tap = NSClickGestureRecognizer(target: self, action: #selector(panelCellTapped(_:)))
         cell.addGestureRecognizer(tap)
