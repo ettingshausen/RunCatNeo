@@ -27,7 +27,6 @@ public enum RunnerKind: String, Sendable, Identifiable, CaseIterable {
     case newtonCradle = "newton-cradle"
     case engine = "engine"
     case mochi = "mochi"
-    case japaneseApology = "japaneseapology"
 
     public var id: String { rawValue }
 
@@ -41,7 +40,6 @@ public enum RunnerKind: String, Sendable, Identifiable, CaseIterable {
         case .newtonCradle: 5
         case .engine: 10
         case .mochi: 5
-        case .japaneseApology: 17
         }
     }
 
@@ -56,7 +54,6 @@ public enum RunnerKind: String, Sendable, Identifiable, CaseIterable {
         case .newtonCradle: .pendulum
         case .engine: .ascending(n)
         case .mochi: .swing
-        case .japaneseApology: .ascending(n)
         }
     }
 }

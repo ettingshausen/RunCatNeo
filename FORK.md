@@ -371,7 +371,6 @@ git merge origin/main          # 或走 PR：main → feat/fan-metrics
 | AI Token 用量采集 | `DataSource/Entities/AITokenUsage/`、`Model/Services/AITokenUsage{Service,Scanner,Parser}.swift`、`DataSource/Dependencies/{FileSlice,SQLite}Client.swift`（15 秒固定刷新） |
 | 指标栏绘制 | `UserInterface/Views/MetricsBar/MetricsBarView.swift` |
 | Touch Bar 指标栏 | `Model/Services/TouchBarMetricsService.swift`、`UserInterface/Views/MetricsBar/TouchBarMetricsContainerView.swift`（纯 AppKit，685pt）、`TouchBarStackView.swift`（堆叠上滚） |
-| japaneseapology runner | 移植自 scavin/RunCat_for_windows（Windows 变种）：`resources/japaneseapology` 里的 ICO 是**裸 BITMAPINFO DIB**（BGRA 底行在上 + AND mask 决定 alpha），不是 PNG payload——按行解码后取 `dark_*`（纯白剪影，模板 runner）17 帧，写入 `Media.xcassets/Runners/Japanese Apology`（17 个 imageset）。注册三件套：`RunnerKind.japaneseApology = "japaneseapology"`（17 帧 `.ascending`）+ `RunnerNames.xcstrings` 的 `japaneseApology` 键（土下座/Догэдза…10 语言）。默认朝向与 Windows 版一致。 |
 | Touch Bar 堆叠 | `DataSource/Entities/Metrics/TouchBar{Stack,Slot}.swift`、`Model/Services/TouchBarSlotBuilder.swift`、`Model/Stores/MetricsSettings.swift`（每行分配菜单） |
 | Touch Bar 股票 | `DataSource/Dependencies/StockClient.swift`、`DataSource/Entities/Stocks/`（含 `StockMarket.swift` 时段）、`Model/Services/{StockQuoteParser,StockService,StockPollPlanner}.swift`、`Model/Stores/StockEditor.swift` |
 | 本地化 | `UserInterface/Resources/Localizable.xcstrings`（新增文案需补全 10 种语言） |

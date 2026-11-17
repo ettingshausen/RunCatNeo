@@ -39,8 +39,6 @@ extension RunnerKind {
             String(localized: "engine", table: "RunnerNames", bundle: .module)
         case .mochi:
             String(localized: "mochi", table: "RunnerNames", bundle: .module)
-        case .japaneseApology:
-            String(localized: "japaneseApology", table: "RunnerNames", bundle: .module)
         }
     }
 }
