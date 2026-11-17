@@ -36,6 +36,19 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         let logService = LogService(appDependencies)
         logService.bootstrap()
+        // Preferences written while the app was sandboxed (a fork build must
+        // not be sandboxed) live in the container and are invisible to the
+        // standard domain. Import them once before any service reads config.
+        if let bundleIdentifier = Bundle.main.bundleIdentifier {
+            SandboxPreferencesImporter.run(
+                client: appDependencies.userDefaultsClient,
+                bundleIdentifier: bundleIdentifier,
+                containerURL: SandboxPreferencesImporter.containerPreferencesURL(
+                    bundleIdentifier: bundleIdentifier,
+                    homeDirectory: FileManager.default.homeDirectoryForCurrentUser
+                )
+            )
+        }
         let nsWorkspaceClient = appDependencies.nsWorkspaceClient
         let systemInfoObserverClient = appDependencies.systemInfoObserverClient
         let userDefaultsRepository = UserDefaultsRepository(appDependencies.userDefaultsClient)
