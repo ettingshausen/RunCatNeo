@@ -1259,16 +1259,39 @@ public final class TouchBarMetricsContainerView: NSView {
     }
 
     /// Fills the image's alpha silhouette with `color`.
+    ///
+    /// Drawn through a pixel-sized `CGContext`: tinting a fractionally sized
+    /// image inside a `lockFocus` context left a faint one-pixel column along
+    /// the right edge (the fill's antialiased boundary survived
+    /// `.destinationIn`), which read as a vertical separator between the
+    /// picker's runners.
     private static func tinted(_ image: NSImage, color: NSColor) -> NSImage {
-        let size = image.size
-        let rect = NSRect(origin: .zero, size: size)
-        let tintedImage = NSImage(size: size)
-        tintedImage.lockFocus()
-        color.setFill()
-        rect.fill()
-        image.draw(in: rect, from: rect, operation: .destinationIn, fraction: 1)
-        tintedImage.unlockFocus()
-        return tintedImage
+        let points = image.size
+        guard let source = image.cgImage(forProposedRect: nil, context: nil, hints: nil),
+              let context = CGContext(
+                  data: nil,
+                  width: max(1, Int((points.width * 2).rounded())),
+                  height: max(1, Int((points.height * 2).rounded())),
+                  bitsPerComponent: 8,
+                  bytesPerRow: 0,
+                  space: CGColorSpaceCreateDeviceRGB(),
+                  bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+              ) else {
+            return image
+        }
+        let rect = CGRect(
+            x: 0,
+            y: 0,
+            width: context.width,
+            height: context.height
+        )
+        context.setFillColor(color.cgColor)
+        context.fill(rect)
+        context.setBlendMode(.destinationIn)
+        context.interpolationQuality = .high
+        context.draw(source, in: rect)
+        guard let output = context.makeImage() else { return image }
+        return NSImage(cgImage: output, size: points)
     }
 
     /// An elastic gap that absorbs every leftover point, so a centered group
