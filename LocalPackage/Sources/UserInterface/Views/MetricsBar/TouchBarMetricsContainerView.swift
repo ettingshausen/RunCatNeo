@@ -1180,9 +1180,11 @@ public final class TouchBarMetricsContainerView: NSView {
         return cell
     }
 
-    /// One runner in the picker: its preview image only. The names are
+    /// One runner in the picker: its first frame only. The names are
     /// omitted — the previews are what tell the runners apart — and the
-    /// current runner is marked by a soft rounded background.
+    /// current runner is marked by a soft rounded background. A page of
+    /// running previews was tried and reverted: too flashy with this many
+    /// runners, and it would keep the OLED strip animating for nothing.
     private func makeRunnerCell(bundle: RunnerBundle, isCurrent: Bool) -> NSView {
         let cell = NSView()
         cell.identifier = NSUserInterfaceItemIdentifier("panel:runner:\(bundle.runner.id)")
@@ -1199,11 +1201,17 @@ public final class TouchBarMetricsContainerView: NSView {
 
         let tint = isCurrent ? TouchBarOLEDTheme.controlFill : TouchBarOLEDTheme.dynamicValue
         let imageView = NSImageView()
-        imageView.image = Self.thumbnail(of: bundle, box: Self.runnerPreviewSize, tint: tint)
-            ?? NSImage(
-                systemSymbolName: "questionmark.square.dashed",
-                accessibilityDescription: nil
-            )?.withSymbolConfiguration(.init(pointSize: 18, weight: .regular))
+        imageView.image = Self.previewFrames(of: bundle).first.map {
+            Self.previewImage(
+                $0,
+                box: Self.runnerPreviewSize,
+                isTemplate: bundle.runner.isTemplate,
+                tint: tint
+            )
+        } ?? NSImage(
+            systemSymbolName: "questionmark.square.dashed",
+            accessibilityDescription: nil
+        )?.withSymbolConfiguration(.init(pointSize: 18, weight: .regular))
         imageView.contentTintColor = tint
         imageView.translatesAutoresizingMaskIntoConstraints = false
         cell.addSubview(imageView)
@@ -1217,35 +1225,26 @@ public final class TouchBarMetricsContainerView: NSView {
         return cell
     }
 
-    private static func thumbnail(
-        of bundle: RunnerBundle,
-        box: NSSize,
-        tint: NSColor
-    ) -> NSImage? {
-        let frame: Frame
+    /// Every frame of a bundle, resolved to images: presets come from the
+    /// module's resources, custom runners carry their own PNG data.
+    private static func previewFrames(of bundle: RunnerBundle) -> [NSImage] {
+        let frameValues: [Frame]
         switch bundle.displayFormat {
         case let .thumbnail(value):
-            frame = value
-        case let .keyFrameAnimation(frames):
-            guard let first = frames.first else { return nil }
-            frame = first
+            frameValues = [value]
+        case let .keyFrameAnimation(values):
+            frameValues = values
         }
-        let image: NSImage?
-        switch frame {
-        case let .preset(resourceName):
-            image = NSImage(resource: .init(name: resourceName, bundle: .module))
-        case let .custom(data):
-            image = NSImage(data: data)
-        case .broken:
-            image = nil
+        return frameValues.compactMap { frame in
+            switch frame {
+            case let .preset(resourceName):
+                NSImage(resource: .init(name: resourceName, bundle: .module))
+            case let .custom(data):
+                NSImage(data: data)
+            case .broken:
+                nil
+            }
         }
-        guard let image else { return nil }
-        return previewImage(
-            image,
-            box: box,
-            isTemplate: bundle.runner.isTemplate,
-            tint: tint
-        )
     }
 
     /// Fits a runner frame into `box` (preserving its aspect, never enlarging

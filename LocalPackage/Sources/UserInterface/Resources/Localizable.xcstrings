@@ -9509,13 +9509,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "选 Runner"
+            "value" : "Runner"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "選 Runner"
+            "value" : "Runner"
           }
         },
         "ja" : {
