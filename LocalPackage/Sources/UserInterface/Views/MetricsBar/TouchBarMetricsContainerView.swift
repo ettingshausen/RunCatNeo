@@ -968,7 +968,8 @@ public final class TouchBarMetricsContainerView: NSView {
         }
     }
 
-    /// The runner's menu: three large icon-only cells, centered on the bar.
+    /// The runner's menu: three large icon-only cells, starting at the bar's
+    /// leading edge.
     /// Tapping a cell is captured by a recognizer on the cell itself, so the
     /// identifier carries the action.
     private func buildMenuPanel() {
@@ -988,8 +989,6 @@ public final class TouchBarMetricsContainerView: NSView {
             ("panel:menu:brightness", "sun.max", nil),
             ("panel:menu:hide", "xmark.circle", nil),
         ]
-        let leading = Self.spacer()
-        panelStack.addArrangedSubview(leading)
         for (index, item) in items.enumerated() {
             if index > 0 {
                 panelStack.addArrangedSubview(Self.fixedSpace(width: Self.menuCellGap))
@@ -1000,9 +999,7 @@ public final class TouchBarMetricsContainerView: NSView {
                 image: item.image
             ))
         }
-        let trailing = Self.spacer()
-        panelStack.addArrangedSubview(trailing)
-        leading.widthAnchor.constraint(equalTo: trailing.widthAnchor).isActive = true
+        panelStack.addArrangedSubview(Self.spacer())
     }
 
     private func buildRunnerPickerPanel() {
@@ -1013,10 +1010,6 @@ public final class TouchBarMetricsContainerView: NSView {
         runnerPickerPage = page
 
         panelStack.addArrangedSubview(makeChevronCell(symbol: "chevron.left", identifier: "panel:back"))
-        // The back control stays at the leading edge; everything else is
-        // centered, since a page of previews rarely fills the bar.
-        let leading = Self.spacer()
-        panelStack.addArrangedSubview(leading)
         if page > 0 {
             panelStack.addArrangedSubview(makeChevronCell(symbol: "chevron.left", identifier: "panel:page:prev"))
         }
@@ -1038,9 +1031,7 @@ public final class TouchBarMetricsContainerView: NSView {
         if page < pageCount - 1 {
             panelStack.addArrangedSubview(makeChevronCell(symbol: "chevron.right", identifier: "panel:page:next"))
         }
-        let trailing = Self.spacer()
-        panelStack.addArrangedSubview(trailing)
-        leading.widthAnchor.constraint(equalTo: trailing.widthAnchor).isActive = true
+        panelStack.addArrangedSubview(Self.spacer())
     }
 
     /// Mirrors the system brightness control: a compact rounded card holding a
@@ -1086,16 +1077,12 @@ public final class TouchBarMetricsContainerView: NSView {
             bigSun.trailingAnchor.constraint(equalTo: card.trailingAnchor, constant: -28),
             bigSun.centerYAnchor.constraint(equalTo: card.centerYAnchor),
         ])
-        // The card and its close box travel as one centered group, like the
-        // system control, instead of hugging the bar's edges.
-        let leading = Self.spacer()
-        panelStack.addArrangedSubview(leading)
+        // Every control page starts at the bar's leading edge, like the rest
+        // of the app's content.
         panelStack.addArrangedSubview(card)
         panelStack.addArrangedSubview(Self.fixedSpace(width: 22))
         panelStack.addArrangedSubview(makeCloseCell(identifier: "panel:done"))
-        let trailing = Self.spacer()
-        panelStack.addArrangedSubview(trailing)
-        leading.widthAnchor.constraint(equalTo: trailing.widthAnchor).isActive = true
+        panelStack.addArrangedSubview(Self.spacer())
     }
 
     /// The same key the settings slider writes, so both stay in sync and the
@@ -1294,10 +1281,10 @@ public final class TouchBarMetricsContainerView: NSView {
         return NSImage(cgImage: output, size: points)
     }
 
-    /// An elastic gap that absorbs every leftover point, so a centered group
-    /// stays centered. Its hugging priority is deliberately below the default
-    /// (250): otherwise AppKit hands the slack to the icon cells as well and
-    /// the group drifts off-center depending on how many cells a page holds.
+    /// An elastic gap that absorbs every leftover point, so the content before
+    /// it stays hard against the leading edge. Its hugging priority is
+    /// deliberately below the default (250): otherwise AppKit hands the slack
+    /// to the icon cells as well and the row drifts.
     private static func spacer() -> NSView {
         let spacer = NSView()
         spacer.setContentHuggingPriority(NSLayoutConstraint.Priority(1), for: .horizontal)
@@ -1306,7 +1293,7 @@ public final class TouchBarMetricsContainerView: NSView {
     }
 
     /// A fixed gap inside a stack, used between the brightness card and its
-    /// close box while both outer spacers center the pair.
+    /// close box so they read as one control.
     private static func fixedSpace(width: CGFloat) -> NSView {
         let space = NSView()
         space.translatesAutoresizingMaskIntoConstraints = false
