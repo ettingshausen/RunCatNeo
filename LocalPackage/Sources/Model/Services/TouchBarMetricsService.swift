@@ -57,6 +57,9 @@ public final class TouchBarMetricsService: NSObject, NSTouchBarDelegate {
     private var touchBar: NSTouchBar?
     private var trayItem: NSCustomTouchBarItem?
     private var isPresented = false
+    /// A deliberate hide is stronger than the automatic presentation policy:
+    /// app-switch notifications must not immediately undo the user's action.
+    private var userManuallyHidBar = false
     private var frontmostApplicationInfo: FrontmostApplicationInfo?
     private var task: Task<Void, Never>?
 
@@ -126,10 +129,17 @@ public final class TouchBarMetricsService: NSObject, NSTouchBarDelegate {
         isHardwareAvailable: Bool,
         frontmostBundleIdentifier: String?,
         isPresented: Bool,
+        isManuallyHidden: Bool = false,
         trigger: Trigger
     ) -> Decision {
         guard isEnabled, isHardwareAvailable else {
             return isPresented ? .minimize : .none
+        }
+        // Smart/always-expanded modes normally restore a collapsed bar on an
+        // app switch. Respect an explicit hide until the user taps the tray
+        // anchor again or changes the Touch Bar presentation configuration.
+        if isManuallyHidden, trigger == .frontmostChanged {
+            return .none
         }
         switch configuration.mode {
         case .anchorOnly:
@@ -167,6 +177,9 @@ public final class TouchBarMetricsService: NSObject, NSTouchBarDelegate {
     }
 
     private func applyCurrentDecision(trigger: Trigger) {
+        if trigger == .configurationChanged {
+            userManuallyHidBar = false
+        }
         guard showsMetricsBarOnTouchBar else {
             minimizeMetricsBar()
             removeTrayItem()
@@ -181,6 +194,7 @@ public final class TouchBarMetricsService: NSObject, NSTouchBarDelegate {
             isHardwareAvailable: true,
             frontmostBundleIdentifier: frontmostApplicationInfo?.bundleIdentifier,
             isPresented: isPresented,
+            isManuallyHidden: userManuallyHidBar,
             trigger: trigger
         ) {
         case .present:
@@ -254,6 +268,7 @@ public final class TouchBarMetricsService: NSObject, NSTouchBarDelegate {
             group.addImmediateTask { [weak self] in
                 let stream = appStateClient.withLock(\.touchBarMinimizeRequests.stream)
                 for await _ in stream {
+                    self?.userManuallyHidBar = true
                     self?.minimizeMetricsBar()
                 }
             }
@@ -301,6 +316,9 @@ public final class TouchBarMetricsService: NSObject, NSTouchBarDelegate {
     // MARK: - Actions
 
     @objc private func trayItemTapped(_ sender: Any?) {
+        // An explicit tap on the anchor is the user's request to show the bar
+        // again, clearing any previous manual hide.
+        userManuallyHidBar = false
         // Re-present unconditionally: the system may have minimized the bar on
         // its own, which our local isPresented flag would never learn about.
         guard let touchBar, let trayItem else { return }
