@@ -8974,6 +8974,270 @@
         }
       }
     },
+    "touchBarStockBrightness" : {
+      "comment" : "A label of the Touch Bar stock brightness slider.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Touch-Bar-Aktienhelligkeit"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Touch Bar Stock Brightness"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Brillo de acciones de la Touch Bar"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Luminosité des actions de la Touch Bar"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Touch Bar 株価の明るさ"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Touch Bar 주가 밝기"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Яркость акций в Touch Bar"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Độ sáng cổ phiếu trên Touch Bar"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Touch Bar 股票亮度"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Touch Bar 股票亮度"
+          }
+        }
+      }
+    },
+    "touchBarStockBrightnessDimmer" : {
+      "comment" : "The dimmer end of the Touch Bar stock brightness slider.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dunkler"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dimmer"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Más oscuro"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Plus sombre"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "暗い"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "어둡게"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Темнее"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tối hơn"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "较暗"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "較暗"
+          }
+        }
+      }
+    },
+    "touchBarStockBrightnessBrighter" : {
+      "comment" : "The brighter end of the Touch Bar stock brightness slider.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Heller"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Brighter"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Más claro"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Plus clair"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "明るい"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "밝게"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Светлее"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sáng hơn"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "较亮"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "較亮"
+          }
+        }
+      }
+    },
+    "touchBarStockBrightnessNote" : {
+      "comment" : "An explanation of what the Touch Bar stock brightness slider changes.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ändert nur die Helligkeit der Aktiennamen, Änderungsprozente und Detailtexte in der Touch Bar, nicht die Hardware-Helligkeit der System-Touch-Bar."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Adjusts only the brightness of the Touch Bar stock names, change percentages and detail text; it does not change the system Touch Bar hardware brightness."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Solo ajusta el brillo de los nombres de acciones, porcentajes de cambio y texto de detalle de la Touch Bar; no cambia el brillo del hardware de la Touch Bar del sistema."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ajuste uniquement la luminosité des noms d'actions, des pourcentages de variation et du texte de détail de la Touch Bar, sans modifier la luminosité matérielle de la Touch Bar du système."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Touch Bar の銘柄名・騰落率・詳細テキストの明るさのみを調整します。システムの Touch Bar ハードウェアの明るさは変更しません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Touch Bar 주가 이름, 등락률, 상세 텍스트의 밝기만 조정하며 시스템 Touch Bar 하드웨어 밝기는 변경하지 않습니다."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Регулирует только яркость названий акций, процентов изменения и подробного текста в Touch Bar, не меняя аппаратную яркость Touch Bar."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chỉ điều chỉnh độ sáng của tên cổ phiếu, phần trăm thay đổi và văn bản chi tiết trên Touch Bar, không thay đổi độ sáng phần cứng của Touch Bar hệ thống."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "仅调整 Touch Bar 股票名称、涨跌幅和详情文字的亮度，不改变系统 Touch Bar 硬件亮度。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "僅調整 Touch Bar 股票名稱、漲跌幅和詳情文字的亮度，不改變系統 Touch Bar 硬體亮度。"
+          }
+        }
+      }
+    },
     "touchBarTab" : {
       "comment" : "A title of the tab holding the Touch Bar settings.",
       "extractionState" : "manual",
@@ -9498,6 +9762,138 @@
         }
       }
     },
+    "touchBarPixelShiftToggle" : {
+      "comment" : "A title of the toggle switch for OLED protection pixel shifting.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pixelverschiebung (OLED-Schutz)"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pixel Shift (OLED protection)"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Desplazamiento de píxeles (protección OLED)"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Décalage de pixels (protection OLED)"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ピクセルシフト（有機EL保護）"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "픽셀 시프트 (OLED 보호)"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Сдвиг пикселей (защита OLED)"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dịch điểm ảnh (bảo vệ OLED)"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "像素偏移（OLED 保护）"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "像素偏移（OLED 保護）"
+          }
+        }
+      }
+    },
+    "touchBarPixelShiftDescription" : {
+      "comment" : "An explanation of how the OLED protection pixel shift works.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Verschiebt benutzerdefinierten Touch-Bar-Inhalt alle fünf Minuten um ein physisches Pixel."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Moves custom Touch Bar content by one physical pixel every five minutes."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Desplaza el contenido personalizado de la Touch Bar un píxel físico cada cinco minutos."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Déplace le contenu personnalisé de la Touch Bar d'un pixel physique toutes les cinq minutes."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "5分ごとにTouch Barのカスタムコンテンツを1物理ピクセル移動します。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "5분마다 사용자화된 Touch Bar 콘텐츠를 물리적 픽셀 1개만큼 이동합니다."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Сдвигает пользовательское содержимое Touch Bar на один физический пиксель каждые пять минут."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dịch nội dung Touch Bar tùy chỉnh một điểm ảnh vật lý mỗi năm phút."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "每五分钟将 Touch Bar 的自定义内容移动一个物理像素。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "每五分鐘將 Touch Bar 的自訂內容移動一個實體像素。"
+          }
+        }
+      }
+    },
     "touchBarPanelRunner" : {
       "localizations" : {
         "en" : {
@@ -9558,6 +9954,72 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Runner"
+          }
+        }
+      }
+    },
+    "touchBarOLEDProtection" : {
+      "comment" : "A header of the Touch Bar OLED protection section.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "OLED-Schutz"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "OLED Protection"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Protección OLED"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Protection OLED"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "有機EL保護"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "OLED 보호"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Защита OLED"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bảo vệ OLED"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "OLED 保护"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "OLED 保護"
           }
         }
       }

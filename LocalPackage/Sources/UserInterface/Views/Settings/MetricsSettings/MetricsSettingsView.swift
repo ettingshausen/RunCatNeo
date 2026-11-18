@@ -183,14 +183,14 @@ private struct TouchBarTabView: View {
     var body: some View {
         Section {
             Toggle(isOn: $pixelShiftEnabled) {
-                Text("Pixel Shift (OLED protection)")
+                Text("touchBarPixelShiftToggle", bundle: .module)
             }
-            Text("Moves custom Touch Bar content by one physical pixel every five minutes.")
+            Text("touchBarPixelShiftDescription", bundle: .module)
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
         } header: {
-            Text("OLED Protection")
+            Text("touchBarOLEDProtection", bundle: .module)
         }
 
         Section {
@@ -453,7 +453,7 @@ private struct StockSectionView: View {
         Section {
             VStack(alignment: .leading, spacing: 8) {
                 HStack {
-                    Text("Touch Bar 股票亮度")
+                    Text("touchBarStockBrightness", bundle: .module)
                     Spacer()
                     Text("\(Int(stockBrightness * 100))%")
                         .monospacedDigit()
@@ -465,13 +465,13 @@ private struct StockSectionView: View {
                     step: TouchBarStockBrightness.step
                 )
                 HStack {
-                    Text("较暗")
+                    Text("touchBarStockBrightnessDimmer", bundle: .module)
                     Spacer()
-                    Text("较亮")
+                    Text("touchBarStockBrightnessBrighter", bundle: .module)
                 }
                 .font(.caption2)
                 .foregroundStyle(.secondary)
-                Text("仅调整 Touch Bar 股票名称、涨跌幅和详情文字的亮度，不改变系统 Touch Bar 硬件亮度。")
+                Text("touchBarStockBrightnessNote", bundle: .module)
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
