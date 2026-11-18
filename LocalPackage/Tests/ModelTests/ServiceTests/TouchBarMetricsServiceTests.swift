@@ -24,6 +24,7 @@ struct TouchBarMetricsServiceTests {
         isHardwareAvailable: Bool = true,
         frontmost: String? = "com.apple.finder",
         isPresented: Bool,
+        isManuallyHidden: Bool = false,
         trigger: Trigger
     ) -> TouchBarMetricsService.Decision {
         TouchBarMetricsService.evaluate(
@@ -32,6 +33,7 @@ struct TouchBarMetricsServiceTests {
             isHardwareAvailable: isHardwareAvailable,
             frontmostBundleIdentifier: frontmost,
             isPresented: isPresented,
+            isManuallyHidden: isManuallyHidden,
             trigger: trigger
         )
     }
@@ -97,6 +99,41 @@ struct TouchBarMetricsServiceTests {
     @Test
     func always_expanded_mode_represents_after_mode_change_from_anchor_only() {
         #expect(evaluate(alwaysExpandedConfiguration, isPresented: false, trigger: .configurationChanged) == .present)
+    }
+
+
+    @Test
+    func manually_hidden_bar_stays_hidden_across_app_switches_in_smart_mode() {
+        #expect(evaluate(
+            excludedConfiguration,
+            frontmost: finder,
+            isPresented: false,
+            isManuallyHidden: true,
+            trigger: .frontmostChanged
+        ) == .none)
+        #expect(evaluate(
+            excludedConfiguration,
+            frontmost: safari,
+            isPresented: false,
+            isManuallyHidden: true,
+            trigger: .frontmostChanged
+        ) == .none)
+    }
+
+    @Test
+    func manually_hidden_bar_stays_hidden_in_always_expanded_mode_until_anchor_is_used() {
+        #expect(evaluate(
+            alwaysExpandedConfiguration,
+            isPresented: false,
+            isManuallyHidden: true,
+            trigger: .frontmostChanged
+        ) == .none)
+        #expect(evaluate(
+            alwaysExpandedConfiguration,
+            isPresented: false,
+            isManuallyHidden: false,
+            trigger: .frontmostChanged
+        ) == .present)
     }
 
     // MARK: switches
