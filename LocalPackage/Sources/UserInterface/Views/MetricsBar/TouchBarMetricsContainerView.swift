@@ -904,7 +904,7 @@ public final class TouchBarMetricsContainerView: NSView {
         tint: NSColor,
         identifier: String? = nil
     ) -> NSTextField {
-        let field = NSTextField(labelWithString: text)
+        let field = LabelTextField(labelWithString: text)
         field.font = font
         field.textColor = tint
         if let identifier {
@@ -1488,6 +1488,27 @@ public final class TouchBarMetricsContainerView: NSView {
     @objc private func detailPanelTapped(_ sender: NSClickGestureRecognizer) {
         expandedStockID = nil
         scheduleRebuildIfNeeded()
+    }
+}
+
+/// A label that reserves the whole text-field cell instead of only its glyph
+/// run.
+///
+/// `NSTextField`'s intrinsic width is narrower than the cell's `cellSize` by
+/// the cell's horizontal margins (about 3.9pt at 12pt). An `NSStackView` sizes
+/// labels by that intrinsic width, and with `lineBreakMode = .byClipping` the
+/// cell then cuts the trailing glyph: "10%" rendered as "10", and "36.4%" lost
+/// the right half of the percent sign. Sizing to the cell's own width keeps
+/// every suffix inside the label, including wide CJK stock names.
+final class LabelTextField: NSTextField {
+    override var intrinsicContentSize: NSSize {
+        var size = super.intrinsicContentSize
+        if let cell {
+            let cellSize = cell.cellSize
+            size.width = max(size.width, ceil(cellSize.width))
+            size.height = max(size.height, ceil(cellSize.height))
+        }
+        return size
     }
 }
 

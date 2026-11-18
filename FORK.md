@@ -224,6 +224,8 @@ open /Applications/RunCatNeo.app     # 重新登记
 
 **休市日的显示与两个坑（踩过）：** 行情每次轮询成功后**合并并持久化**（`UserDefaultsRepository.stockQuotes`），启动时先恢复——否则周末重启后一次请求都不发、整组股票直接消失（2026-11-14 周六部署重启后复现）。合并语义很重要：`StockService.merge` 按 symbol 替换、**未覆盖的市场保留旧值**——若用整表替换，一个市场节假日休市时另一市场的轮询会把休市市场的行情从界面上抹掉。轮询结果发布前按当前配置剪枝，避免已删除的代码永久留在缓存里。唯一的开市时段外请求是**补拉（seed）**：配置里没有任何已知行情的代码（全新安装、休市日新添加的股票）补拉一次用于显示，每代码每次运行至多一次；不要放宽成"休市日每 tick 重试"，否则失效代码会天天打接口。
 
+20. **`NSTextField` 的 intrinsic 宽度比 cell 需要的窄 ~3.9pt（踩过，文字被裁掉尾字）**：`NSTextField(labelWithString:)` 设完字体后，`intrinsicContentSize.width` 比 `cell.cellSize.width` 窄**两个 cell 横向边距**（12pt 字号约 3.9pt）。`NSStackView` 按 intrinsic 给标签定型，而标签 `lineBreakMode = .byClipping`，cell 画字时就把最后一个字形切掉：`10%` 只剩 `10`、`36.4%` 的 `%` 右半边没了、`卫宁健康` 这类 CJK 股票名也会少半格宽。刷新一次数值后 `sizeToFit()` 凑巧补上宽度，所以**只有「值从没变过」的格子看得出问题**，极易被当成随机 bug（实测 dump：frame 34 / cellSize 37.87）。修法：条内所有标签改用 `LabelTextField`（重写 `intrinsicContentSize`，宽高取 `max(super, ceil(cell.cellSize.width/height))`），一次覆盖指标、股票、菜单标题；不要在各调用点手工加 `widthAnchor`——旋转 stack 的 slot 宽度是从成员的 fitting 宽度算出来的，改 intrinsic 才会跟着更新。
+
 ### AI Token 用量
 
 三个工具各自读本地日志：Claude Code（`~/.claude/projects/**/*.jsonl`，按 `(message.id, requestId)` 去重）、ZCode（`~/.zcode/cli/db/db.sqlite` 的 `model_usage` 表）、Codex CLI（`~/.codex/sessions/rollout-*.jsonl`）。刷新固定 15 秒，按自然日归零。
