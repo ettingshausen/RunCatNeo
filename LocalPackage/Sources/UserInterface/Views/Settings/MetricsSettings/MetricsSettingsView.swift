@@ -49,7 +49,6 @@ struct MetricsSettingsView: View {
                 .pickerStyle(.segmented)
                 .labelsHidden()
             }
-
             switch surfaceTab {
             case .systemMetrics:
                 SystemMetricsTabView(store: store)
@@ -93,31 +92,31 @@ private struct SystemMetricsTabView: View {
             if store.showsMetricsBar {
                 Toggle(isOn: Binding<Bool>(
                     get: { store.metricsBarConfiguration.showsCPU },
-                    asyncSet: { await store.send(.monitorsSystemMetricsToggleSwitched(.cpu, $0)) }
+                    asyncSet: { await store.send(.monitorSystemMetricsToggleSwitched(.cpu, $0)) }
                 )) {
                     Text("showCPUUsage", bundle: .module)
                 }
                 Toggle(isOn: Binding<Bool>(
                     get: { store.metricsBarConfiguration.showsMemory },
-                    asyncSet: { await store.send(.monitorsSystemMetricsToggleSwitched(.memory, $0)) }
+                    asyncSet: { await store.send(.monitorSystemMetricsToggleSwitched(.memory, $0)) }
                 )) {
                     Text("showMemoryUsage", bundle: .module)
                 }
                 Toggle(isOn: Binding<Bool>(
                     get: { store.metricsBarConfiguration.showsStorage },
-                    asyncSet: { await store.send(.monitorsSystemMetricsToggleSwitched(.storage, $0)) }
+                    asyncSet: { await store.send(.monitorSystemMetricsToggleSwitched(.storage, $0)) }
                 )) {
                     Text("showStorageCapacity", bundle: .module)
                 }
                 Toggle(isOn: Binding<Bool>(
                     get: { store.metricsBarConfiguration.showsBattery },
-                    asyncSet: { await store.send(.monitorsSystemMetricsToggleSwitched(.battery, $0)) }
+                    asyncSet: { await store.send(.monitorSystemMetricsToggleSwitched(.battery, $0)) }
                 )) {
                     Text("showBatteryStatus", bundle: .module)
                 }
                 Toggle(isOn: Binding<Bool>(
                     get: { store.metricsBarConfiguration.showsNetwork },
-                    asyncSet: { await store.send(.monitorsSystemMetricsToggleSwitched(.network, $0)) }
+                    asyncSet: { await store.send(.monitorSystemMetricsToggleSwitched(.network, $0)) }
                 )) {
                     Text("showNetworkConnectivity", bundle: .module)
                 }

@@ -91,92 +91,16 @@ public final class MetricsBar: Composable {
         switch action {
         case let .viewAppeared(screenName):
             logService.notice(.screenView(name: screenName))
-            if let metrics = appStateClient.withLock(\.metrics.latestValue) {
-                updateMetrics(from: metrics)
-            }
-            // Streams do not replay their latest value to new subscribers:
-            // the stock service restores quotes at launch, before any bar is
-            // on screen, so a bar appearing later must seed explicitly or it
-            // shows nothing until the next poll (on a closed day: never).
-            if let quotes = appStateClient.withLock(\.stocks.latestValue) {
-                stockQuotes = quotes
-            }
-            // The runner bundle is only published when the runner changes, so
-            // a bar appearing mid-session must seed from the latest values.
-            if touchBarRunnerImageProvider != nil {
-                if let bundle = appStateClient.withLock(\.runnerBundles.latestValue) {
-                    updateTouchBarRunner(from: bundle)
-                }
-                if let speed = appStateClient.withLock(\.runnerSpeeds.latestValue) {
-                    touchBarRunnerSpeed = speed
-                }
-                runnerBundleList = appStateClient.withLock(\.runnerBundleLists.latestValue) ?? []
-            }
-            task?.cancel()
-            task = Task.immediate { [weak self, appStateClient] in
-                await withTaskGroup { group in
-                    group.addImmediateTask {
-                        let stream = appStateClient.withLock(\.metrics.stream)
-                        for await value in stream {
-                            self?.updateMetrics(from: value)
-                        }
-                    }
-                    group.addImmediateTask {
-                        let stream = appStateClient.withLock(\.systemMetricsConfigurationChanges.stream)
-                        for await _ in stream {
-                            self?.updateMetricsBarConfiguration()
-                        }
-                    }
-                    group.addImmediateTask {
-                        let stream = appStateClient.withLock(\.customMetricsConfigurationChanges.stream)
-                        for await _ in stream {
-                            self?.updateMetricsBarConfiguration()
-                        }
-                    }
-                    group.addImmediateTask {
-                        let stream = appStateClient.withLock(\.touchBarConfigurationChanges.stream)
-                        for await _ in stream {
-                            self?.updateTouchBarConfiguration()
-                        }
-                    }
-                    group.addImmediateTask {
-                        let stream = appStateClient.withLock(\.stockConfigurationChanges.stream)
-                        for await _ in stream {
-                            self?.updateStockConfiguration()
-                        }
-                    }
-                    group.addImmediateTask {
-                        let stream = appStateClient.withLock(\.stocks.stream)
-                        for await quotes in stream {
-                            self?.stockQuotes = quotes
-                        }
-                    }
-                    if self?.touchBarRunnerImageProvider != nil {
-                        group.addImmediateTask {
-                            let stream = appStateClient.withLock(\.runnerBundles.stream)
-                            for await value in stream {
-                                self?.updateTouchBarRunner(from: value)
-                            }
-                        }
-                        group.addImmediateTask {
-                            let stream = appStateClient.withLock(\.runnerSpeeds.stream)
-                            for await value in stream {
-                                self?.touchBarRunnerSpeed = value
-                            }
-                        }
-                        group.addImmediateTask {
-                            let stream = appStateClient.withLock(\.runnerBundleLists.stream)
-                            for await value in stream {
-                                self?.runnerBundleList = value
-                            }
-                        }
-                    }
-                }
+
+        case let .isInsertedChanged(isInserted):
+            if isInserted {
+                startObserving()
+            } else {
+                stopObserving()
             }
 
         case .viewDisappeared:
-            task?.cancel()
-            task = nil
+            stopObserving()
 
         case let .runnerSelectionRequested(runner):
             // Nothing in UserInterface may construct a RunnerService, so the
@@ -210,6 +134,97 @@ public final class MetricsBar: Composable {
                 quote: quote
             )
         }
+    }
+
+    private func startObserving() {
+        updateMetricsBarConfiguration()
+        if let metrics = appStateClient.withLock(\.metrics.latestValue) {
+            updateMetrics(from: metrics)
+        }
+        // Streams do not replay their latest value to new subscribers:
+        // the stock service restores quotes at launch, before any bar is
+        // on screen, so a bar appearing later must seed explicitly or it
+        // shows nothing until the next poll (on a closed day: never).
+        if let quotes = appStateClient.withLock(\.stocks.latestValue) {
+            stockQuotes = quotes
+        }
+        // The runner bundle is only published when the runner changes, so
+        // a bar appearing mid-session must seed from the latest values.
+        if touchBarRunnerImageProvider != nil {
+            if let bundle = appStateClient.withLock(\.runnerBundles.latestValue) {
+                updateTouchBarRunner(from: bundle)
+            }
+            if let speed = appStateClient.withLock(\.runnerSpeeds.latestValue) {
+                touchBarRunnerSpeed = speed
+            }
+            runnerBundleList = appStateClient.withLock(\.runnerBundleLists.latestValue) ?? []
+        }
+        task?.cancel()
+        task = Task.immediate { [weak self, appStateClient] in
+            await withTaskGroup { group in
+                group.addImmediateTask {
+                    let stream = appStateClient.withLock(\.metrics.stream)
+                    for await value in stream {
+                        self?.updateMetrics(from: value)
+                    }
+                }
+                group.addImmediateTask {
+                    let stream = appStateClient.withLock(\.systemMetricsConfigurationChanges.stream)
+                    for await _ in stream {
+                        self?.updateMetricsBarConfiguration()
+                    }
+                }
+                group.addImmediateTask {
+                    let stream = appStateClient.withLock(\.customMetricsConfigurationChanges.stream)
+                    for await _ in stream {
+                        self?.updateMetricsBarConfiguration()
+                    }
+                }
+                group.addImmediateTask {
+                    let stream = appStateClient.withLock(\.touchBarConfigurationChanges.stream)
+                    for await _ in stream {
+                        self?.updateTouchBarConfiguration()
+                    }
+                }
+                group.addImmediateTask {
+                    let stream = appStateClient.withLock(\.stockConfigurationChanges.stream)
+                    for await _ in stream {
+                        self?.updateStockConfiguration()
+                    }
+                }
+                group.addImmediateTask {
+                    let stream = appStateClient.withLock(\.stocks.stream)
+                    for await quotes in stream {
+                        self?.stockQuotes = quotes
+                    }
+                }
+                if self?.touchBarRunnerImageProvider != nil {
+                    group.addImmediateTask {
+                        let stream = appStateClient.withLock(\.runnerBundles.stream)
+                        for await value in stream {
+                            self?.updateTouchBarRunner(from: value)
+                        }
+                    }
+                    group.addImmediateTask {
+                        let stream = appStateClient.withLock(\.runnerSpeeds.stream)
+                        for await value in stream {
+                            self?.touchBarRunnerSpeed = value
+                        }
+                    }
+                    group.addImmediateTask {
+                        let stream = appStateClient.withLock(\.runnerBundleLists.stream)
+                        for await value in stream {
+                            self?.runnerBundleList = value
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private func stopObserving() {
+        task?.cancel()
+        task = nil
     }
 
     private func updateMetrics(from metrics: Metrics) {
@@ -361,6 +376,7 @@ public final class MetricsBar: Composable {
 
     public enum Action: Sendable {
         case viewAppeared(String)
+        case isInsertedChanged(Bool)
         case viewDisappeared
         case runnerSelectionRequested(Runner)
         case touchBarMinimizeRequested

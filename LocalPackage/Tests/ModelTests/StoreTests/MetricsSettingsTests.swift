@@ -250,7 +250,7 @@ struct MetricsSettingsTests {
     }
 
     @MainActor @Test
-    func send_monitorsSystemMetricsToggleSwitched_persists_configurations_and_notifies() async throws {
+    func send_monitorSystemMetricsToggleSwitched_persists_configurations_and_notifies() async throws {
         let appState = AllocatedUnfairLock<AppState>(initialState: .init())
         let activationRequests = AllocatedUnfairLock<[SystemInfoType: Bool]?>(initialState: nil)
         let storage = UserDefaultsClient.storage()
@@ -273,7 +273,7 @@ struct MetricsSettingsTests {
             },
             userDefaultsClient: storage.client
         ))
-        await sut.send(.monitorsSystemMetricsToggleSwitched(.memory, false))
+        await sut.send(.monitorSystemMetricsToggleSwitched(.memory, false))
         #expect(!sut.systemMetricsConfiguration.monitorsMemory)
         let storedConfigurationData = storage.lock.withLock { $0[.systemMetricsConfiguration] }
         let storedConfiguration = try JSONDecoder().decode(
@@ -289,7 +289,7 @@ struct MetricsSettingsTests {
         #expect(!storedBarConfiguration.showsMemory)
         #expect(activationRequests.withLock(\.self) == [.memory: false])
         #expect(appState.withLock(\.systemMetricsConfigurationChanges.latestValue) != nil)
-        await sut.send(.monitorsSystemMetricsToggleSwitched(.memory, true))
+        await sut.send(.monitorSystemMetricsToggleSwitched(.memory, true))
         #expect(sut.systemMetricsConfiguration.monitorsMemory)
         let restoredBarConfigurationData = storage.lock.withLock { $0[.metricsBarConfiguration] }
         let restoredBarConfiguration = try JSONDecoder().decode(
@@ -386,7 +386,7 @@ struct MetricsSettingsTests {
     }
 
     @MainActor @Test
-    func send_monitorsSystemMetricsToggleSwitched_cpu_is_noop() async {
+    func send_monitorSystemMetricsToggleSwitched_cpu_is_noop() async {
         let toggleActivationCount = AllocatedUnfairLock<Int>(initialState: 0)
         let sut = MetricsSettings(.testDependencies(
             systemInfoObserverClient: testDependency(of: SystemInfoObserverClient.self) {
@@ -395,7 +395,7 @@ struct MetricsSettingsTests {
                 }
             }
         ))
-        await sut.send(.monitorsSystemMetricsToggleSwitched(.cpu, false))
+        await sut.send(.monitorSystemMetricsToggleSwitched(.cpu, false))
         #expect(toggleActivationCount.withLock(\.self) == 0)
     }
 

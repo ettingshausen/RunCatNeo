@@ -20,11 +20,22 @@ struct MetricsBarTests {
     }
 
     @MainActor @Test
-    func send_viewAppeared_loads_latest_metrics_and_observes_stream() async {
+    func send_viewAppeared_does_not_apply_metrics() async {
         let appState = AllocatedUnfairLock<AppState>(initialState: .init())
         appState.withLock { $0.metrics.send(Metrics.dummy(cpuRawValue: 0.1)) }
         let sut = MetricsBar(.testDependencies(appStateClient: .testDependency(appState)))
         await sut.send(.viewAppeared("MetricsBarTests"))
+        appState.withLock { $0.metrics.send(Metrics.dummy(cpuRawValue: 0.2)) }
+        try? await Task.sleep(for: .milliseconds(50))
+        #expect(sut.systemInfoBundle.cpuInfo == nil)
+    }
+
+    @MainActor @Test
+    func send_isInsertedChanged_true_loads_latest_metrics_and_observes_stream() async {
+        let appState = AllocatedUnfairLock<AppState>(initialState: .init())
+        appState.withLock { $0.metrics.send(Metrics.dummy(cpuRawValue: 0.1)) }
+        let sut = MetricsBar(.testDependencies(appStateClient: .testDependency(appState)))
+        await sut.send(.isInsertedChanged(true))
         #expect(sut.systemInfoBundle.cpuInfo?.percentage.value == 10.0)
         appState.withLock { $0.metrics.send(Metrics.dummy(cpuRawValue: 0.2)) }
         await waitUntil { sut.systemInfoBundle.cpuInfo?.percentage.value == 20.0 }
@@ -33,33 +44,33 @@ struct MetricsBarTests {
     }
 
     @MainActor @Test
-    func send_viewAppeared_loads_latest_keyboardBatteries_and_observes_stream() async {
+    func send_isInsertedChanged_true_loads_latest_keyboardBatteries_and_observes_stream() async {
         let appState = AllocatedUnfairLock<AppState>(initialState: .init())
         let infos = [BluetoothKeyboardInfo(id: "Keychron K6|ABC", name: "Keychron K6", percent: 36, status: .ok)]
         appState.withLock { $0.metrics.send(Metrics(keyboardBatteries: infos)) }
         let sut = MetricsBar(.testDependencies(appStateClient: .testDependency(appState)))
-        await sut.send(.viewAppeared("MetricsBarTests"))
+        await sut.send(.isInsertedChanged(true))
         #expect(sut.keyboardBatteries == infos)
         let updated = [BluetoothKeyboardInfo(id: "Keychron K6|ABC", name: "Keychron K6", percent: 35, status: .ok)]
         appState.withLock { $0.metrics.send(Metrics(keyboardBatteries: updated)) }
         await waitUntil { sut.keyboardBatteries == updated }
-        await sut.send(.viewDisappeared)
+        await sut.send(.isInsertedChanged(false))
     }
 
     @MainActor @Test
-    func send_viewAppeared_loads_latest_fanInfo_and_observes_stream() async {
+    func send_isInsertedChanged_true_loads_latest_fanInfo_and_observes_stream() async {
         let appState = AllocatedUnfairLock<AppState>(initialState: .init())
         appState.withLock { $0.metrics.send(Metrics(fanInfo: FanInfo(fans: [FanInfo.Fan(rpm: 1218)]))) }
         let sut = MetricsBar(.testDependencies(appStateClient: .testDependency(appState)))
-        await sut.send(.viewAppeared("MetricsBarTests"))
+        await sut.send(.isInsertedChanged(true))
         #expect(sut.fanInfo == FanInfo(fans: [FanInfo.Fan(rpm: 1218)]))
         appState.withLock { $0.metrics.send(Metrics(fanInfo: FanInfo(fans: [FanInfo.Fan(rpm: 1199)]))) }
         await waitUntil { sut.fanInfo == FanInfo(fans: [FanInfo.Fan(rpm: 1199)]) }
-        await sut.send(.viewDisappeared)
+        await sut.send(.isInsertedChanged(false))
     }
 
     @MainActor @Test
-    func send_viewAppeared_refreshes_configuration_when_change_event_is_emitted() async throws {
+    func send_isInsertedChanged_true_loads_configuration_changed_while_hidden() async throws {
         let appState = AllocatedUnfairLock<AppState>(initialState: .init())
         let configurationData = AllocatedUnfairLock<Data?>(initialState: nil)
         let sut = MetricsBar(.testDependencies(
@@ -68,7 +79,33 @@ struct MetricsBarTests {
                 $0.data = { _ in configurationData.withLock(\.self) }
             }
         ))
-        await sut.send(.viewAppeared("MetricsBarTests"))
+        #expect(sut.metricsBarConfiguration == .default)
+        let updatedConfiguration = MetricsBarConfiguration(
+            showsCPU: true,
+            showsMemory: false,
+            showsStorage: false,
+            showsBattery: false,
+            showsNetwork: false,
+            visibleCustomMetricsSourceIDs: []
+        )
+        let encodedConfiguration = try JSONEncoder().encode(updatedConfiguration)
+        configurationData.withLock { $0 = encodedConfiguration }
+        await sut.send(.isInsertedChanged(true))
+        #expect(sut.metricsBarConfiguration == updatedConfiguration)
+        await sut.send(.viewDisappeared)
+    }
+
+    @MainActor @Test
+    func send_isInsertedChanged_true_refreshes_configuration_when_change_event_is_emitted() async throws {
+        let appState = AllocatedUnfairLock<AppState>(initialState: .init())
+        let configurationData = AllocatedUnfairLock<Data?>(initialState: nil)
+        let sut = MetricsBar(.testDependencies(
+            appStateClient: .testDependency(appState),
+            userDefaultsClient: testDependency(of: UserDefaultsClient.self) {
+                $0.data = { _ in configurationData.withLock(\.self) }
+            }
+        ))
+        await sut.send(.isInsertedChanged(true))
         #expect(sut.metricsBarConfiguration == .default)
         let updatedConfiguration = MetricsBarConfiguration(
             showsCPU: true,
@@ -87,7 +124,7 @@ struct MetricsBarTests {
     }
 
     @MainActor @Test
-    func send_viewAppeared_refreshes_visibility_when_custom_metrics_configuration_change_is_emitted() async {
+    func send_isInsertedChanged_true_refreshes_visibility_when_custom_metrics_configuration_change_is_emitted() async {
         let appState = AllocatedUnfairLock<AppState>(initialState: .init())
         var initialMetricsBarConfiguration = MetricsBarConfiguration.default
         initialMetricsBarConfiguration.visibleCustomMetricsSourceIDs = [UUID(1)]
@@ -99,7 +136,7 @@ struct MetricsBarTests {
             appStateClient: .testDependency(appState),
             userDefaultsClient: storage.client
         ))
-        await sut.send(.viewAppeared("MetricsBarTests"))
+        await sut.send(.isInsertedChanged(true))
         #expect(sut.metricsBarConfiguration.visibleCustomMetricsSourceIDs == [UUID(1)])
         let service = CustomMetricsService(.testDependencies(userDefaultsClient: storage.client))
         service.removeSource(of: UUID(1))
@@ -110,10 +147,35 @@ struct MetricsBarTests {
     }
 
     @MainActor @Test
+    func send_isInsertedChanged_false_stops_observing_streams() async {
+        let appState = AllocatedUnfairLock<AppState>(initialState: .init())
+        appState.withLock { $0.metrics.send(Metrics.dummy(cpuRawValue: 0.1)) }
+        let sut = MetricsBar(.testDependencies(appStateClient: .testDependency(appState)))
+        await sut.send(.isInsertedChanged(true))
+        await sut.send(.isInsertedChanged(false))
+        appState.withLock { $0.metrics.send(Metrics.dummy(cpuRawValue: 0.3)) }
+        try? await Task.sleep(for: .milliseconds(50))
+        #expect(sut.systemInfoBundle.cpuInfo?.percentage.value == 10.0)
+    }
+
+    @MainActor @Test
+    func send_isInsertedChanged_true_after_false_applies_metrics_sent_while_hidden() async {
+        let appState = AllocatedUnfairLock<AppState>(initialState: .init())
+        appState.withLock { $0.metrics.send(Metrics.dummy(cpuRawValue: 0.1)) }
+        let sut = MetricsBar(.testDependencies(appStateClient: .testDependency(appState)))
+        await sut.send(.isInsertedChanged(true))
+        await sut.send(.isInsertedChanged(false))
+        appState.withLock { $0.metrics.send(Metrics.dummy(cpuRawValue: 0.3)) }
+        await sut.send(.isInsertedChanged(true))
+        #expect(sut.systemInfoBundle.cpuInfo?.percentage.value == 30.0)
+        await sut.send(.viewDisappeared)
+    }
+
+    @MainActor @Test
     func send_viewDisappeared_stops_observing_streams() async {
         let appState = AllocatedUnfairLock<AppState>(initialState: .init())
         let sut = MetricsBar(.testDependencies(appStateClient: .testDependency(appState)))
-        await sut.send(.viewAppeared("MetricsBarTests"))
+        await sut.send(.isInsertedChanged(true))
         await sut.send(.viewDisappeared)
         appState.withLock { $0.metrics.send(Metrics.dummy(cpuRawValue: 0.3)) }
         try? await Task.sleep(for: .milliseconds(50))
@@ -188,7 +250,7 @@ struct MetricsBarTests {
     }
 
     @MainActor @Test
-    func send_viewAppeared_loads_touchBar_runner_frames_and_speed() async {
+    func send_isInsertedChanged_true_loads_touchBar_runner_frames_and_speed() async {
         let appState = AllocatedUnfairLock<AppState>(initialState: .init())
         // Seeded before the view appears: the bundle stream only fires when
         // the runner changes, so a mid-session bar must read the latest value.
@@ -203,7 +265,7 @@ struct MetricsBarTests {
             .testDependencies(appStateClient: .testDependency(appState)),
             touchBarRunnerImageProvider: { _ in NSImage(size: NSSize(width: 10, height: 18)) }
         )
-        await sut.send(.viewAppeared("MetricsBarTests"))
+        await sut.send(.isInsertedChanged(true))
         await waitUntil { sut.touchBarRunnerVersion > 0 }
         #expect(sut.touchBarRunnerFrames.count == 2)
         #expect(sut.touchBarRunnerIsTemplate)
@@ -214,24 +276,24 @@ struct MetricsBarTests {
     }
 
     @MainActor @Test
-    func send_viewAppeared_seeds_stockQuotes_from_the_latest_value() async {        let appState = AllocatedUnfairLock<AppState>(initialState: .init())
+    func send_isInsertedChanged_true_seeds_stockQuotes_from_the_latest_value() async {        let appState = AllocatedUnfairLock<AppState>(initialState: .init())
         let saved = [StockQuote(symbol: "sz000001", name: "平安银行", price: 11.02, changePercent: 0.5)]
         // Restored before any bar exists: the stream must not be the only
         // source, or a bar appearing later starts from nothing.
         appState.withLock { $0.stocks.send(saved) }
         let sut = MetricsBar(.testDependencies(appStateClient: .testDependency(appState)))
-        await sut.send(.viewAppeared("MetricsBarTests"))
+        await sut.send(.isInsertedChanged(true))
         #expect(sut.stockQuotes == saved)
         await sut.send(.viewDisappeared)
     }
 
     @MainActor @Test
-    func send_viewAppeared_without_image_provider_skips_the_runner_streams() async {        let appState = AllocatedUnfairLock<AppState>(initialState: .init())
+    func send_isInsertedChanged_true_without_image_provider_skips_the_runner_streams() async {        let appState = AllocatedUnfairLock<AppState>(initialState: .init())
         appState.withLock {
             $0.runnerBundles.send(RunnerBundle(runner: .default, frames: [.preset("cat-frame-1")]))
         }
         let sut = MetricsBar(.testDependencies(appStateClient: .testDependency(appState)))
-        await sut.send(.viewAppeared("MetricsBarTests"))
+        await sut.send(.isInsertedChanged(true))
         await sut.send(.viewDisappeared)
         // The menu bar instance never loads runner frames: the resources live
         // in the UserInterface bundle and only the Touch Bar needs them.
@@ -240,7 +302,7 @@ struct MetricsBarTests {
     }
 
     @MainActor @Test
-    func send_viewAppeared_seeds_the_runner_bundle_list_for_the_picker() async {
+    func send_isInsertedChanged_true_seeds_the_runner_bundle_list_for_the_picker() async {
         let appState = AllocatedUnfairLock<AppState>(initialState: .init())
         let list = [
             RunnerBundle(runner: .default, frame: .preset("cat-frame-1")),
@@ -251,7 +313,7 @@ struct MetricsBarTests {
             .testDependencies(appStateClient: .testDependency(appState)),
             touchBarRunnerImageProvider: { _ in NSImage(size: NSSize(width: 10, height: 18)) }
         )
-        await sut.send(.viewAppeared("MetricsBarTests"))
+        await sut.send(.isInsertedChanged(true))
         #expect(sut.runnerBundleList.map(\.runner.id) == list.map(\.runner.id))
         await sut.send(.viewDisappeared)
     }

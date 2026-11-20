@@ -278,6 +278,9 @@ public final class TouchBarMetricsContainerView: NSView {
         lifecycleTask = Task { @MainActor [weak self] in
             guard let self, self.lifecycleGeneration == generation else { return }
             await self.store.send(.viewAppeared(String(describing: TouchBarMetricsContainerView.self)))
+            // The DFR bar is not a SwiftUI view, so there is no insertion
+            // callback: observing starts explicitly once the row is built.
+            await self.store.send(.isInsertedChanged(true))
             guard self.lifecycleGeneration == generation else { return }
             self.scheduleRebuildIfNeeded()
             self.updateVisibleValues()
