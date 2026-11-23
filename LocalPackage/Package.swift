@@ -90,5 +90,12 @@ let package = Package(
             ],
             swiftSettings: swiftSettings
         ),
+        .testTarget(
+            name: "UserInterfaceTests",
+            dependencies: [
+                "UserInterface",
+            ],
+            swiftSettings: swiftSettings
+        ),
     ]
 )
