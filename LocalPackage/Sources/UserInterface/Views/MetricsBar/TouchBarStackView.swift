@@ -82,10 +82,14 @@ final class TouchBarStackView: NSView {
     func refreshMemberWidths() -> Bool {
         guard !bands.isEmpty else { return false }
 
+        // Autoresizing translation pins the member's width to its current
+        // frame with generated constraints, which would freeze fittingSize at
+        // the old width and keep the slot from growing with its text.
         var measured: [(view: NSView, size: NSSize)] = []
         var widest: CGFloat = 1
         for band in bands {
             guard let member = band.subviews.first else { continue }
+            member.translatesAutoresizingMaskIntoConstraints = false
             member.layoutSubtreeIfNeeded()
             let fitting = member.fittingSize
             measured.append((member, fitting))
@@ -105,6 +109,7 @@ final class TouchBarStackView: NSView {
                 width: min(ceil(member.size.width), slotWidth),
                 height: max(member.size.height, 1)
             )
+            member.view.translatesAutoresizingMaskIntoConstraints = true
         }
         needsLayout = true
         return true
