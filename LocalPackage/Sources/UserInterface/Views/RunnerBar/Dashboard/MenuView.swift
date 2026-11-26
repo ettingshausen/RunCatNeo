@@ -24,6 +24,7 @@ import SwiftUI
 
 struct MenuView: View {
     @Environment(\.openWindow) private var openWindow
+    @Environment(\.openSettings) private var openSettings
     var store: DashboardMenu
 
     private var aboutBody: AttributedString {
@@ -64,16 +65,17 @@ struct MenuView: View {
                 }
             }
             Divider()
-            SettingsLink {
+            Button {
+                Task {
+                    await store.send(.settingsButtonTapped(.init { openSettings() }))
+                }
+            } label: {
                 Label {
                     Text("settings", bundle: .module)
                 } icon: {
                     Image(systemName: "gear")
                 }
             }
-            .buttonStyle(.preAction {
-                await store.send(.settingsButtonTapped)
-            })
             Button {
                 Task {
                     await store.send(.activityMonitorButtonTapped)
@@ -100,7 +102,7 @@ struct MenuView: View {
             Button {
                 Task {
                     await store.send(.openSourceLicenseButtonTapped(.init(action: {
-                        openWindow(id: $0, value: $1)
+                        openWindow(id: $0)
                     })))
                 }
             } label: {

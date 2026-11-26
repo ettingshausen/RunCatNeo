@@ -1,5 +1,5 @@
 {
-  "originHash" : "fb7d875d62503270f4e0b6b187492c3017a5e508d008bc8afef55848aa9eafb2",
+  "originHash" : "497072cf351fe07974dec1b7a5eddcd08ca83ef0405e71f298719676dd64ec49",
   "pins" : [
     {
       "identity" : "allocatedunfairlock",
@@ -8,6 +8,15 @@
       "state" : {
         "revision" : "bf1fa2b1b6a449fd1f8adf2d846feb5fab7734ca",
         "version" : "1.0.0"
+      }
+    },
+    {
+      "identity" : "devicemodel",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/Kyome22/DeviceModel.git",
+      "state" : {
+        "revision" : "c4aceeb1056ac2280fd596ac8e7c86bd66a4d61c",
+        "version" : "2.0.2"
       }
     },
     {
@@ -42,8 +51,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/apple/swift-log.git",
       "state" : {
-        "revision" : "e3da04078777e6a1b72ce19981fbd6539b0847d8",
-        "version" : "1.17.0"
+        "revision" : "c7413d967b97aae67c46452bf7645bdb7b200e8e",
+        "version" : "1.17.2"
       }
     },
     {

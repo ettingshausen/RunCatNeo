@@ -25,6 +25,7 @@ public struct AppDependencies: Sendable {
     public var appStateClient = AppStateClient.liveValue
     public var dataClient = DataClient.liveValue
     public var dateClient = DateClient.liveValue
+    public var deviceModelClient = DeviceModelClient.liveValue
     public var fileManagerClient = FileManagerClient.liveValue
     public var fileSliceClient = FileSliceClient.liveValue
     public var fileWatcherClient = FileWatcherClient.liveValue
@@ -55,6 +56,7 @@ extension AppDependencies {
         appStateClient: AppStateClient = .testValue,
         dataClient: DataClient = .testValue,
         dateClient: DateClient = .testValue,
+        deviceModelClient: DeviceModelClient = .testValue,
         fileManagerClient: FileManagerClient = .testValue,
         fileSliceClient: FileSliceClient = .testValue,
         fileWatcherClient: FileWatcherClient = .testValue,
@@ -77,6 +79,7 @@ extension AppDependencies {
             appStateClient: appStateClient,
             dataClient: dataClient,
             dateClient: dateClient,
+            deviceModelClient: deviceModelClient,
             fileManagerClient: fileManagerClient,
             fileSliceClient: fileSliceClient,
             fileWatcherClient: fileWatcherClient,

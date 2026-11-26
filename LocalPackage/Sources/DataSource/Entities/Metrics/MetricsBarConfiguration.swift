@@ -22,8 +22,11 @@ import Foundation
 
 public struct MetricsBarConfiguration: Codable, Sendable, Equatable {
     public var showsCPU: Bool
+    public var cpuStyle: MetricsBarUsageStyle = .percentage
     public var showsMemory: Bool
+    public var memoryStyle: MetricsBarUsageStyle = .percentage
     public var showsStorage: Bool
+    public var storageStyle: MetricsBarStorageStyle = .percentage
     public var showsBattery: Bool
     public var showsNetwork: Bool
     public var showsFan: Bool = false
@@ -52,8 +55,11 @@ public struct MetricsBarConfiguration: Codable, Sendable, Equatable {
 
     public init(
         showsCPU: Bool,
+        cpuStyle: MetricsBarUsageStyle = .percentage,
         showsMemory: Bool,
+        memoryStyle: MetricsBarUsageStyle = .percentage,
         showsStorage: Bool,
+        storageStyle: MetricsBarStorageStyle = .percentage,
         showsBattery: Bool,
         showsNetwork: Bool,
         showsFan: Bool = false,
@@ -62,8 +68,11 @@ public struct MetricsBarConfiguration: Codable, Sendable, Equatable {
         visibleCustomMetricsSourceIDs: Set<UUID>
     ) {
         self.showsCPU = showsCPU
+        self.cpuStyle = cpuStyle
         self.showsMemory = showsMemory
+        self.memoryStyle = memoryStyle
         self.showsStorage = showsStorage
+        self.storageStyle = storageStyle
         self.showsBattery = showsBattery
         self.showsNetwork = showsNetwork
         self.showsFan = showsFan
@@ -72,16 +81,19 @@ public struct MetricsBarConfiguration: Codable, Sendable, Equatable {
         self.visibleCustomMetricsSourceIDs = visibleCustomMetricsSourceIDs
     }
 
-    public init(from decoder: Decoder) throws {
+    public init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         showsCPU = try container.decode(Bool.self, forKey: .showsCPU)
+        cpuStyle = container.decode(MetricsBarUsageStyle.self, forKey: .cpuStyle, default: .percentage)
         showsMemory = try container.decode(Bool.self, forKey: .showsMemory)
+        memoryStyle = container.decode(MetricsBarUsageStyle.self, forKey: .memoryStyle, default: .percentage)
         showsStorage = try container.decode(Bool.self, forKey: .showsStorage)
+        storageStyle = container.decode(MetricsBarStorageStyle.self, forKey: .storageStyle, default: .percentage)
         showsBattery = try container.decode(Bool.self, forKey: .showsBattery)
         showsNetwork = try container.decode(Bool.self, forKey: .showsNetwork)
-        showsFan = try container.decodeIfPresent(Bool.self, forKey: .showsFan) ?? false
-        showsKeyboardBattery = try container.decodeIfPresent(Bool.self, forKey: .showsKeyboardBattery) ?? false
-        showsAITokenUsage = try container.decodeIfPresent(Bool.self, forKey: .showsAITokenUsage) ?? false
+        showsFan = container.decode(Bool.self, forKey: .showsFan, default: false)
+        showsKeyboardBattery = container.decode(Bool.self, forKey: .showsKeyboardBattery, default: false)
+        showsAITokenUsage = container.decode(Bool.self, forKey: .showsAITokenUsage, default: false)
         visibleCustomMetricsSourceIDs = try container.decode(Set<UUID>.self, forKey: .visibleCustomMetricsSourceIDs)
     }
 }
